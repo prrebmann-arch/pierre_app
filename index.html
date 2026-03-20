@@ -2254,6 +2254,14 @@ async function toggleTrainingProgram(id, isActive) {
       if (err2) throw err2;
 
       notify('Programme activé !', 'success');
+    } else {
+      // Désactiver celui-ci
+      const { error } = await supabaseClient
+        .from('workout_programs')
+        .update({ actif: false })
+        .eq('id', id);
+      if (error) throw error;
+      notify('Programme désactivé', 'success');
     }
     loadAthleteTabTraining();
   } catch(error) {
