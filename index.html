@@ -2237,6 +2237,7 @@ async function deleteProgRow(id) {
 
 // Activer/Désactiver un programme (et désactiver les autres)
 async function toggleTrainingProgram(id, isActive) {
+  console.log('🔄 Toggle programme:', id, 'isActive:', isActive);
   try {
     if (isActive) {
       // Désactiver TOUS les autres d'abord
@@ -2245,6 +2246,7 @@ async function toggleTrainingProgram(id, isActive) {
         .update({ actif: false })
         .eq('athlete_id', currentAthleteId);
       if (err1) throw err1;
+      console.log('✅ Tous désactivés');
 
       // Puis activer celui-ci
       const { error: err2 } = await supabaseClient
@@ -2252,6 +2254,7 @@ async function toggleTrainingProgram(id, isActive) {
         .update({ actif: true })
         .eq('id', id);
       if (err2) throw err2;
+      console.log('✅ Celui-ci activé:', id);
 
       notify('Programme activé !', 'success');
     } else {
@@ -2261,10 +2264,12 @@ async function toggleTrainingProgram(id, isActive) {
         .update({ actif: false })
         .eq('id', id);
       if (error) throw error;
+      console.log('✅ Désactivé:', id);
       notify('Programme désactivé', 'success');
     }
     loadAthleteTabTraining();
   } catch(error) {
+    console.error('❌ Erreur:', error);
     notify('Erreur: ' + error.message, 'error');
     loadAthleteTabTraining();
   }
