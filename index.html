@@ -2199,10 +2199,14 @@ async function loadAthleteTabTraining() {
   const el = document.getElementById('athlete-tab-content');
   el.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
 
-  const { data: programs } = await supabaseClient
+  const { data: programs, error } = await supabaseClient
     .from('workout_programs')
     .select('*, workout_sessions(*)')
     .eq('athlete_id', currentAthleteId);
+
+  console.log('📋 Programmes chargés:', programs);
+  console.log('❌ Erreur si existe:', error);
+  if (programs) programs.forEach(p => console.log(`Program: ${p.nom}, Sessions:`, p.workout_sessions));
 
   if (!programs?.length) {
     el.innerHTML = `
