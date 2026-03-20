@@ -2121,6 +2121,8 @@ async function loadAthleteTabNutrition() {
   const el = document.getElementById('athlete-tab-content');
   el.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
 
+  await loadAliments();
+
   const { data: plans } = await supabaseClient
     .from('nutrition_plans')
     .select('*')
@@ -2180,27 +2182,42 @@ function renderNutriTab(type) {
   let meals = [];
   if (plan.meals_data) { try { meals = JSON.parse(plan.meals_data); } catch(e) {} }
 
+  // Recalcule les macros depuis alimentsDB pour corriger les vieilles données
+  function calcItemMacros(item) {
+    const qte = parseFloat(item.qte) || 0;
+    const a = (window.alimentsDB || []).find(x => x.nom === (item.aliment || item.nom));
+    if (a) {
+      return {
+        kcal: parseFloat((a.calories  * qte).toFixed(0)),
+        p:    parseFloat((a.proteines * qte).toFixed(1)),
+        g:    parseFloat((a.glucides  * qte).toFixed(1)),
+        l:    parseFloat((a.lipides   * qte).toFixed(1))
+      };
+    }
+    return { kcal: parseFloat(item.kcal)||0, p: parseFloat(item.p)||0, g: parseFloat(item.g)||0, l: parseFloat(item.l)||0 };
+  }
+
   let totalK = 0, totalP = 0, totalG = 0, totalL = 0;
   meals.forEach(meal => { if (Array.isArray(meal)) meal.forEach(item => {
-    totalK += parseFloat(item.kcal)||0; totalP += parseFloat(item.p)||0;
-    totalG += parseFloat(item.g)||0; totalL += parseFloat(item.l)||0;
+    const m = calcItemMacros(item);
+    totalK += m.kcal; totalP += m.p; totalG += m.g; totalL += m.l;
   }); });
 
   const mealsHtml = meals.map((meal, idx) => {
     if (!Array.isArray(meal)) return '';
     let mk=0,mp=0,mg=0,ml=0;
-    meal.forEach(item => { mk+=parseFloat(item.kcal)||0; mp+=parseFloat(item.p)||0; mg+=parseFloat(item.g)||0; ml+=parseFloat(item.l)||0; });
+    meal.forEach(item => { const m=calcItemMacros(item); mk+=m.kcal; mp+=m.p; mg+=m.g; ml+=m.l; });
     return `
       <div class="meal-row">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div class="meal-header" style="margin-bottom:0;">R${idx+1}</div>
           <div style="font-size:12px;font-weight:600;">${mk.toFixed(0)} kcal &nbsp;|&nbsp; P:${mp.toFixed(1)}g &nbsp;G:${mg.toFixed(1)}g &nbsp;L:${ml.toFixed(1)}g</div>
         </div>
-        ${meal.map(item => `
+        ${meal.map(item => { const m=calcItemMacros(item); return `
           <div class="food-item">
             <div style="flex:1;"><span style="font-weight:500;">${item.aliment||item.nom||'-'}</span><span style="font-size:11px;color:var(--text3);margin-left:8px;">${item.qte}g</span></div>
-            <div style="font-size:12px;text-align:right;"><span style="font-weight:600;">${item.kcal||0} kcal</span><span style="color:var(--text3);margin-left:8px;">P:${item.p||0}g G:${item.g||0}g L:${item.l||0}g</span></div>
-          </div>`).join('')}
+            <div style="font-size:12px;text-align:right;"><span style="font-weight:600;">${m.kcal} kcal</span><span style="color:var(--text3);margin-left:8px;">P:${m.p}g G:${m.g}g L:${m.l}g</span></div>
+          </div>`; }).join('')}
       </div>`;
   }).join('');
 
