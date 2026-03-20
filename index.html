@@ -2884,27 +2884,80 @@ function updateAthleteSelects() {
 // Ajouter athlète
 document.getElementById('athlete-form').addEventListener('submit', async (e) => {
   e.preventDefault();
-  
+
+  const prenom = document.getElementById('athlete-prenom').value;
+  const nom = document.getElementById('athlete-nom').value;
+  const email = document.getElementById('athlete-email').value;
+
   const athleteData = {
-    prenom: document.getElementById('athlete-prenom').value,
-    nom: document.getElementById('athlete-nom').value,
-    email: document.getElementById('athlete-email').value,
+    prenom,
+    nom,
+    email,
     poids_actuel: parseFloat(document.getElementById('athlete-poids').value) || null,
     poids_objectif: parseFloat(document.getElementById('athlete-poids-obj').value) || null,
     objectif: document.getElementById('athlete-objectif').value,
     coach_id: currentUser.id
   };
-  
+
+  // Créer l'athlète dans la base de données
   const { data, error } = await supabaseClient
     .from('athletes')
     .insert(athleteData)
     .select();
-  
+
   if (error) {
     notify('Erreur: ' + error.message, 'error');
     return;
   }
-  
+
+  // Générer un mot de passe temporaire aléatoire
+  const tempPassword = Math.random().toString(36).slice(-12);
+  const athleteId = data[0].id;
+
+  // Créer un compte auth pour l'athlète
+  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+    email,
+    password: tempPassword,
+    options: {
+      data: {
+        prenom,
+        nom,
+        athlete_id: athleteId
+      }
+    }
+  });
+
+  if (authError) {
+    console.error('Erreur création compte:', authError);
+    // On a créé l'athlète mais pas le compte auth, on continue quand même
+  }
+
+  // Afficher le message WhatsApp à copier-coller
+  const whatsappMessage = `Bienvenue dans l'app de coaching Pierre! 🏋️‍♂️\n\nVoici vos identifiants pour vous connecter:\n\n📧 Email: ${email}\n🔐 Mot de passe: ${tempPassword}\n\nTéléchargez l'app et connectez-vous pour voir vos séances d'entraînement et nutrition!`;
+
+  // Créer une modal avec le message à copier
+  const modal = document.createElement('div');
+  modal.innerHTML = `
+    <div class="modal-overlay" style="z-index: 10000;">
+      <div class="modal" style="max-width: 500px;">
+        <div class="modal-header">
+          <h2 class="modal-title">Message WhatsApp</h2>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
+        </div>
+        <div style="padding: 20px; background: var(--bg2); border-radius: 10px; margin: 16px; font-family: monospace; font-size: 13px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; border: 1px solid var(--border);">
+          ${whatsappMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+        </div>
+        <div style="padding: 16px; display: flex; gap: 8px;">
+          <button class="btn btn-red" onclick="navigator.clipboard.writeText(\`${whatsappMessage.replace(/`/g, '\\`')}\`); alert('Message copié!'); this.closest('.modal-overlay').remove();">
+            📋 Copier le message
+          </button>
+          <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove();">Fermer</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
   notify('Athlète ajouté avec succès !', 'success');
   closeModal('modal-athlete');
   document.getElementById('athlete-form').reset();
