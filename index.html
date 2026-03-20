@@ -2926,6 +2926,15 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
 
   console.log('✅ Compte auth créé');
 
+  // Obtenir le vrai ID du coach depuis la session
+  const session = (await supabaseClient.auth.getSession()).data?.session;
+  const coachId = session?.user?.id;
+
+  if (!coachId) {
+    notify('❌ Erreur: pas de session authentifiée', 'error');
+    return;
+  }
+
   const athleteData = {
     prenom,
     nom,
@@ -2933,7 +2942,7 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
     poids_actuel: parseFloat(document.getElementById('athlete-poids').value) || null,
     poids_objectif: parseFloat(document.getElementById('athlete-poids-obj').value) || null,
     objectif: document.getElementById('athlete-objectif').value,
-    coach_id: currentUser.id
+    coach_id: coachId
   };
 
   // Créer l'athlète dans la base de données
