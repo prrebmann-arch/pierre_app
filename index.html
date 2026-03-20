@@ -1783,6 +1783,11 @@ async function editNutritionPlan(id) {
         <button class="btn btn-red" onclick="saveNutritionPlanInline()"><i class="fas fa-save"></i> Enregistrer</button>
       </div>
     </div>`;
+  // Recalculer les macros de toutes les lignes chargées
+  document.querySelectorAll('#np-meals .np-food-row').forEach(row => {
+    const sel = row.querySelector('select');
+    if (sel && sel.value) calcNpMacros(sel);
+  });
 }
 function editAthleteInfos() {
   openModal('modal-edit-athlete');
@@ -2874,15 +2879,21 @@ function getNpMealData() {
     const foods = [];
     row.querySelectorAll('.np-food-row').forEach(fr => {
       const sel = fr.querySelector('select');
-      const nom = sel?.options[sel.selectedIndex]?.text;
+      const opt = sel ? sel.options[sel.selectedIndex] : null;
+      const nom = opt?.text;
       if (!nom || nom === '— aliment —') return;
+      const qte = parseFloat(fr.querySelector('.np-qty')?.value) || 0;
+      const cal  = parseFloat(opt?.dataset?.cal)  || 0;
+      const prot = parseFloat(opt?.dataset?.prot) || 0;
+      const gluc = parseFloat(opt?.dataset?.gluc) || 0;
+      const lip  = parseFloat(opt?.dataset?.lip)  || 0;
       foods.push({
         aliment: nom,
-        qte: parseFloat(fr.querySelector('.np-qty')?.value) || 0,
-        kcal: parseFloat(fr.querySelector('.np-kcal')?.value) || 0,
-        p: parseFloat(fr.querySelector('.np-p')?.value) || 0,
-        g: parseFloat(fr.querySelector('.np-g')?.value) || 0,
-        l: parseFloat(fr.querySelector('.np-l')?.value) || 0
+        qte,
+        kcal: parseFloat((cal  * qte).toFixed(0)),
+        p:    parseFloat((prot * qte).toFixed(1)),
+        g:    parseFloat((gluc * qte).toFixed(1)),
+        l:    parseFloat((lip  * qte).toFixed(1))
       });
     });
     meals.push(foods);
