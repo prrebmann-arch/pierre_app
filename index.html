@@ -1315,7 +1315,7 @@ async function editTrainingProgram(id) {
   const patternType = prog.pattern_type || 'pattern';
   const sessions = (prog.workout_sessions || []).sort((a,b) => (a.ordre||0)-(b.ordre||0)).map(s => {
     let exercises = [];
-    try { exercises = JSON.parse(s.exercices || '[]'); } catch(e) {}
+    try { exercises = typeof s.exercices === 'string' ? JSON.parse(s.exercices) : (s.exercices || []); } catch(e) {}
     return { nom: s.nom || '', jour: s.jour || '', exercises };
   });
   const inpStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;';
@@ -3105,7 +3105,7 @@ async function saveSessionDetailInline() {
 async function removeExercise(sessionId, exerciseIdx, programId) {
   const { data: session } = await supabaseClient.from('workout_sessions').select('exercices').eq('id', sessionId).single();
   let exs = [];
-  try { exs = JSON.parse(session?.exercices || '[]'); } catch(e) {}
+  try { exs = typeof session?.exercices === 'string' ? JSON.parse(session.exercices) : (session?.exercices || []); } catch(e) {}
   exs.splice(exerciseIdx, 1);
   await supabaseClient.from('workout_sessions').update({ exercices: JSON.stringify(exs) }).eq('id', sessionId);
   loadAthleteTabTraining();
