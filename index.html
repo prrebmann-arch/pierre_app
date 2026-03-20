@@ -1244,6 +1244,7 @@ async function saveTrainingProgramInline() {
     ? { pattern: document.getElementById('tp-pattern')?.value || '' }
     : { days: (document.getElementById('tp-fixed')?.value || '').split(',').map(d => d.trim()).filter(Boolean) };
   const sessions = getTpSessionsData();
+  console.log('💾 Sauvegarde programme:', nom, 'Sessions:', sessions.length, sessions);
   let programId = window._tpEditId;
   if (programId) {
     const { error } = await supabaseClient.from('workout_programs').update({ nom, pattern_type: patternType, pattern_data: patternData }).eq('id', programId);
@@ -1256,7 +1257,9 @@ async function saveTrainingProgramInline() {
   }
   for (let i = 0; i < sessions.length; i++) {
     const s = sessions[i];
-    await supabaseClient.from('workout_sessions').insert({ nom: s.nom, jour: s.jour || null, program_id: programId, exercices: JSON.stringify(s.exercises), ordre: i });
+    const { data, error } = await supabaseClient.from('workout_sessions').insert({ nom: s.nom, jour: s.jour || null, program_id: programId, exercices: JSON.stringify(s.exercises), ordre: i });
+    if (error) { console.error('❌ Erreur insertion session:', error); notify('Erreur: ' + error.message, 'error'); return; }
+    console.log('✅ Session créée:', s.nom);
   }
   notify('Programme sauvegardé !', 'success');
   window._tpEditId = null;
@@ -2980,8 +2983,9 @@ async function editSessionDetail(sessionId, programId) {
   let exercises = [];
   try {
     if (session.exercices) exercises = typeof session.exercices === 'string' ? JSON.parse(session.exercices) : (session.exercices || []);
-  } catch(e) {}
-  
+  } catch(e) { console.error('❌ Erreur parsing exercices:', e); }
+
+  console.log('📝 Édition séance:', session.nom, 'Exercices:', exercises);
   window._esEditId = sessionId;
   window._esProgramId = programId;
   window._esExercises = exercises;
