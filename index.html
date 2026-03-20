@@ -1248,7 +1248,7 @@ async function saveTrainingProgramInline() {
   if (programId) {
     const { error } = await supabaseClient.from('workout_programs').update({ nom, pattern_type: patternType, pattern_data: patternData }).eq('id', programId);
     if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-    await supabaseClient.from('workout_sessions').delete().eq('workout_program_id', programId);
+    await supabaseClient.from('workout_sessions').delete().eq('program_id', programId);
   } else {
     const { data, error } = await supabaseClient.from('workout_programs').insert({ nom, athlete_id: currentAthleteId, coach_id: currentUser.id, pattern_type: patternType, pattern_data: patternData }).select();
     if (error) { notify('Erreur: ' + error.message, 'error'); return; }
@@ -1256,7 +1256,7 @@ async function saveTrainingProgramInline() {
   }
   for (let i = 0; i < sessions.length; i++) {
     const s = sessions[i];
-    await supabaseClient.from('workout_sessions').insert({ nom: s.nom, jour: s.jour || null, workout_program_id: programId, exercices: JSON.stringify(s.exercises), ordre: i });
+    await supabaseClient.from('workout_sessions').insert({ nom: s.nom, jour: s.jour || null, program_id: programId, exercices: JSON.stringify(s.exercises), ordre: i });
   }
   notify('Programme sauvegardé !', 'success');
   window._tpEditId = null;
