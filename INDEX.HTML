@@ -1745,10 +1745,10 @@ function calculateFoodMacros(qteInput) {
     const lipPer100g = parseFloat(option.dataset.lip) || 0;
     
     const inputs = foodItem.querySelectorAll('input[type="text"]');
-    inputs[0].value = (calPer100g * qte / 100).toFixed(0);
-    inputs[1].value = (protPer100g * qte / 100).toFixed(1);
-    inputs[2].value = (glucPer100g * qte / 100).toFixed(1);
-    inputs[3].value = (lipPer100g * qte / 100).toFixed(1);
+    inputs[0].value = (calPer100g * qte).toFixed(0);
+    inputs[1].value = (protPer100g * qte).toFixed(1);
+    inputs[2].value = (glucPer100g * qte).toFixed(1);
+    inputs[3].value = (lipPer100g * qte).toFixed(1);
   }
 }
 async function editNutritionPlan(id) {
@@ -2629,19 +2629,19 @@ function renderAliments(aliments) {
       </div>
       <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; font-size: 14px; text-align: center;">
         <div>
-          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Calories/100g</div>
+          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Calories/g</div>
           <div style="font-weight: 700;">${aliment.calories || 0} kcal</div>
         </div>
         <div>
-          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Protéines/100g</div>
+          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Protéines/g</div>
           <div style="font-weight: 700;">${aliment.proteines || 0}g</div>
         </div>
         <div>
-          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Glucides/100g</div>
+          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Glucides/g</div>
           <div style="font-weight: 700;">${aliment.glucides || 0}g</div>
         </div>
         <div>
-          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Lipides/100g</div>
+          <div style="font-size: 11px; color: var(--text3); margin-bottom: 4px;">Lipides/g</div>
           <div style="font-weight: 700;">${aliment.lipides || 0}g</div>
         </div>
       </div>
@@ -2862,10 +2862,10 @@ function calcNpMacros(el) {
   if (!sel?.value) return;
   const opt = sel.options[sel.selectedIndex];
   const f = (k) => parseFloat(opt.dataset[k]) || 0;
-  row.querySelector('.np-kcal').value = (f('cal') * qte / 100).toFixed(0);
-  row.querySelector('.np-p').value = (f('prot') * qte / 100).toFixed(1);
-  row.querySelector('.np-g').value = (f('gluc') * qte / 100).toFixed(1);
-  row.querySelector('.np-l').value = (f('lip') * qte / 100).toFixed(1);
+  row.querySelector('.np-kcal').value = (f('cal') * qte).toFixed(0);
+  row.querySelector('.np-p').value = (f('prot') * qte).toFixed(1);
+  row.querySelector('.np-g').value = (f('gluc') * qte).toFixed(1);
+  row.querySelector('.np-l').value = (f('lip') * qte).toFixed(1);
 }
 
 function getNpMealData() {
