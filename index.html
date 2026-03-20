@@ -2197,6 +2197,16 @@ async function deleteProgRow(id) {
   await loadProgrammingWeeks();
 }
 
+// Supprimer un programme d'entraînement
+async function deleteTrainingProgram(id) {
+  if (!confirm('Supprimer ce programme et toutes ses séances ?')) return;
+  const { error: err1 } = await supabaseClient.from('workout_sessions').delete().eq('program_id', id);
+  const { error: err2 } = await supabaseClient.from('workout_programs').delete().eq('id', id);
+  if (err1 || err2) { notify('Erreur: ' + (err1?.message || err2?.message), 'error'); return; }
+  notify('Programme supprimé !', 'success');
+  loadAthleteTabTraining();
+}
+
 // Onglet Training
 async function loadAthleteTabTraining() {
   const el = document.getElementById('athlete-tab-content');
@@ -2254,10 +2264,7 @@ function renderTrainingProgram(p) {
           ${patternDisplay ? `<div style="font-size:13px;color:var(--primary);margin-top:4px;"><i class="fas fa-repeat"></i> ${patternDisplay}</div>` : ''}
           <div style="font-size:12px;color:var(--text3);margin-top:6px;">${sessionCount} séance(s)</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="viewAllSessions('${p.id}')"><i class="fas fa-eye"></i></button>
-          <button class="btn btn-red btn-sm" onclick="editTrainingProgram('${p.id}')"><i class="fas fa-pen"></i></button>
-        </div>
+        <button class="btn btn-red btn-sm" onclick="viewAllSessions('${p.id}')"><i class="fas fa-eye"></i></button>
       </div>
     </div>
   `;
@@ -2308,10 +2315,16 @@ async function viewAllSessions(programId) {
           <div class="card-title">${prog.nom}</div>
           <div style="font-size:12px;color:var(--text3);margin-top:6px;">${sessions.length} séance(s)</div>
         </div>
-        <button class="btn btn-outline" onclick="loadAthleteTabTraining()"><i class="fas fa-arrow-left"></i> Retour</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="editTrainingProgram('${prog.id}')"><i class="fas fa-pen"></i> Modifier</button>
+          <button class="btn btn-outline btn-sm" onclick="deleteTrainingProgram('${prog.id}')" style="color:var(--danger);"><i class="fas fa-trash"></i> Supprimer</button>
+        </div>
       </div>
       <div style="margin-top:16px;">
         ${sessionsHtml}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+        <button class="btn btn-outline" onclick="loadAthleteTabTraining()"><i class="fas fa-arrow-left"></i> Retour</button>
       </div>
     </div>`;
 }
