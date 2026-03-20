@@ -2258,27 +2258,31 @@ function renderTrainingProgram(p) {
 
 function renderSession(s, programId) {
   let exercisesHtml = '';
+  let exerciseCount = 0;
   if (s.exercices) {
     try {
       const exs = JSON.parse(s.exercices);
-      exercisesHtml = exs.map((ex, idx) => `
-        <div class="exercise-item">
-          <div style="flex:1;font-weight:500;">${ex.nom}</div>
-          <div style="font-size:12px;color:var(--text2);margin-right:8px;">${ex.series || '-'} × ${ex.reps || '-'}${ex.charge ? ` @ ${ex.charge}kg` : ''}</div>
-          <button class="btn btn-outline btn-sm" style="padding:3px 8px;" onclick="removeExercise('${s.id}', ${idx}, '${programId}')">×</button>
+      exerciseCount = exs.length;
+      exercisesHtml = exs.map((ex) => `
+        <div style="font-size:12px;color:var(--text2);padding:4px 0;">
+          ${ex.nom} — ${ex.series || '-'} × ${ex.reps || '-'}${ex.charge ? ` @ ${ex.charge}kg` : ''}
         </div>`).join('');
     } catch(e) {}
   }
   return `
     <div class="training-day">
       <div class="training-day-header">
-        <div style="font-weight:700;">${s.nom || 'Séance'}</div>
+        <div style="flex:1;cursor:pointer;" onclick="editSessionDetail('${s.id}', '${programId}')">
+          <div style="font-weight:700;">${s.nom || 'Séance'}</div>
+          ${exerciseCount > 0 ? `<div style="font-size:11px;color:var(--text3);margin-top:2px;">${exerciseCount} exercice(s)</div>` : ''}
+        </div>
         <div style="display:flex;gap:6px;align-items:center;">
           ${s.jour ? `<span style="font-size:11px;color:var(--text3);background:var(--bg4);padding:2px 8px;border-radius:4px;">${s.jour}</span>` : ''}
-          <button class="btn btn-outline btn-sm" onclick="deleteSession('${s.id}', '${programId}')" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
+          <button class="btn btn-outline btn-sm" onclick="editSessionDetail('${s.id}', '${programId}');" title="Modifier la séance"><i class="fas fa-pen"></i></button>
+          <button class="btn btn-red btn-sm" onclick="event.stopPropagation(); deleteSession('${s.id}', '${programId}')" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
         </div>
       </div>
-      ${exercisesHtml || '<div style="color:var(--text3);font-size:12px;padding:4px 0;">Aucun exercice</div>'}
+      ${exercisesHtml ? `<div style="margin-top:8px;">${exercisesHtml}</div>` : '<div style="color:var(--text3);font-size:12px;padding:4px 0;">Cliquer pour ajouter des exercices</div>'}
     </div>
   `;
 }
@@ -2896,6 +2900,149 @@ document.getElementById('aliment-form').addEventListener('submit', async (e) => 
 async function deleteSession(sessionId, programId) {
   if (!confirm('Supprimer cette séance ?')) return;
   await supabaseClient.from('workout_sessions').delete().eq('id', sessionId);
+  loadAthleteTabTraining();
+}
+
+async function editSessionDetail(sessionId, programId) {
+  const el = document.getElementById('athlete-tab-content');
+  el.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
+  
+  await loadExercices();
+  
+  const { data: session } = await supabaseClient
+    .from('workout_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .single();
+  
+  if (!session) { 
+    notify('Séance introuvable', 'error');
+    loadAthleteTabTraining();
+    return;
+  }
+  
+  let exercises = [];
+  try { 
+    if (session.exercices) exercises = JSON.parse(session.exercices);
+  } catch(e) {}
+  
+  window._esEditId = sessionId;
+  window._esProgramId = programId;
+  window._esExercises = exercises;
+  
+  const inpStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;';
+  
+  el.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Modifier — ${esEsc(session.nom)}</div>
+        <button class="btn btn-outline" onclick="loadAthleteTabTraining()"><i class="fas fa-arrow-left"></i> Annuler</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Nom de la séance</label><input type="text" id="es-nom" value="${esEsc(session.nom||'')}" style="${inpStyle}"></div>
+        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Jour</label><input type="text" id="es-jour" value="${esEsc(session.jour||'')}" placeholder="ex: Lundi" style="${inpStyle}"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:16px 0 8px;">
+        <h4 style="color:var(--primary);">Exercices (${exercises.length})</h4>
+        <button type="button" class="btn btn-outline btn-sm" onclick="addEsExercise()"><i class="fas fa-plus"></i> Exercice</button>
+      </div>
+      <div id="es-exercises">${exercises.length ? exercises.map((ex, idx) => buildEsExerciseHtml(idx, ex)).join('') : '<div style="color:var(--text3);font-size:12px;padding:16px;text-align:center;">Aucun exercice pour le moment</div>'}</div>
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+        <button class="btn btn-red" onclick="saveSessionDetailInline()"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </div>`;
+}
+
+function esEsc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildEsExerciseHtml(idx, ex) {
+  const inpStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);outline:none;font-size:12px;';
+  return `
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:8px;align-items:flex-end;">
+        <div>
+          <label style="font-size:11px;color:var(--text3);">Exercice</label>
+          <input type="text" id="es-ex-nom-${idx}" value="${esEsc(ex.nom||'')}" placeholder="Nom de l'exercice" style="${inpStyle};width:100%;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);">Séries</label>
+          <input type="number" id="es-ex-series-${idx}" value="${ex.series||3}" min="1" style="${inpStyle};width:100%;text-align:center;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);">Reps</label>
+          <input type="number" id="es-ex-reps-${idx}" value="${ex.reps||8}" min="1" style="${inpStyle};width:100%;text-align:center;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);">Charge (kg)</label>
+          <input type="number" id="es-ex-charge-${idx}" value="${ex.charge||''}" placeholder="0" step="0.5" style="${inpStyle};width:100%;text-align:center;">
+        </div>
+        <button type="button" class="btn btn-outline btn-sm" onclick="removeEsExercise(${idx})" style="color:var(--danger);padding:6px 10px;"><i class="fas fa-trash"></i></button>
+      </div>
+    </div>`;
+}
+
+function addEsExercise() {
+  const container = document.getElementById('es-exercises');
+  const idx = window._esExercises.length;
+  const newEx = { nom: '', series: 3, reps: 8, charge: null };
+  window._esExercises.push(newEx);
+  
+  if (container.textContent.includes('Aucun exercice')) {
+    container.innerHTML = '';
+  }
+  
+  container.innerHTML += buildEsExerciseHtml(idx, newEx);
+}
+
+function removeEsExercise(idx) {
+  window._esExercises.splice(idx, 1);
+  
+  const container = document.getElementById('es-exercises');
+  container.innerHTML = window._esExercises.length ? 
+    window._esExercises.map((ex, i) => buildEsExerciseHtml(i, ex)).join('') : 
+    '<div style="color:var(--text3);font-size:12px;padding:16px;text-align:center;">Aucun exercice pour le moment</div>';
+}
+
+async function saveSessionDetailInline() {
+  const nom = document.getElementById('es-nom').value.trim();
+  const jour = document.getElementById('es-jour').value.trim();
+  
+  if (!nom) {
+    notify('Veuillez entrer un nom de séance', 'warning');
+    return;
+  }
+  
+  // Récupérer les exercices du formulaire
+  const exercises = [];
+  for (let i = 0; i < window._esExercises.length; i++) {
+    const nomInput = document.getElementById(`es-ex-nom-${i}`);
+    if (!nomInput) break;
+    
+    exercises.push({
+      nom: nomInput.value.trim(),
+      series: parseInt(document.getElementById(`es-ex-series-${i}`).value) || 0,
+      reps: parseInt(document.getElementById(`es-ex-reps-${i}`).value) || 0,
+      charge: parseFloat(document.getElementById(`es-ex-charge-${i}`).value) || null
+    });
+  }
+  
+  const { error } = await supabaseClient
+    .from('workout_sessions')
+    .update({
+      nom,
+      jour,
+      exercices: JSON.stringify(exercises)
+    })
+    .eq('id', window._esEditId);
+  
+  if (error) {
+    notify('Erreur: ' + error.message, 'error');
+    return;
+  }
+  
+  notify('Séance enregistrée !', 'success');
   loadAthleteTabTraining();
 }
 
