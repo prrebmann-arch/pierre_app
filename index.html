@@ -2852,8 +2852,15 @@ function buildNpMealHtml(n, items) {
   return `
     <div class="meal-row np-meal-row" style="margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-        <div class="meal-header np-meal-label" style="margin-bottom:0;">R${n}</div>
-        <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="removeNpMeal(this)">Supprimer repas</button>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="meal-header np-meal-label" style="margin-bottom:0;">R${n}</div>
+          <span class="np-meal-totals" style="font-size:12px;color:var(--text3);"></span>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button type="button" class="btn btn-outline btn-sm" onclick="copyNpMeal(this)" title="Copier ce repas"><i class="fas fa-copy"></i></button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="pasteNpMeal(this)" title="Coller repas copié"><i class="fas fa-paste"></i></button>
+          <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="removeNpMeal(this)">Supprimer</button>
+        </div>
       </div>
       <div class="np-foods-list">${foodsHtml}</div>
       <button type="button" class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="this.previousElementSibling.insertAdjacentHTML('beforeend', buildNpFoodHtml(null))">
@@ -2893,18 +2900,65 @@ function calcNpMacros(el) {
 }
 
 function updateNpTotals() {
-  let k = 0, p = 0, g = 0, l = 0;
-  document.querySelectorAll('#np-meals .np-food-row').forEach(fr => {
-    k += parseFloat(fr.querySelector('.np-kcal')?.value) || 0;
-    p += parseFloat(fr.querySelector('.np-p')?.value)    || 0;
-    g += parseFloat(fr.querySelector('.np-g')?.value)    || 0;
-    l += parseFloat(fr.querySelector('.np-l')?.value)    || 0;
+  let tk = 0, tp = 0, tg = 0, tl = 0;
+  document.querySelectorAll('#np-meals .np-meal-row').forEach(mealRow => {
+    let k = 0, p = 0, g = 0, l = 0;
+    mealRow.querySelectorAll('.np-food-row').forEach(fr => {
+      k += parseFloat(fr.querySelector('.np-kcal')?.value) || 0;
+      p += parseFloat(fr.querySelector('.np-p')?.value)    || 0;
+      g += parseFloat(fr.querySelector('.np-g')?.value)    || 0;
+      l += parseFloat(fr.querySelector('.np-l')?.value)    || 0;
+    });
+    tk += k; tp += p; tg += g; tl += l;
+    const tot = mealRow.querySelector('.np-meal-totals');
+    if (tot) tot.textContent = k > 0 ? `${k.toFixed(0)} kcal · P${p.toFixed(1)} G${g.toFixed(1)} L${l.toFixed(1)}` : '';
   });
   const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('np-cal',  k.toFixed(0));
-  set('np-prot', p.toFixed(1));
-  set('np-gluc', g.toFixed(1));
-  set('np-lip',  l.toFixed(1));
+  set('np-cal',  tk.toFixed(0));
+  set('np-prot', tp.toFixed(1));
+  set('np-gluc', tg.toFixed(1));
+  set('np-lip',  tl.toFixed(1));
+}
+
+function copyNpMeal(btn) {
+  const mealRow = btn.closest('.np-meal-row');
+  const foods = [];
+  mealRow.querySelectorAll('.np-food-row').forEach(fr => {
+    const sel = fr.querySelector('select');
+    const opt = sel ? sel.options[sel.selectedIndex] : null;
+    const nom = opt?.text;
+    if (!nom || nom === '— aliment —') return;
+    foods.push({
+      aliment: nom,
+      qte: parseFloat(fr.querySelector('.np-qty')?.value) || 0,
+      cal:  parseFloat(opt?.dataset?.cal)  || 0,
+      prot: parseFloat(opt?.dataset?.prot) || 0,
+      gluc: parseFloat(opt?.dataset?.gluc) || 0,
+      lip:  parseFloat(opt?.dataset?.lip)  || 0,
+    });
+  });
+  window._npClipboard = foods;
+  notify('Repas copié', 'success');
+}
+
+function pasteNpMeal(btn) {
+  if (!window._npClipboard || !window._npClipboard.length) { notify('Aucun repas copié', 'warning'); return; }
+  const mealRow = btn.closest('.np-meal-row');
+  const list = mealRow.querySelector('.np-foods-list');
+  const items = window._npClipboard.map(f => ({
+    aliment: f.aliment,
+    qte: f.qte,
+    kcal: parseFloat((f.cal * f.qte).toFixed(0)),
+    p:    parseFloat((f.prot * f.qte).toFixed(1)),
+    g:    parseFloat((f.gluc * f.qte).toFixed(1)),
+    l:    parseFloat((f.lip  * f.qte).toFixed(1)),
+  }));
+  list.innerHTML = items.map(item => buildNpFoodHtml(item)).join('');
+  list.querySelectorAll('.np-food-row').forEach(row => {
+    const sel = row.querySelector('select');
+    if (sel && sel.value) calcNpMacros(sel);
+  });
+  notify('Repas collé', 'success');
 }
 
 function getNpMealData() {
