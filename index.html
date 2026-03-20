@@ -2045,6 +2045,11 @@ async function loadAthleteTabInfos() {
         <div><div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Poids actuel</div><div style="font-weight:600;">${a.poids_actuel || '-'} kg</div></div>
         <div><div style="font-size:12px;color:var(--text3);margin-bottom:4px;">Poids objectif</div><div style="font-weight:600;">${a.poids_objectif || '-'} kg</div></div>
       </div>
+      <div style="display:flex;gap:8px;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+        <button class="btn btn-outline" onclick="deleteAthlete('${a.id}', '${a.prenom} ${a.nom}')" style="color:var(--danger);margin-left:auto;">
+          <i class="fas fa-trash"></i> Supprimer l'athlète
+        </button>
+      </div>
     </div>
     <div class="card">
       <div class="card-header">
@@ -2972,6 +2977,51 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
 });
 
 // Anciennes fonctions programmes et nutrition supprimées - tout est dans les onglets athlète
+
+// Supprimer un athlète complètement
+async function deleteAthlete(athleteId, athleteName) {
+  if (!confirm(`Êtes-vous sûr de vouloir supprimer ${athleteName} et TOUTES ses données ?`)) return;
+
+  try {
+    console.log('🗑️ Suppression athlète:', athleteId);
+
+    // 1. Supprimer tous les programmes et sessions de cet athlète
+    const { error: err1 } = await supabaseClient
+      .from('workout_sessions')
+      .delete()
+      .in('program_id', (await supabaseClient.from('workout_programs').select('id').eq('athlete_id', athleteId)).data?.map(p => p.id) || []);
+
+    const { error: err2 } = await supabaseClient
+      .from('workout_programs')
+      .delete()
+      .eq('athlete_id', athleteId);
+
+    // 2. Supprimer tous les plans de nutrition
+    const { error: err3 } = await supabaseClient
+      .from('nutrition_plans')
+      .delete()
+      .eq('athlete_id', athleteId);
+
+    // 3. Supprimer l'athlète lui-même
+    const { error: err4 } = await supabaseClient
+      .from('athletes')
+      .delete()
+      .eq('id', athleteId);
+
+    if (err1 || err2 || err3 || err4) {
+      throw new Error((err1 || err2 || err3 || err4).message);
+    }
+
+    console.log('✅ Athlète supprimé');
+    notify(`${athleteName} a été supprimé !`, 'success');
+    showSection('athletes');
+    loadAthletes();
+
+  } catch (error) {
+    console.error('❌ Erreur suppression:', error);
+    notify('Erreur: ' + error.message, 'error');
+  }
+}
 
 // Aliments - CORRECTION PROBLÈME 2
 async function loadAliments() {
