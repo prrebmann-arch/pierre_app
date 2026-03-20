@@ -2915,6 +2915,7 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
   const athleteId = data[0].id;
 
   // Créer un compte auth pour l'athlète
+  console.log('🔐 Création compte auth pour:', email);
   const { data: authData, error: authError } = await supabaseClient.auth.signUp({
     email,
     password: tempPassword,
@@ -2928,35 +2929,41 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
   });
 
   if (authError) {
-    console.error('Erreur création compte:', authError);
-    // On a créé l'athlète mais pas le compte auth, on continue quand même
+    console.error('❌ Erreur création compte auth:', authError);
+    notify('Athlète créé mais compte auth non créé: ' + authError.message, 'warning');
+  } else {
+    console.log('✅ Compte auth créé:', authData);
   }
 
   // Afficher le message WhatsApp à copier-coller
-  const whatsappMessage = `Bienvenue dans l'app de coaching Pierre! 🏋️‍♂️\n\nVoici vos identifiants pour vous connecter:\n\n📧 Email: ${email}\n🔐 Mot de passe: ${tempPassword}\n\nTéléchargez l'app et connectez-vous pour voir vos séances d'entraînement et nutrition!`;
+  const whatsappMessage = `Bienvenue dans l'app de coaching Pierre! 🏋️\n\nVoici vos identifiants:\n\nEmail: ${email}\nMot de passe: ${tempPassword}\n\nConnectez-vous pour voir vos séances!`;
 
   // Créer une modal avec le message à copier
-  const modal = document.createElement('div');
-  modal.innerHTML = `
-    <div class="modal-overlay" style="z-index: 10000;">
-      <div class="modal" style="max-width: 500px;">
-        <div class="modal-header">
-          <h2 class="modal-title">Message WhatsApp</h2>
-          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button>
-        </div>
-        <div style="padding: 20px; background: var(--bg2); border-radius: 10px; margin: 16px; font-family: monospace; font-size: 13px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; border: 1px solid var(--border);">
-          ${whatsappMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
-        </div>
-        <div style="padding: 16px; display: flex; gap: 8px;">
-          <button class="btn btn-red" onclick="navigator.clipboard.writeText(\`${whatsappMessage.replace(/`/g, '\\`')}\`); alert('Message copié!'); this.closest('.modal-overlay').remove();">
-            📋 Copier le message
-          </button>
-          <button class="btn btn-outline" onclick="this.closest('.modal-overlay').remove();">Fermer</button>
+  const showWhatsappModal = () => {
+    const container = document.createElement('div');
+    container.id = 'whatsapp-modal-temp';
+    container.innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target.id==='whatsapp-modal-temp') event.target.remove()">
+        <div class="modal" style="max-width: 500px;">
+          <div class="modal-header">
+            <h2 class="modal-title">Message WhatsApp</h2>
+            <button class="modal-close" onclick="document.getElementById('whatsapp-modal-temp').remove()">×</button>
+          </div>
+          <div style="padding: 20px; background: var(--bg2); border-radius: 10px; margin: 16px; font-family: monospace; font-size: 13px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; border: 1px solid var(--border);">${whatsappMessage}</div>
+          <div style="padding: 16px; display: flex; gap: 8px;">
+            <button class="btn btn-red" onclick="navigator.clipboard.writeText('${whatsappMessage.replace(/'/g, "\\'")}'); alert('Message copié! 📋'); document.getElementById('whatsapp-modal-temp').remove();">
+              Copier le message
+            </button>
+            <button class="btn btn-outline" onclick="document.getElementById('whatsapp-modal-temp').remove();">Fermer</button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
-  document.body.appendChild(modal);
+    `;
+    document.body.appendChild(container);
+  };
+
+  // Afficher la modal avec délai
+  setTimeout(showWhatsappModal, 300);
 
   notify('Athlète ajouté avec succès !', 'success');
   closeModal('modal-athlete');
