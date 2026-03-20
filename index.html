@@ -2293,7 +2293,8 @@ async function loadAthleteTabTraining() {
   const { data: programs, error } = await supabaseClient
     .from('workout_programs')
     .select('*, workout_sessions(*)')
-    .eq('athlete_id', currentAthleteId);
+    .eq('athlete_id', currentAthleteId)
+    .order('created_at', { ascending: false });
 
   console.log('📋 Programmes chargés:', programs);
   console.log('❌ Erreur si existe:', error);
