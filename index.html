@@ -252,6 +252,44 @@
     border-color: var(--primary);
   }
 
+  /* ===== TOGGLE SWITCH ===== */
+  .toggle-switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+  }
+  .toggle-switch input {
+    display: none;
+  }
+  .toggle-switch .switch {
+    width: 44px;
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  .toggle-switch input:checked + .switch {
+    background: var(--primary);
+  }
+  .toggle-switch .switch::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: white;
+    border-radius: 50%;
+    top: 2px;
+    left: 2px;
+    transition: left 0.3s;
+  }
+  .toggle-switch input:checked + .switch::after {
+    left: 22px;
+  }
+
   /* ===== TRAINING PATTERN ===== */
   .training-day {
     background: var(--bg3);
@@ -2199,20 +2237,29 @@ async function deleteProgRow(id) {
 
 // Activer/Désactiver un programme (et désactiver les autres)
 async function toggleTrainingProgram(id, isActive) {
-  if (isActive) {
-    // Désactiver TOUS les programmes d'abord
-    await supabaseClient.from('workout_programs').update({ actif: false }).eq('athlete_id', currentAthleteId).neq('id', id);
-    // Puis activer celui-ci
-    const { error } = await supabaseClient.from('workout_programs').update({ actif: true }).eq('id', id);
-    if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-    notify('Programme activé !', 'success');
-  } else {
-    // Désactiver celui-ci
-    const { error } = await supabaseClient.from('workout_programs').update({ actif: false }).eq('id', id);
-    if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-    notify('Programme désactivé', 'success');
+  try {
+    if (isActive) {
+      // Désactiver TOUS les autres d'abord
+      const { error: err1 } = await supabaseClient
+        .from('workout_programs')
+        .update({ actif: false })
+        .eq('athlete_id', currentAthleteId);
+      if (err1) throw err1;
+
+      // Puis activer celui-ci
+      const { error: err2 } = await supabaseClient
+        .from('workout_programs')
+        .update({ actif: true })
+        .eq('id', id);
+      if (err2) throw err2;
+
+      notify('Programme activé !', 'success');
+    }
+    loadAthleteTabTraining();
+  } catch(error) {
+    notify('Erreur: ' + error.message, 'error');
+    loadAthleteTabTraining();
   }
-  loadAthleteTabTraining();
 }
 
 // Supprimer un programme d'entraînement
@@ -2284,10 +2331,11 @@ function renderTrainingProgram(p) {
           ${patternDisplay ? `<div style="font-size:13px;color:var(--primary);margin-top:4px;"><i class="fas fa-repeat"></i> ${patternDisplay}</div>` : ''}
           <div style="font-size:12px;color:var(--text3);margin-top:6px;">${sessionCount} séance(s)</div>
         </div>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleTrainingProgram('${p.id}', this.checked)" style="cursor:pointer;width:18px;height:18px;">
-            <span style="font-size:12px;color:var(--text2);">Actif</span>
+        <div style="display:flex;gap:12px;align-items:center;">
+          <label class="toggle-switch">
+            <input type="checkbox" ${isActive ? 'checked' : ''} onchange="toggleTrainingProgram('${p.id}', this.checked)">
+            <span class="switch"></span>
+            <span style="font-size:12px;color:var(--text2);font-weight:500;">Actif</span>
           </label>
           <button class="btn btn-red btn-sm" onclick="viewAllSessions('${p.id}')"><i class="fas fa-eye"></i></button>
         </div>
