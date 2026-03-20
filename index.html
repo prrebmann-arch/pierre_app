@@ -2262,7 +2262,7 @@ function renderSession(s, programId) {
   let exerciseCount = 0;
   if (s.exercices) {
     try {
-      const exs = JSON.parse(s.exercices);
+      const exs = typeof s.exercices === 'string' ? JSON.parse(s.exercices) : (s.exercices || []);
       exerciseCount = exs.length;
       exercisesHtml = exs.map((ex) => `
         <div style="font-size:12px;color:var(--text2);padding:4px 0;">
@@ -2283,8 +2283,7 @@ function renderSession(s, programId) {
       </div>
       ${exercisesHtml ? `<div style="margin:8px 0;font-size:12px;color:var(--text2);">${exercisesHtml}</div>` : ''}
       <div style="display:flex;gap:6px;margin-top:8px;">
-        <button class="btn btn-outline btn-sm" onclick="viewSessionDetail('${s.id}', '${programId}')"><i class="fas fa-eye"></i> Détail</button>
-        <button class="btn btn-outline btn-sm" onclick="editSessionDetail('${s.id}', '${programId}')"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="btn btn-red btn-sm" onclick="viewSessionDetail('${s.id}', '${programId}')"><i class="fas fa-eye"></i> Voir le détail</button>
         <button class="btn btn-outline btn-sm" onclick="deleteSession('${s.id}', '${programId}')" style="margin-left:auto;color:var(--danger);"><i class="fas fa-trash"></i></button>
       </div>
     </div>
@@ -2910,24 +2909,27 @@ async function deleteSession(sessionId, programId) {
 async function viewSessionDetail(sessionId, programId) {
   const el = document.getElementById('athlete-tab-content');
   el.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
-  
+
   const { data: session } = await supabaseClient
     .from('workout_sessions')
     .select('*')
     .eq('id', sessionId)
     .single();
-  
-  if (!session) { 
+
+  if (!session) {
     notify('Séance introuvable', 'error');
     loadAthleteTabTraining();
     return;
   }
-  
+
   let exercises = [];
-  try { 
-    if (session.exercices) exercises = JSON.parse(session.exercices);
+  try {
+    if (session.exercices) exercises = typeof session.exercices === 'string' ? JSON.parse(session.exercices) : (session.exercices || []);
   } catch(e) {}
-  
+
+  let totalSeries = 0;
+  exercises.forEach(ex => { totalSeries += (parseInt(ex.series) || 0); });
+
   const exercisesHtml = exercises.map((ex) => `
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
       <div style="display:grid;grid-template-columns:1fr 80px 80px 100px;gap:12px;align-items:center;">
@@ -2949,7 +2951,7 @@ async function viewSessionDetail(sessionId, programId) {
       </div>
     </div>
   `).join('');
-  
+
   el.innerHTML = `
     <div class="card">
       <div class="card-header">
@@ -2959,13 +2961,17 @@ async function viewSessionDetail(sessionId, programId) {
         </div>
         <button class="btn btn-red btn-sm" onclick="editSessionDetail('${session.id}', '${programId}')"><i class="fas fa-pen"></i> Modifier</button>
       </div>
-      <div style="margin-top:16px;">
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;padding:16px;background:var(--bg3);border-radius:10px;">
+        <div style="text-align:center;"><div style="font-size:24px;font-weight:700;color:var(--primary);">${exercises.length}</div><div style="font-size:11px;color:var(--text3);">Exercices</div></div>
+        <div style="text-align:center;"><div style="font-size:24px;font-weight:700;color:var(--primary);">${totalSeries}</div><div style="font-size:11px;color:var(--text3);">Séries total</div></div>
+      </div>
+      <div style="margin-bottom:16px;">
         <div style="font-size:13px;font-weight:600;color:var(--primary);margin-bottom:12px;">
-          <i class="fas fa-dumbbell"></i> ${exercises.length} exercice(s)
+          <i class="fas fa-dumbbell"></i> Exercices
         </div>
         ${exercisesHtml || '<div style="color:var(--text3);font-size:12px;padding:16px;text-align:center;">Aucun exercice</div>'}
       </div>
-      <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+      <div style="display:flex;gap:8px;padding-top:16px;border-top:1px solid var(--border);">
         <button class="btn btn-outline" onclick="loadAthleteTabTraining()"><i class="fas fa-arrow-left"></i> Retour</button>
       </div>
     </div>`;
@@ -2974,24 +2980,22 @@ async function viewSessionDetail(sessionId, programId) {
 async function editSessionDetail(sessionId, programId) {
   const el = document.getElementById('athlete-tab-content');
   el.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
-  
-  await loadExercices();
-  
+
   const { data: session } = await supabaseClient
     .from('workout_sessions')
     .select('*')
     .eq('id', sessionId)
     .single();
-  
-  if (!session) { 
+
+  if (!session) {
     notify('Séance introuvable', 'error');
     loadAthleteTabTraining();
     return;
   }
-  
+
   let exercises = [];
-  try { 
-    if (session.exercices) exercises = JSON.parse(session.exercices);
+  try {
+    if (session.exercices) exercises = typeof session.exercices === 'string' ? JSON.parse(session.exercices) : (session.exercices || []);
   } catch(e) {}
   
   window._esEditId = sessionId;
@@ -3056,12 +3060,12 @@ function addEsExercise() {
   const idx = window._esExercises.length;
   const newEx = { nom: '', series: 3, reps: 8, charge: null };
   window._esExercises.push(newEx);
-  
+
   if (container.textContent.includes('Aucun exercice')) {
     container.innerHTML = '';
   }
-  
-  container.innerHTML += buildEsExerciseHtml(idx, newEx);
+
+  container.insertAdjacentHTML('beforeend', buildEsExerciseHtml(idx, newEx));
 }
 
 function removeEsExercise(idx) {
