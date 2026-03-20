@@ -3328,7 +3328,7 @@ function buildEsExerciseHtml(idx, ex) {
   const inpStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text);outline:none;font-size:12px;';
   return `
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;">
-      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:8px;align-items:flex-end;">
+      <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px;gap:8px;align-items:flex-end;">
         <div>
           <label style="font-size:11px;color:var(--text3);">Exercice</label>
           <input type="text" id="es-ex-nom-${idx}" value="${esEsc(ex.nom||'')}" placeholder="Nom de l'exercice" list="exercices-list" style="${inpStyle};width:100%;">
@@ -3345,6 +3345,10 @@ function buildEsExerciseHtml(idx, ex) {
           <label style="font-size:11px;color:var(--text3);">Charge (kg)</label>
           <input type="number" id="es-ex-charge-${idx}" value="${ex.charge||''}" placeholder="0" step="0.5" style="${inpStyle};width:100%;text-align:center;">
         </div>
+        <div>
+          <label style="font-size:11px;color:var(--text3);">Tempo</label>
+          <input type="text" id="es-ex-tempo-${idx}" value="${esEsc(ex.tempo||'')}" placeholder="ex: 3010" style="${inpStyle};width:100%;text-align:center;">
+        </div>
         <button type="button" class="btn btn-outline btn-sm" onclick="removeEsExercise(${idx})" style="color:var(--danger);padding:6px 10px;"><i class="fas fa-trash"></i></button>
       </div>
     </div>`;
@@ -3353,7 +3357,7 @@ function buildEsExerciseHtml(idx, ex) {
 function addEsExercise() {
   const container = document.getElementById('es-exercises');
   const idx = window._esExercises.length;
-  const newEx = { nom: '', series: 3, reps: 8, charge: null };
+  const newEx = { nom: '', series: 3, reps: 8, charge: null, tempo: '' };
   window._esExercises.push(newEx);
 
   if (container.textContent.includes('Aucun exercice')) {
@@ -3391,7 +3395,8 @@ async function saveSessionDetailInline() {
       nom: nomInput.value.trim(),
       series: parseInt(document.getElementById(`es-ex-series-${i}`).value) || 0,
       reps: parseInt(document.getElementById(`es-ex-reps-${i}`).value) || 0,
-      charge: parseFloat(document.getElementById(`es-ex-charge-${i}`).value) || null
+      charge: parseFloat(document.getElementById(`es-ex-charge-${i}`).value) || null,
+      tempo: document.getElementById(`es-ex-tempo-${i}`)?.value.trim() || null
     });
   }
   
