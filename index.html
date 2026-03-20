@@ -2197,6 +2197,19 @@ async function deleteProgRow(id) {
   await loadProgrammingWeeks();
 }
 
+// Activer/Désactiver un programme (et désactiver les autres)
+async function toggleTrainingProgram(id, isActive) {
+  if (isActive) {
+    // Désactiver tous les autres programmes
+    await supabaseClient.from('workout_programs').update({ actif: false }).eq('athlete_id', currentAthleteId);
+  }
+  // Activer ou désactiver celui-ci
+  const { error } = await supabaseClient.from('workout_programs').update({ actif: isActive }).eq('id', id);
+  if (error) { notify('Erreur: ' + error.message, 'error'); return; }
+  notify(isActive ? 'Programme activé !' : 'Programme désactivé', 'success');
+  loadAthleteTabTraining();
+}
+
 // Supprimer un programme d'entraînement
 async function deleteTrainingProgram(id) {
   if (!confirm('Supprimer ce programme et toutes ses séances ?')) return;
@@ -2255,9 +2268,11 @@ function renderTrainingProgram(p) {
   }
   const sessions = (p.workout_sessions || []).sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
   const sessionCount = sessions.length;
+  const isActive = p.actif;
 
   return `
-    <div class="card" style="margin-bottom:20px;">
+    <div class="card" style="margin-bottom:20px;border:2px solid ${isActive ? 'var(--primary)' : 'var(--border)'};position:relative;">
+      ${isActive ? '<div style="position:absolute;top:12px;right:12px;background:var(--primary);color:white;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">✓ ACTIF</div>' : ''}
       <div class="card-header">
         <div>
           <div class="card-title">${p.nom}</div>
@@ -2315,16 +2330,20 @@ async function viewAllSessions(programId) {
           <div class="card-title">${prog.nom}</div>
           <div style="font-size:12px;color:var(--text3);margin-top:6px;">${sessions.length} séance(s)</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="editTrainingProgram('${prog.id}')"><i class="fas fa-pen"></i> Modifier</button>
-          <button class="btn btn-outline btn-sm" onclick="deleteTrainingProgram('${prog.id}')" style="color:var(--danger);"><i class="fas fa-trash"></i> Supprimer</button>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" ${prog.actif ? 'checked' : ''} onchange="toggleTrainingProgram('${prog.id}', this.checked)" style="cursor:pointer;">
+            <span style="font-size:13px;color:var(--text2);">Actif pour l'athlète</span>
+          </label>
         </div>
       </div>
       <div style="margin-top:16px;">
         ${sessionsHtml}
       </div>
       <div style="display:flex;gap:8px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-        <button class="btn btn-outline" onclick="loadAthleteTabTraining()"><i class="fas fa-arrow-left"></i> Retour</button>
+        <button class="btn btn-outline" onclick="editTrainingProgram('${prog.id}')"><i class="fas fa-pen"></i> Modifier</button>
+        <button class="btn btn-outline" onclick="deleteTrainingProgram('${prog.id}')" style="color:var(--danger);"><i class="fas fa-trash"></i> Supprimer</button>
+        <button class="btn btn-outline" style="margin-left:auto;" onclick="viewAllSessions('${prog.id}')"><i class="fas fa-arrow-left"></i> Retour</button>
       </div>
     </div>`;
 }
