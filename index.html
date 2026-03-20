@@ -2431,8 +2431,7 @@ function renderSession(s, programId) {
     <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
       <div style="font-weight:600;color:var(--text);flex:1;">${s.nom || 'Séance'}</div>
       <div style="display:flex;gap:6px;align-items:center;">
-        <button class="btn btn-outline btn-sm" onclick="viewSessionDetail('${s.id}', '${programId}')" title="Voir le détail"><i class="fas fa-eye"></i></button>
-        <button class="btn btn-outline btn-sm" onclick="editSessionDetail('${s.id}', '${programId}')" title="Modifier"><i class="fas fa-pen"></i></button>
+        <button class="btn btn-red btn-sm" onclick="viewSessionDetail('${s.id}', '${programId}')" title="Voir le détail"><i class="fas fa-eye"></i> Voir</button>
         <button class="btn btn-outline btn-sm" onclick="deleteSession('${s.id}', '${programId}')" title="Supprimer" style="color:var(--danger);"><i class="fas fa-trash"></i></button>
       </div>
     </div>
@@ -2985,13 +2984,15 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
     document.body.appendChild(container);
   };
 
-  // Afficher la modal avec délai
-  setTimeout(showWhatsappModal, 300);
+  // Afficher la modal AVANT la recharge
+  showWhatsappModal();
 
   notify('Athlète ajouté avec succès !', 'success');
   closeModal('modal-athlete');
   document.getElementById('athlete-form').reset();
-  loadAthletes();
+
+  // Recharger après la modal
+  setTimeout(() => loadAthletes(), 500);
 });
 
 // Anciennes fonctions programmes et nutrition supprimées - tout est dans les onglets athlète
@@ -3253,6 +3254,9 @@ async function editSessionDetail(sessionId, programId) {
   const el = document.getElementById('athlete-tab-content');
   el.innerHTML = '<div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
 
+  // Load exercises for autocomplete
+  await loadExercices();
+
   const { data: session } = await supabaseClient
     .from('workout_sessions')
     .select('*')
@@ -3274,11 +3278,17 @@ async function editSessionDetail(sessionId, programId) {
   window._esEditId = sessionId;
   window._esProgramId = programId;
   window._esExercises = exercises;
-  
+
   const inpStyle = 'background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;';
-  
+
+  // Build datalist for autocomplete
+  const exercisesOptions = (window.exercicesDB || []).map(ex => `<option value="${tpEsc(ex.nom)}">`).join('');
+
   el.innerHTML = `
     <div class="card">
+      <datalist id="exercices-list">
+        ${exercisesOptions}
+      </datalist>
       <div class="card-header">
         <div class="card-title">Modifier — ${esEsc(session.nom)}</div>
         <button class="btn btn-outline" onclick="viewSessionDetail('${sessionId}', '${programId}')"><i class="fas fa-arrow-left"></i> Annuler</button>
@@ -3309,7 +3319,7 @@ function buildEsExerciseHtml(idx, ex) {
       <div style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr 80px;gap:8px;align-items:flex-end;">
         <div>
           <label style="font-size:11px;color:var(--text3);">Exercice</label>
-          <input type="text" id="es-ex-nom-${idx}" value="${esEsc(ex.nom||'')}" placeholder="Nom de l'exercice" style="${inpStyle};width:100%;">
+          <input type="text" id="es-ex-nom-${idx}" value="${esEsc(ex.nom||'')}" placeholder="Nom de l'exercice" list="exercices-list" style="${inpStyle};width:100%;">
         </div>
         <div>
           <label style="font-size:11px;color:var(--text3);">Séries</label>
