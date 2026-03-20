@@ -914,7 +914,7 @@ async function loadTemplates() {
   
   if (currentTemplateTab === 'training') {
     const { data: templates } = await supabaseClient
-      .from('workout_templates')
+      .from('training_templates')
       .select('*')
       .eq('coach_id', currentUser.id)
       .order('created_at', { ascending: false });
@@ -1006,7 +1006,7 @@ function copyTemplateToAthlete(templateId, type) {
 
 async function copyWorkoutTemplate(templateId) {
   const { data: template, error } = await supabaseClient
-    .from('workout_templates')
+    .from('training_templates')
     .select('*')
     .eq('id', templateId)
     .single();
@@ -1141,7 +1141,7 @@ document.getElementById('workout-template-form').addEventListener('submit', asyn
   e.preventDefault();
   
   const { data, error } = await supabaseClient
-    .from('workout_templates')
+    .from('training_templates')
     .insert({
       nom: document.getElementById('workout-template-name').value,
       description: document.getElementById('workout-template-description').value,
@@ -3408,7 +3408,7 @@ async function deleteAliment(id) {
 
 // ===== TEMPLATE COPY =====
 async function copyTrainingFromTemplate() {
-  const { data: templates } = await supabaseClient.from('workout_templates').select('*').eq('coach_id', currentUser.id);
+  const { data: templates } = await supabaseClient.from('training_templates').select('*').eq('coach_id', currentUser.id);
   if (!templates?.length) { notify('Aucun template disponible', 'error'); return; }
   showTemplateSelector('training', templates).then(id => { if (id) copyWorkoutTemplate(id); });
 }
