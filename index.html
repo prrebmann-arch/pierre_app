@@ -2200,13 +2200,18 @@ async function deleteProgRow(id) {
 // Activer/Désactiver un programme (et désactiver les autres)
 async function toggleTrainingProgram(id, isActive) {
   if (isActive) {
-    // Désactiver tous les autres programmes
-    await supabaseClient.from('workout_programs').update({ actif: false }).eq('athlete_id', currentAthleteId);
+    // Désactiver TOUS les programmes d'abord
+    await supabaseClient.from('workout_programs').update({ actif: false }).eq('athlete_id', currentAthleteId).neq('id', id);
+    // Puis activer celui-ci
+    const { error } = await supabaseClient.from('workout_programs').update({ actif: true }).eq('id', id);
+    if (error) { notify('Erreur: ' + error.message, 'error'); return; }
+    notify('Programme activé !', 'success');
+  } else {
+    // Désactiver celui-ci
+    const { error } = await supabaseClient.from('workout_programs').update({ actif: false }).eq('id', id);
+    if (error) { notify('Erreur: ' + error.message, 'error'); return; }
+    notify('Programme désactivé', 'success');
   }
-  // Activer ou désactiver celui-ci
-  const { error } = await supabaseClient.from('workout_programs').update({ actif: isActive }).eq('id', id);
-  if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-  notify(isActive ? 'Programme activé !' : 'Programme désactivé', 'success');
   loadAthleteTabTraining();
 }
 
