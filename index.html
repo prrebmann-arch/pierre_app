@@ -1772,10 +1772,10 @@ async function editNutritionPlan(id) {
       </div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
         <div class="form-group"><label style="font-size:12px;color:var(--text3);">Nom</label><input type="text" id="np-nom" value="${npEsc(plan.nom||'')}" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-        <div class="form-group"><label style="font-size:12px;color:var(--text3);">kcal obj.</label><input type="number" id="np-cal" value="${plan.calories_objectif||''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Protéines (g)</label><input type="number" id="np-prot" value="${plan.proteines||''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Glucides (g)</label><input type="number" id="np-gluc" value="${plan.glucides||''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Lipides (g)</label><input type="number" id="np-lip" value="${plan.lipides||''}" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
+        <div class="form-group"><label style="font-size:12px;color:var(--text3);">kcal total</label><div id="np-cal" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
+        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Protéines (g)</label><div id="np-prot" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
+        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Glucides (g)</label><div id="np-gluc" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
+        <div class="form-group"><label style="font-size:12px;color:var(--text3);">Lipides (g)</label><div id="np-lip" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
       </div>
       <div id="np-meals">${meals.map((items, i) => buildNpMealHtml(i+1, items)).join('')}</div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
@@ -2253,10 +2253,10 @@ function createNutritionPlanForType(mealType) {
         </div>
         <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;">
           <div class="form-group"><label style="font-size:12px;color:var(--text3);">Nom</label><input type="text" id="np-nom" placeholder="ex: Plan S1" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-          <div class="form-group"><label style="font-size:12px;color:var(--text3);">kcal obj.</label><input type="number" id="np-cal" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-          <div class="form-group"><label style="font-size:12px;color:var(--text3);">Protéines (g)</label><input type="number" id="np-prot" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-          <div class="form-group"><label style="font-size:12px;color:var(--text3);">Glucides (g)</label><input type="number" id="np-gluc" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
-          <div class="form-group"><label style="font-size:12px;color:var(--text3);">Lipides (g)</label><input type="number" id="np-lip" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;outline:none;font-size:13px;"></div>
+          <div class="form-group"><label style="font-size:12px;color:var(--text3);">kcal total</label><div id="np-cal" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
+          <div class="form-group"><label style="font-size:12px;color:var(--text3);">Protéines (g)</label><div id="np-prot" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
+          <div class="form-group"><label style="font-size:12px;color:var(--text3);">Glucides (g)</label><div id="np-gluc" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
+          <div class="form-group"><label style="font-size:12px;color:var(--text3);">Lipides (g)</label><div id="np-lip" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);width:100%;font-size:13px;text-align:center;font-weight:600;">0</div></div>
         </div>
         <div id="np-meals">${buildNpMealHtml(1, [])}</div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
@@ -2843,7 +2843,7 @@ function buildNpFoodHtml(item) {
       <input type="text" class="np-p" value="${item?.p||''}" readonly placeholder="P" style="width:40px;${ro}">
       <input type="text" class="np-g" value="${item?.g||''}" readonly placeholder="G" style="width:40px;${ro}">
       <input type="text" class="np-l" value="${item?.l||''}" readonly placeholder="L" style="width:40px;${ro}">
-      <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="this.closest('.np-food-row').remove()">×</button>
+      <button type="button" class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="this.closest('.np-food-row').remove();updateNpTotals()">×</button>
     </div>`;
 }
 
@@ -2874,6 +2874,7 @@ function removeNpMeal(btn) {
   if (c.querySelectorAll('.np-meal-row').length <= 1) { notify('Minimum 1 repas', 'warning'); return; }
   btn.closest('.np-meal-row').remove();
   c.querySelectorAll('.np-meal-label').forEach((lbl, i) => { lbl.textContent = 'R' + (i+1); });
+  updateNpTotals();
 }
 
 function calcNpMacros(el) {
@@ -2888,6 +2889,22 @@ function calcNpMacros(el) {
   row.querySelector('.np-p').value = (f('prot') * qte).toFixed(1);
   row.querySelector('.np-g').value = (f('gluc') * qte).toFixed(1);
   row.querySelector('.np-l').value = (f('lip') * qte).toFixed(1);
+  updateNpTotals();
+}
+
+function updateNpTotals() {
+  let k = 0, p = 0, g = 0, l = 0;
+  document.querySelectorAll('#np-meals .np-food-row').forEach(fr => {
+    k += parseFloat(fr.querySelector('.np-kcal')?.value) || 0;
+    p += parseFloat(fr.querySelector('.np-p')?.value)    || 0;
+    g += parseFloat(fr.querySelector('.np-g')?.value)    || 0;
+    l += parseFloat(fr.querySelector('.np-l')?.value)    || 0;
+  });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('np-cal',  k.toFixed(0));
+  set('np-prot', p.toFixed(1));
+  set('np-gluc', g.toFixed(1));
+  set('np-lip',  l.toFixed(1));
 }
 
 function getNpMealData() {
@@ -2923,10 +2940,10 @@ async function saveNutritionPlanInline() {
   if (!nom) { notify('Le nom est obligatoire', 'error'); return; }
   const planData = {
     nom,
-    calories_objectif: parseFloat(document.getElementById('np-cal')?.value) || 0,
-    proteines: parseFloat(document.getElementById('np-prot')?.value) || 0,
-    glucides: parseFloat(document.getElementById('np-gluc')?.value) || 0,
-    lipides: parseFloat(document.getElementById('np-lip')?.value) || 0,
+    calories_objectif: parseFloat(document.getElementById('np-cal')?.textContent) || 0,
+    proteines: parseFloat(document.getElementById('np-prot')?.textContent) || 0,
+    glucides: parseFloat(document.getElementById('np-gluc')?.textContent) || 0,
+    lipides: parseFloat(document.getElementById('np-lip')?.textContent) || 0,
     meals_data: JSON.stringify(getNpMealData()),
     meal_type: window._npMealType || 'training'
   };
