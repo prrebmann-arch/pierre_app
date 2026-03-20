@@ -2994,10 +2994,10 @@ async function saveNutritionPlanInline() {
   if (!nom) { notify('Le nom est obligatoire', 'error'); return; }
   const planData = {
     nom,
-    calories_objectif: parseFloat(document.getElementById('np-cal')?.textContent) || 0,
-    proteines: parseFloat(document.getElementById('np-prot')?.textContent) || 0,
-    glucides: parseFloat(document.getElementById('np-gluc')?.textContent) || 0,
-    lipides: parseFloat(document.getElementById('np-lip')?.textContent) || 0,
+    calories_objectif: Math.round(parseFloat(document.getElementById('np-cal')?.textContent) || 0),
+    proteines: Math.round(parseFloat(document.getElementById('np-prot')?.textContent) || 0),
+    glucides: Math.round(parseFloat(document.getElementById('np-gluc')?.textContent) || 0),
+    lipides: Math.round(parseFloat(document.getElementById('np-lip')?.textContent) || 0),
     meals_data: JSON.stringify(getNpMealData()),
     meal_type: window._npMealType || 'training'
   };
