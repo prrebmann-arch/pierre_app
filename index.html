@@ -2237,6 +2237,7 @@ function renderTrainingProgram(p) {
     } catch(e) {}
   }
   const sessions = (p.workout_sessions || []).sort((a, b) => (a.ordre || 0) - (b.ordre || 0));
+  const sessionsList = sessions.length ? sessions.map(s => renderSession(s, p.id)).join('') : '<div style="color:var(--text3);font-size:12px;padding:16px;text-align:center;">Aucune séance</div>';
   return `
     <div class="card" style="margin-bottom:20px;">
       <div class="card-header">
@@ -2246,12 +2247,12 @@ function renderTrainingProgram(p) {
         </div>
         <button class="btn btn-outline btn-sm" onclick="editTrainingProgram('${p.id}')"><i class="fas fa-pen"></i></button>
       </div>
-      <div style="margin-top:12px;">
-        ${sessions.map(s => renderSession(s, p.id)).join('')}
-        <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="editTrainingProgram('${p.id}')">
-          <i class="fas fa-pen"></i> Modifier le programme
-        </button>
+      <div style="margin-top:16px;padding:12px;background:var(--bg2);border-radius:8px;">
+        ${sessionsList}
       </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:12px;width:100%;" onclick="editTrainingProgram('${p.id}')">
+        <i class="fas fa-pen"></i> Modifier le programme
+      </button>
     </div>
   `;
 }
