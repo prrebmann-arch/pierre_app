@@ -2964,23 +2964,23 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
   const showWhatsappModal = () => {
     const container = document.createElement('div');
     container.id = 'whatsapp-modal-temp';
+    container.className = 'modal-overlay open';
     container.innerHTML = `
-      <div class="modal-overlay" onclick="if(event.target.id==='whatsapp-modal-temp') event.target.remove()">
-        <div class="modal" style="max-width: 500px;">
-          <div class="modal-header">
-            <h2 class="modal-title">Message WhatsApp</h2>
-            <button class="modal-close" onclick="document.getElementById('whatsapp-modal-temp').remove()">×</button>
-          </div>
-          <div style="padding: 20px; background: var(--bg2); border-radius: 10px; margin: 16px; font-family: monospace; font-size: 13px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; border: 1px solid var(--border);">${whatsappMessage}</div>
-          <div style="padding: 16px; display: flex; gap: 8px;">
-            <button class="btn btn-red" onclick="navigator.clipboard.writeText('${whatsappMessage.replace(/'/g, "\\'")}'); alert('Message copié! 📋'); document.getElementById('whatsapp-modal-temp').remove();">
-              Copier le message
-            </button>
-            <button class="btn btn-outline" onclick="document.getElementById('whatsapp-modal-temp').remove();">Fermer</button>
-          </div>
+      <div class="modal" style="max-width: 500px;" onclick="event.stopPropagation();">
+        <div class="modal-header">
+          <h2 class="modal-title">Message WhatsApp</h2>
+          <button class="modal-close" onclick="document.getElementById('whatsapp-modal-temp').remove()">×</button>
+        </div>
+        <div style="padding: 20px; background: var(--bg2); border-radius: 10px; margin: 16px; font-family: monospace; font-size: 13px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; word-break: break-word; border: 1px solid var(--border);">${whatsappMessage}</div>
+        <div style="padding: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-red" onclick="navigator.clipboard.writeText(\`${whatsappMessage.replaceAll('`', '\\`')}\`); alert('Message copié! 📋'); document.getElementById('whatsapp-modal-temp').remove();">
+            Copier le message
+          </button>
+          <button class="btn btn-outline" onclick="document.getElementById('whatsapp-modal-temp').remove();">Fermer</button>
         </div>
       </div>
     `;
+    container.onclick = () => container.remove();
     document.body.appendChild(container);
   };
 
