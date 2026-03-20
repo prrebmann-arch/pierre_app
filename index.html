@@ -2894,6 +2894,38 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
   const nom = document.getElementById('athlete-nom').value;
   const email = document.getElementById('athlete-email').value;
 
+  // Générer un mot de passe temporaire aléatoire
+  const tempPassword = Math.random().toString(36).slice(-12);
+
+  // Créer un compte auth AVANT l'athlète
+  console.log('🔐 Création compte auth pour:', email);
+  let athleteId = null;
+
+  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+    email,
+    password: tempPassword,
+    options: {
+      data: {
+        prenom,
+        nom
+      }
+    }
+  });
+
+  // Si l'email existe déjà → pas de création d'athlète
+  if (authError && authError.message.includes('already registered')) {
+    notify('❌ Cet email est déjà utilisé !', 'error');
+    return;
+  }
+
+  if (authError) {
+    console.error('❌ Erreur auth:', authError.message);
+    notify('Erreur: ' + authError.message, 'error');
+    return;
+  }
+
+  console.log('✅ Compte auth créé');
+
   const athleteData = {
     prenom,
     nom,
@@ -2911,34 +2943,11 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
     .select();
 
   if (error) {
-    notify('Erreur: ' + error.message, 'error');
+    notify('Erreur création athlète: ' + error.message, 'error');
     return;
   }
 
-  // Générer un mot de passe temporaire aléatoire
-  const tempPassword = Math.random().toString(36).slice(-12);
-  const athleteId = data[0].id;
-
-  // Créer un compte auth pour l'athlète
-  console.log('🔐 Création compte auth pour:', email);
-  const { data: authData, error: authError } = await supabaseClient.auth.signUp({
-    email,
-    password: tempPassword,
-    options: {
-      data: {
-        prenom,
-        nom,
-        athlete_id: athleteId
-      }
-    }
-  });
-
-  if (authError) {
-    console.error('❌ Erreur création compte auth:', authError);
-    notify('Athlète créé mais compte auth non créé: ' + authError.message, 'warning');
-  } else {
-    console.log('✅ Compte auth créé:', authData);
-  }
+  athleteId = data[0].id;
 
   // Afficher le message WhatsApp à copier-coller
   const whatsappMessage = `Bienvenue dans l'app de coaching Pierre! 🏋️\n\nVoici vos identifiants:\n\nEmail: ${email}\nMot de passe: ${tempPassword}\n\nConnectez-vous pour voir vos séances!`;
