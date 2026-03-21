@@ -1,4 +1,4 @@
-// ===== BILANS TAB =====
+// ===== BILANS TAB — Weekly Accordion =====
 
 async function loadAthleteTabBilans() {
   const el = document.getElementById('athlete-tab-content');
@@ -9,106 +9,260 @@ async function loadAthleteTabBilans() {
     return;
   }
 
-  const { data: bilans, error } = await supabaseClient
-    .from('daily_reports')
-    .select('*')
-    .eq('user_id', currentAthleteObj.user_id)
-    .order('date', { ascending: false });
+  // Fetch data in parallel
+  const [bilansRes, progRes, nutriRes] = await Promise.all([
+    supabaseClient.from('daily_reports').select('*').eq('user_id', currentAthleteObj.user_id).order('date', { ascending: false }),
+    supabaseClient.from('programming_weeks').select('*').eq('athlete_id', currentAthleteId).order('week_date'),
+    supabaseClient.from('nutrition_plans').select('*').eq('athlete_id', currentAthleteId).eq('coach_id', currentUser.id)
+  ]);
 
-  if (error) {
-    el.innerHTML = `<div class="card"><div class="empty-state"><i class="fas fa-exclamation-triangle"></i><p>Erreur: ${error.message}</p></div></div>`;
-    return;
-  }
+  const bilans = bilansRes.data || [];
+  const progWeeks = progRes.data || [];
+  const nutriPlans = nutriRes.data || [];
 
-  if (!bilans?.length) {
+  if (!bilans.length) {
     el.innerHTML = '<div class="card"><div class="empty-state"><i class="fas fa-chart-line"></i><p>Aucun bilan enregistré</p><p style="font-size:12px;color:var(--text3);margin-top:8px;">L\'athlète doit remplir ses check-ins journaliers.</p></div></div>';
     return;
   }
 
+  // Helper: get Monday of a given date's week
+  function getMonday(date) {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    return d;
+  }
+
+  // Group bilans by week (Monday-based)
   const weeks = {};
   bilans.forEach(b => {
-    const date = new Date(b.date);
-    const week = getWeekNumber(date);
-    const key = `${date.getFullYear()}-S${week}`;
-    if (!weeks[key]) weeks[key] = [];
-    weeks[key].push(b);
+    const date = new Date(b.date + 'T00:00:00');
+    const monday = getMonday(date);
+    const key = monday.toISOString().slice(0, 10);
+    if (!weeks[key]) weeks[key] = { monday, bilans: [], bilansByDayIdx: {} };
+    weeks[key].bilans.push(b);
+    // dayIdx: 0=Mon, 1=Tue, ..., 6=Sun
+    let dayIdx = date.getDay() - 1;
+    if (dayIdx < 0) dayIdx = 6;
+    weeks[key].bilansByDayIdx[dayIdx] = b;
   });
 
-  const NCOLS = 18;
-  let tableHtml = `
-    <div class="card" style="padding:0;">
-      <div style="overflow-x:auto;">
-        <table class="bilans-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Poids</th>
-              <th>Adhérence</th>
-              <th>Séances</th>
-              <th>Perf./Plaisir</th>
-              <th>Cardio</th>
-              <th>Pas/NEAT</th>
-              <th>Courbatures</th>
-              <th>Stress</th>
-              <th>Énergie</th>
-              <th>Maladie</th>
-              <th>Coucher</th>
-              <th>Réveil</th>
-              <th>Eff. sommeil</th>
-              <th>Qual. sommeil</th>
-              <th>Positif</th>
-              <th>Négatif</th>
-              <th>Général</th>
-            </tr>
-          </thead>
-          <tbody>`;
+  // Sort week keys descending (most recent first)
+  const sortedKeys = Object.keys(weeks).sort().reverse();
 
-  Object.keys(weeks).sort().reverse().forEach(weekKey => {
-    const wb = weeks[weekKey];
-    wb.forEach(b => {
-      tableHtml += `
-        <tr>
-          <td>${new Date(b.date).toLocaleDateString('fr-FR')}</td>
-          <td>${b.weight ?? '-'}</td>
-          <td>${b.adherence ?? '-'}</td>
-          <td>${b.sessions_executed ?? '-'}</td>
-          <td>${b.enjoyment ?? '-'}</td>
-          <td>${b.cardio_minutes ?? '-'}</td>
-          <td>${b.steps ?? '-'}</td>
-          <td>${b.soreness ?? '-'}</td>
-          <td>${b.stress ?? '-'}</td>
-          <td>${b.energy ?? '-'}</td>
-          <td>${b.illness_signs ?? '-'}</td>
-          <td>${b.bedtime ?? '-'}</td>
-          <td>${b.wake_time ?? '-'}</td>
-          <td>${b.sleep_efficiency ?? '-'}</td>
-          <td>${b.sleep_quality ?? '-'}</td>
-          <td>${b.positives ? '✓' : '-'}</td>
-          <td>${b.negatives ? '✓' : '-'}</td>
-          <td>${b.general_notes ? '📝' : '-'}</td>
-        </tr>`;
+  // Current week Monday
+  const todayMonday = getMonday(new Date()).toISOString().slice(0, 10);
+
+  // Build programming_weeks lookup by ISO year-weekNumber
+  const progLookup = {};
+  progWeeks.forEach(pw => {
+    if (pw.week_date) {
+      const d = new Date(pw.week_date + 'T00:00:00');
+      const wn = getWeekNumber(d);
+      progLookup[`${d.getFullYear()}-${wn}`] = pw;
+    }
+  });
+
+  // Nutrition plans — Jour ON (training) / Jour OFF (rest)
+  const nutriTraining = nutriPlans.find(n => n.meal_type === 'training') || nutriPlans[0] || null;
+  const nutriRest = nutriPlans.find(n => n.meal_type === 'rest') || null;
+
+  // Compute weekly averages
+  const weekData = sortedKeys.map(key => {
+    const w = weeks[key];
+    return {
+      key,
+      ...w,
+      avgWeight:    bwAvg(w.bilans, 'weight'),
+      avgEnergy:    bwAvg(w.bilans, 'energy'),
+      avgSleep:     bwAvg(w.bilans, 'sleep_quality'),
+      avgAdherence: bwAvg(w.bilans, 'adherence'),
+      avgStress:    bwAvg(w.bilans, 'stress'),
+      totalSessions: w.bilans.reduce((s, b) => s + (parseFloat(b.sessions_executed) || 0), 0),
+    };
+  });
+
+  // Compute weight delta between consecutive weeks
+  weekData.forEach((w, i) => {
+    const prev = weekData[i + 1];
+    w.deltaKg = (prev && w.avgWeight !== null && prev.avgWeight !== null)
+      ? +(w.avgWeight - prev.avgWeight).toFixed(1)
+      : null;
+  });
+
+  const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const dayNames  = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+  // ── Render ──
+  let html = '<div class="bw-container">';
+
+  weekData.forEach((w, idx) => {
+    const isCurrent = w.key === todayMonday;
+    const isFuture  = w.key > todayMonday;
+    const sunday = new Date(w.monday);
+    sunday.setDate(sunday.getDate() + 6);
+    const weekNum = getWeekNumber(w.monday);
+
+    // Programming phase
+    const prog  = progLookup[`${w.monday.getFullYear()}-${weekNum}`];
+    const phase = prog ? PROG_PHASES[prog.phase] : null;
+
+    // Date range label
+    const mondayStr = w.monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+    const sundayStr = sunday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
+    // Status badge
+    let statusHtml = '';
+    if (isCurrent) statusHtml = '<span class="bw-status bw-status-current">EN COURS</span>';
+    else if (isFuture) statusHtml = '<span class="bw-status bw-status-future">À VENIR</span>';
+
+    // Phase badge
+    const phaseBadge = phase
+      ? `<span class="bw-phase" style="background:${phase.color};">${phase.label}</span>`
+      : '';
+
+    // Day dots
+    const dotsHtml = dayLabels.map((l, di) =>
+      `<span class="bw-dot${w.bilansByDayIdx[di] ? ' filled' : ''}">${l}</span>`
+    ).join('');
+
+    // Summary stats
+    const statsHtml = [
+      { label: 'POIDS',     value: w.avgWeight !== null ? w.avgWeight.toFixed(1) + ' kg' : '—' },
+      { label: 'Δ KG',      value: w.deltaKg !== null ? (w.deltaKg > 0 ? '+' : '') + w.deltaKg : '—',
+        cls: w.deltaKg !== null ? (w.deltaKg < 0 ? 'bw-delta-neg' : w.deltaKg > 0 ? 'bw-delta-pos' : '') : '' },
+      { label: 'SÉANCES',   value: w.totalSessions },
+      { label: 'ÉNERGIE',   value: w.avgEnergy !== null ? w.avgEnergy.toFixed(1) + '/10' : '—' },
+      { label: 'SOMMEIL',   value: w.avgSleep !== null ? w.avgSleep.toFixed(1) + '/10' : '—' },
+      { label: 'STRESS',    value: w.avgStress !== null ? w.avgStress.toFixed(1) + '/10' : '—' },
+    ].map(s => `
+      <div class="bw-stat">
+        <span class="bw-stat-label">${s.label}</span>
+        <span class="bw-stat-value ${s.cls || ''}">${s.value}</span>
+      </div>
+    `).join('');
+
+    // Card state
+    const isOpen = isCurrent || idx === 0;
+    const cardCls = ['bw-card'];
+    if (isCurrent) cardCls.push('bw-current');
+    if (isOpen) cardCls.push('bw-open');
+    const borderLeft = phase ? `border-left:3px solid ${phase.color};` : '';
+
+    // ── Expanded body ──
+    // Nutrition objectives
+    let nutriHtml = '';
+    if (nutriTraining || nutriRest) {
+      nutriHtml = '<div class="bw-nutri">';
+      if (nutriTraining) {
+        nutriHtml += `<div class="bw-nutri-item">
+          <span class="bw-nutri-label">Jour ON</span>
+          <span>${nutriTraining.calories_objectif || 0} kcal · P:${nutriTraining.proteines || 0}g G:${nutriTraining.glucides || 0}g L:${nutriTraining.lipides || 0}g</span>
+        </div>`;
+      }
+      if (nutriRest) {
+        nutriHtml += `<div class="bw-nutri-item">
+          <span class="bw-nutri-label">Jour OFF</span>
+          <span>${nutriRest.calories_objectif || 0} kcal · P:${nutriRest.proteines || 0}g G:${nutriRest.glucides || 0}g L:${nutriRest.lipides || 0}g</span>
+        </div>`;
+      }
+      nutriHtml += '</div>';
+    }
+
+    // Daily detail rows
+    const sorted = [...w.bilans].sort((a, b) => a.date.localeCompare(b.date));
+
+    let daysHtml = `<div class="bw-days-table">
+      <div class="bw-day-hdr">
+        <span class="bw-dh-date">DATE</span>
+        <span class="bw-dh">POIDS</span>
+        <span class="bw-dh">ÉNERGIE</span>
+        <span class="bw-dh">SOMMEIL</span>
+        <span class="bw-dh">STRESS</span>
+        <span class="bw-dh">SÉANCES</span>
+        <span class="bw-dh">ADHÉRENCE</span>
+        <span class="bw-dh">PAS</span>
+        <span class="bw-dh-end">NOTES</span>
+      </div>`;
+
+    sorted.forEach(b => {
+      const d = new Date(b.date + 'T00:00:00');
+      let di = d.getDay() - 1; if (di < 0) di = 6;
+      const dayStr = dayNames[di] + ' ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
+      const hasNotes = b.positives || b.negatives || b.general_notes;
+      const noteId = 'bn-' + b.id;
+
+      daysHtml += `<div class="bw-day-row">
+        <span class="bw-dr-date">${dayStr}</span>
+        <span class="bw-dr">${b.weight != null ? b.weight + ' kg' : '—'}</span>
+        <span class="bw-dr">${bwTag(b.energy)}</span>
+        <span class="bw-dr">${bwTag(b.sleep_quality)}</span>
+        <span class="bw-dr">${bwTag(b.stress, true)}</span>
+        <span class="bw-dr">${b.sessions_executed ?? '—'}</span>
+        <span class="bw-dr">${b.adherence != null ? b.adherence + '%' : '—'}</span>
+        <span class="bw-dr">${b.steps ? Number(b.steps).toLocaleString('fr-FR') : '—'}</span>
+        <span class="bw-dr-end">${hasNotes ? `<button class="bw-note-btn" onclick="event.stopPropagation();document.getElementById('${noteId}').classList.toggle('open')"><i class="fas fa-comment-dots"></i></button>` : '—'}</span>
+      </div>`;
+
+      // Expandable notes sub-row
+      if (hasNotes) {
+        daysHtml += `<div class="bw-note-row" id="${noteId}">`;
+        if (b.positives) daysHtml += `<div class="bw-note"><span class="bw-note-icon" style="color:var(--success);"><i class="fas fa-plus-circle"></i></span> ${escHtml(b.positives)}</div>`;
+        if (b.negatives) daysHtml += `<div class="bw-note"><span class="bw-note-icon" style="color:var(--danger);"><i class="fas fa-minus-circle"></i></span> ${escHtml(b.negatives)}</div>`;
+        if (b.general_notes) daysHtml += `<div class="bw-note"><span class="bw-note-icon" style="color:var(--text3);"><i class="fas fa-pen"></i></span> ${escHtml(b.general_notes)}</div>`;
+        daysHtml += '</div>';
+      }
     });
+    daysHtml += '</div>';
 
-    tableHtml += `
-      <tr class="week-avg">
-        <td>Moy. ${weekKey}</td>
-        <td>${avgWeek(wb,'weight')}</td>
-        <td>${avgWeek(wb,'adherence')}</td>
-        <td>${avgWeek(wb,'sessions_executed')}</td>
-        <td>${avgWeek(wb,'enjoyment')}</td>
-        <td>${avgWeek(wb,'cardio_minutes')}</td>
-        <td>${avgWeek(wb,'steps')}</td>
-        <td>${avgWeek(wb,'soreness')}</td>
-        <td>${avgWeek(wb,'stress')}</td>
-        <td>${avgWeek(wb,'energy')}</td>
-        <td>-</td><td>-</td><td>-</td>
-        <td>${avgWeek(wb,'sleep_efficiency')}</td>
-        <td>${avgWeek(wb,'sleep_quality')}</td>
-        <td>-</td><td>-</td><td>-</td>
-      </tr>
-      <tr class="week-spacer"><td colspan="${NCOLS}"></td></tr>`;
+    // ── Assemble card ──
+    html += `
+      <div class="${cardCls.join(' ')}" style="${borderLeft}">
+        <div class="bw-header" onclick="toggleBilanWeek(this)">
+          <div class="bw-header-top">
+            <div class="bw-header-left">
+              <span class="bw-week-label">S${weekNum} · ${mondayStr} — ${sundayStr}</span>
+              ${phaseBadge}${statusHtml}
+            </div>
+            <div class="bw-header-right">
+              <div class="bw-dots">${dotsHtml}</div>
+              <i class="fas fa-chevron-down bw-chevron"></i>
+            </div>
+          </div>
+          <div class="bw-stats">${statsHtml}</div>
+        </div>
+        <div class="bw-body">${nutriHtml}${daysHtml}</div>
+      </div>`;
   });
 
-  tableHtml += '</tbody></table></div></div>';
-  el.innerHTML = tableHtml;
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ── Helpers ──
+
+function bwAvg(bilans, field) {
+  const vals = bilans.map(b => parseFloat(b[field])).filter(v => !isNaN(v) && v > 0);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
+function bwTag(value, inverted) {
+  if (value == null || value === '') return '—';
+  const v = parseFloat(value);
+  if (isNaN(v)) return '—';
+  let cls;
+  if (!inverted) {
+    cls = v >= 7 ? 'bw-tag-good' : v >= 5 ? 'bw-tag-ok' : 'bw-tag-bad';
+  } else {
+    cls = v <= 3 ? 'bw-tag-good' : v <= 5 ? 'bw-tag-ok' : 'bw-tag-bad';
+  }
+  return `<span class="bw-tag ${cls}">${v}/10</span>`;
+}
+
+function toggleBilanWeek(headerEl) {
+  headerEl.closest('.bw-card').classList.toggle('bw-open');
 }
