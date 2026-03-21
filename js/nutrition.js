@@ -286,16 +286,16 @@ async function handleNutritionPlanSubmit(e) {
     meal_type: window.newPlanMealType || 'training'
   };
 
+  planData.valid_from = new Date().toISOString().split('T')[0];
+
   if (window.editingPlanId) {
+    // Insert new version instead of updating (keeps history for bilans)
     const { data, error } = await supabaseClient
       .from('nutrition_plans')
-      .update(planData)
-      .eq('id', window.editingPlanId)
+      .insert(planData)
       .select();
 
     if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-    if (!data || data.length === 0) { notify('Erreur: Aucune donnée modifiée', 'error'); return; }
-
     notify('Plan modifié avec succès !', 'success');
     window.editingPlanId = null;
   } else {
@@ -446,8 +446,10 @@ async function loadAthleteTabNutrition() {
     .select('*')
     .eq('athlete_id', currentAthleteId);
 
-  const trainingPlan = plans?.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || null;
-  const restPlan = plans?.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null;
+  // Sort by valid_from desc to pick the most recent version per meal_type
+  const sortedPlans = (plans || []).sort((a, b) => (b.valid_from || '').localeCompare(a.valid_from || ''));
+  const trainingPlan = sortedPlans.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || null;
+  const restPlan = sortedPlans.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null;
   window.currentNutriPlans = { training: trainingPlan, rest: restPlan };
   window.currentNutriTab = 'training';
 
@@ -868,9 +870,11 @@ async function saveNutritionPlanInline() {
     meals_data: JSON.stringify(getNpMealData()),
     meal_type: window._npMealType || 'training'
   };
+  planData.valid_from = new Date().toISOString().split('T')[0];
   let error;
   if (window._npEditId) {
-    ({ error } = await supabaseClient.from('nutrition_plans').update(planData).eq('id', window._npEditId));
+    // Insert new version instead of updating (keeps history for bilans)
+    ({ error } = await supabaseClient.from('nutrition_plans').insert({ ...planData, athlete_id: currentAthleteId, coach_id: currentUser.id }));
   } else {
     ({ error } = await supabaseClient.from('nutrition_plans').insert({ ...planData, athlete_id: currentAthleteId, coach_id: currentUser.id }));
   }

@@ -65,9 +65,8 @@ async function loadAthleteTabBilans() {
     }
   });
 
-  // Nutrition plans — Jour ON (training) / Jour OFF (rest)
-  const nutriTraining = nutriPlans.find(n => n.meal_type === 'training') || nutriPlans[0] || null;
-  const nutriRest = nutriPlans.find(n => n.meal_type === 'rest') || null;
+  // Nutrition plans — sorted by valid_from for per-week lookup
+  const nutriSorted = nutriPlans.sort((a, b) => (b.valid_from || '').localeCompare(a.valid_from || ''));
 
   // Compute weekly averages
   const weekData = sortedKeys.map(key => {
@@ -91,6 +90,18 @@ async function loadAthleteTabBilans() {
       ? +(w.avgWeight - prev.avgWeight).toFixed(1)
       : null;
   });
+
+  // Find the active nutrition plan for a given week
+  function getNutriForWeek(weekMonday) {
+    const sunday = new Date(weekMonday);
+    sunday.setDate(sunday.getDate() + 6);
+    const sundayStr = sunday.toISOString().slice(0, 10);
+    const valid = nutriSorted.filter(p => !p.valid_from || p.valid_from <= sundayStr);
+    return {
+      training: valid.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || valid[0] || null,
+      rest: valid.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null,
+    };
+  }
 
   const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
   const dayNames  = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -152,20 +163,21 @@ async function loadAthleteTabBilans() {
     const borderLeft = phase ? `border-left:3px solid ${phase.color};` : '';
 
     // ── Expanded body ──
-    // Nutrition objectives
+    // Nutrition objectives (per week — uses valid_from history)
+    const weekNutri = getNutriForWeek(w.monday);
     let nutriHtml = '';
-    if (nutriTraining || nutriRest) {
+    if (weekNutri.training || weekNutri.rest) {
       nutriHtml = '<div class="bw-nutri">';
-      if (nutriTraining) {
+      if (weekNutri.training) {
         nutriHtml += `<div class="bw-nutri-item">
           <span class="bw-nutri-label">Jour ON</span>
-          <span>${nutriTraining.calories_objectif || 0} kcal · P:${nutriTraining.proteines || 0}g G:${nutriTraining.glucides || 0}g L:${nutriTraining.lipides || 0}g</span>
+          <span>${weekNutri.training.calories_objectif || 0} kcal · P:${weekNutri.training.proteines || 0}g G:${weekNutri.training.glucides || 0}g L:${weekNutri.training.lipides || 0}g</span>
         </div>`;
       }
-      if (nutriRest) {
+      if (weekNutri.rest) {
         nutriHtml += `<div class="bw-nutri-item">
           <span class="bw-nutri-label">Jour OFF</span>
-          <span>${nutriRest.calories_objectif || 0} kcal · P:${nutriRest.proteines || 0}g G:${nutriRest.glucides || 0}g L:${nutriRest.lipides || 0}g</span>
+          <span>${weekNutri.rest.calories_objectif || 0} kcal · P:${weekNutri.rest.proteines || 0}g G:${weekNutri.rest.glucides || 0}g L:${weekNutri.rest.lipides || 0}g</span>
         </div>`;
       }
       nutriHtml += '</div>';
