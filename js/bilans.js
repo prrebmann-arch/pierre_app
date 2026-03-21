@@ -204,11 +204,15 @@ async function loadAthleteTabBilans() {
     if (isOpen) cardCls.push('bw-open');
     const borderLeft = phase ? `border-left:3px solid ${phase.color};` : '';
 
-    // ── Nutrition periods ──
+    // ── Phase + Nutrition header (like RD Coaching) ──
+    const phaseTitle = phase
+      ? `<div class="bw-nutri-title" style="color:${phase.color};"><span style="font-weight:700;">${phase.short || phase.label}${phaseCounter}</span> — OBJECTIFS SEMAINE</div>`
+      : '';
     const nutriPeriods = getNutriPeriodsForWeek(w.monday);
     let nutriHtml = '';
-    if (nutriPeriods.length) {
-      nutriHtml = nutriPeriods.map(period => {
+    if (nutriPeriods.length || phaseTitle) {
+      let nutriContent = phaseTitle;
+      nutriContent += nutriPeriods.map(period => {
         const showDate = nutriPeriods.length > 1;
         const dateLabel = showDate
           ? `<div class="bw-nutri-date">À partir du ${new Date(period.from + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>`
@@ -222,6 +226,7 @@ async function loadAthleteTabBilans() {
         }
         return `<div class="bw-nutri${showDate ? ' bw-nutri-multi' : ''}">${dateLabel}<div class="bw-nutri-items">${items}</div></div>`;
       }).join('');
+      nutriHtml = nutriContent;
     }
 
     // ── Mensurations section ──

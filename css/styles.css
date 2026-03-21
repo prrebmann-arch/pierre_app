@@ -401,6 +401,10 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
   padding: 12px 20px; background: var(--bg3);
   border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
 }
+.bw-nutri-title {
+  font-size: 12px; font-weight: 600; letter-spacing: 0.5px;
+  padding: 12px 20px 0; text-transform: uppercase;
+}
 .bw-nutri-items { display: flex; gap: 24px; flex-wrap: wrap; }
 .bw-nutri-item { font-size: 12px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
 .bw-nutri-label { font-weight: 700; color: var(--primary); font-size: 11px; text-transform: uppercase; }
@@ -709,6 +713,21 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 }
 .pg-cell-edit:hover { background: var(--bg3); color: var(--text); }
 
+/* Inline edit */
+.pg-click { cursor: pointer; border-radius: 4px; padding: 2px 4px; transition: background 0.1s; }
+.pg-click:hover { background: var(--bg3); }
+.pg-placeholder { color: var(--text3) !important; }
+.pg-inline-inp {
+  background: var(--bg3); border: 1px solid var(--primary); border-radius: 5px;
+  padding: 4px 8px; color: var(--text); font-size: 13px; width: 100%;
+  outline: none;
+}
+.pg-inline-sel {
+  background: var(--bg3); border: 1px solid var(--primary); border-radius: 5px;
+  padding: 3px 6px; color: var(--text); font-size: 11px; font-weight: 700;
+  outline: none;
+}
+
 /* Phase badge */
 .pg-phase {
   padding: 3px 8px; border-radius: 5px;
@@ -725,22 +744,6 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 /* Empty state */
 .pg-empty { text-align: center; padding: 48px 20px; color: var(--text3); }
 .pg-empty i { font-size: 40px; margin-bottom: 12px; opacity: 0.3; display: block; }
-
-/* Generate form */
-.pg-gen-form {
-  background: var(--bg3); border-radius: 10px; padding: 16px;
-  display: none; gap: 12px; align-items: flex-end; flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-.pg-gen-form.open { display: flex; }
-.pg-gen-field { display: flex; flex-direction: column; gap: 4px; }
-.pg-gen-field label {
-  font-size: 11px; color: var(--text3); font-weight: 600; letter-spacing: 0.3px;
-}
-.pg-gen-field input, .pg-gen-field select {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; padding: 6px 10px; color: var(--text); font-size: 12px;
-}
 
 /* Responsive */
 @media (max-width: 768px) {

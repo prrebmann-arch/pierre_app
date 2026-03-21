@@ -89,29 +89,12 @@ async function loadAthleteTabInfos() {
     <div class="card">
       <div class="card-header">
         <div class="card-title"><i class="fas fa-calendar-alt"></i> Programmation</div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="toggleProgGenForm()"><i class="fas fa-magic"></i> Générer</button>
-          <button class="btn btn-outline btn-sm" onclick="addProgWeek()"><i class="fas fa-plus"></i> Semaine</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <span style="font-size:11px;color:var(--text3);">+</span>
+          <input type="number" id="prog-add-count" value="12" min="1" max="52" style="width:48px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 6px;color:var(--text);font-size:12px;text-align:center;">
+          <button class="btn btn-outline btn-sm" onclick="addProgWeeks()">sem.</button>
+          <button class="btn btn-outline btn-sm" onclick="addProgWeek()" title="Ajouter 1 semaine"><i class="fas fa-plus"></i></button>
         </div>
-      </div>
-      <div class="pg-gen-form" id="prog-generate-form">
-        <div class="pg-gen-field">
-          <label>Date de départ</label>
-          <input type="date" id="prog-gen-date">
-        </div>
-        <div class="pg-gen-field">
-          <label>Nb semaines</label>
-          <input type="number" id="prog-gen-count" value="12" min="1" max="52" style="width:70px;">
-        </div>
-        <div class="pg-gen-field">
-          <label>Phase</label>
-          <select id="prog-gen-phase">
-            <option value="">— aucune —</option>
-            ${Object.entries(PROG_PHASES).map(([k,v]) => '<option value="'+k+'">'+v.label+'</option>').join('')}
-          </select>
-        </div>
-        <button class="btn btn-red btn-sm" onclick="generateProgWeeks()"><i class="fas fa-magic"></i> Générer</button>
-        <button class="btn btn-outline btn-sm" onclick="toggleProgGenForm()">Annuler</button>
       </div>
       <div id="prog-table-container"><div class="text-center text-muted" style="padding:20px;"><i class="fas fa-spinner fa-spin"></i></div></div>
     </div>
@@ -238,7 +221,6 @@ async function loadProgrammingWeeks() {
   // Build weight averages per programming week
   const weightByDate = {};
   (reports || []).forEach(r => { if (r.weight) weightByDate[r.date] = parseFloat(r.weight); });
-
   const weightMap = {};
   (weeks || []).forEach(w => {
     const start = new Date(w.week_date + 'T00:00:00');
@@ -251,7 +233,6 @@ async function loadProgrammingWeeks() {
     if (vals.length) weightMap[w.id] = (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1);
   });
   window._progWeightMap = weightMap;
-
   renderProgrammingTable(window._progWeeksCache);
 }
 
@@ -263,7 +244,7 @@ function renderProgrammingTable(weeks) {
     c.innerHTML = `<div class="pg-empty">
       <i class="fas fa-calendar-alt"></i>
       <p>Aucune semaine planifiée</p>
-      <p style="font-size:13px;margin-top:8px;">Utilise <strong>Générer</strong> pour démarrer.</p>
+      <p style="font-size:13px;margin-top:8px;">Clique <strong>+ sem.</strong> pour démarrer.</p>
     </div>`;
     return;
   }
@@ -282,19 +263,16 @@ function renderProgrammingTable(weeks) {
     w._phaseNum = phaseCounter;
   });
 
-  // ── Toolbar ──
+  // ── Toolbar (bulk phase) ──
   let html = '<div class="pg-container">';
   html += '<div class="pg-toolbar">';
   html += '<div class="pg-toolbar-phases">';
   Object.entries(PROG_PHASES).forEach(([k, v]) => {
-    html += `<button class="pg-phase-btn" id="pg-pbtn-${k}" style="background:${v.color};" onclick="selectProgPhase('${k}')">${v.label}</button>`;
+    html += `<button class="pg-phase-btn${window._selectedProgPhase === k ? ' active' : ''}" id="pg-pbtn-${k}" style="background:${v.color};" onclick="selectProgPhase('${k}')">${v.label}</button>`;
   });
-  html += `<button class="pg-phase-btn" id="pg-pbtn-" style="background:#555;" onclick="selectProgPhase('')">AUCUNE</button>`;
+  html += `<button class="pg-phase-btn${window._selectedProgPhase === '' ? ' active' : ''}" id="pg-pbtn-" style="background:#555;" onclick="selectProgPhase('')">AUCUNE</button>`;
   html += '</div>';
-
-  const weekOpts = weeks.map((w, i) =>
-    `<option value="${i}">S${i + 1} — ${formatDate(w.week_date)}</option>`
-  ).join('');
+  const weekOpts = weeks.map((w, i) => `<option value="${i}">S${i + 1} — ${formatDate(w.week_date)}</option>`).join('');
   html += '<div class="pg-toolbar-range">';
   html += `<label>De</label><select id="pg-range-from">${weekOpts}</select>`;
   html += `<label>à</label><select id="pg-range-to">${weekOpts}</select>`;
@@ -311,19 +289,24 @@ function renderProgrammingTable(weeks) {
 
     const pi = PROG_PHASES[w.phase];
     const phaseBadge = pi
-      ? `<span class="pg-phase" style="background:${pi.color};">${pi.short} · S${w._phaseNum}</span>`
-      : '<span style="color:var(--text3);">—</span>';
+      ? `<span class="pg-phase pg-phase-click" style="background:${pi.color};cursor:pointer;" onclick="event.stopPropagation();editProgPhaseInline('${w.id}',this)">${pi.short} · S${w._phaseNum}</span>`
+      : `<span class="pg-phase pg-phase-click" style="background:#444;cursor:pointer;" onclick="event.stopPropagation();editProgPhaseInline('${w.id}',this)">—</span>`;
 
     const weight = weightMap[w.id];
     const weightTxt = weight ? `${weight} kg` : '<span style="color:var(--text3);">—</span>';
 
-    html += `<div class="pg-row${w._isCurrent ? ' pg-row-current' : ''}">`;
+    const detailsVal = w.details ? escHtml(w.details) : '';
+    const detailsHtml = detailsVal
+      ? `<span class="pg-cell-details pg-click" onclick="editProgDetailInline('${w.id}',this)">${detailsVal}</span>`
+      : `<span class="pg-cell-details pg-click pg-placeholder" onclick="editProgDetailInline('${w.id}',this)">—</span>`;
+
+    html += `<div class="pg-row${w._isCurrent ? ' pg-row-current' : ''}" data-pw-id="${w.id}">`;
     html += `<span class="pg-cell-num">S${i + 1}</span>`;
     html += `<span class="pg-cell-date">${formatDate(w.week_date)}</span>`;
     html += phaseBadge;
-    html += `<span class="pg-cell-details">${w.details ? escHtml(w.details) : '<span style="color:var(--text3);">—</span>'}</span>`;
+    html += detailsHtml;
     html += `<span class="pg-cell-weight">${weightTxt}</span>`;
-    html += `<button class="pg-cell-edit" onclick="editProgWeek('${w.id}')" title="Modifier"><i class="fas fa-pen"></i></button>`;
+    html += `<button class="pg-cell-edit" onclick="deleteProgWeek('${w.id}')" title="Supprimer" style="color:var(--text3);"><i class="fas fa-trash-alt" style="font-size:11px;"></i></button>`;
     html += '</div>';
     if (w.notes_bloc) {
       html += `<div class="pg-row-notes"><i class="fas fa-sticky-note" style="margin-right:4px;"></i>${escHtml(w.notes_bloc)}</div>`;
@@ -336,6 +319,39 @@ function renderProgrammingTable(weeks) {
   // Default "to" to last week
   const toSel = document.getElementById('pg-range-to');
   if (toSel && weeks.length) toSel.value = weeks.length - 1;
+}
+
+// ── Inline editing: click details → input, click phase → select ──
+
+function editProgDetailInline(id, el) {
+  const w = (window._progWeeksCache || []).find(x => x.id === id);
+  const val = w?.details || '';
+  el.outerHTML = `<input class="pg-inline-inp" value="${escHtml(val)}" placeholder="Détails..."
+    onblur="saveProgField('${id}','details',this.value)"
+    onkeydown="if(event.key==='Enter'){this.blur();}if(event.key==='Escape'){renderProgrammingTable(window._progWeeksCache);}" autofocus>`;
+  const inp = document.querySelector(`[data-pw-id="${id}"] .pg-inline-inp`);
+  if (inp) inp.focus();
+}
+
+function editProgPhaseInline(id, el) {
+  const w = (window._progWeeksCache || []).find(x => x.id === id);
+  const opts = '<option value="">—</option>' + Object.entries(PROG_PHASES).map(([k, v]) =>
+    `<option value="${k}"${w?.phase === k ? ' selected' : ''}>${v.short}</option>`
+  ).join('');
+  el.outerHTML = `<select class="pg-inline-sel"
+    onchange="saveProgField('${id}','phase',this.value||null)"
+    onblur="renderProgrammingTable(window._progWeeksCache)">${opts}</select>`;
+  const sel = document.querySelector(`[data-pw-id="${id}"] .pg-inline-sel`);
+  if (sel) sel.focus();
+}
+
+async function saveProgField(id, field, value) {
+  const data = {};
+  data[field] = value || null;
+  await supabaseClient.from('programming_weeks').update(data).eq('id', id);
+  const w = (window._progWeeksCache || []).find(x => x.id === id);
+  if (w) w[field] = value || null;
+  renderProgrammingTable(window._progWeeksCache);
 }
 
 // ── Bulk phase assignment ──
@@ -355,58 +371,32 @@ async function bulkAssignPhase() {
   const from = parseInt(document.getElementById('pg-range-from')?.value);
   const to = parseInt(document.getElementById('pg-range-to')?.value);
   if (isNaN(from) || isNaN(to) || from > to) { notify('Plage invalide', 'warning'); return; }
-
   const weeks = window._progWeeksCache || [];
   const ids = weeks.slice(from, to + 1).map(w => w.id);
   const { error } = await supabaseClient.from('programming_weeks')
-    .update({ phase: phase || null })
-    .in('id', ids);
+    .update({ phase: phase || null }).in('id', ids);
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
   await loadProgrammingWeeks();
   notify(`Phase appliquée à ${ids.length} semaines`, 'success');
 }
 
-// ── Generate / Add ──
+// ── Add weeks ──
 
-function toggleProgGenForm() {
-  document.getElementById('prog-generate-form')?.classList.toggle('open');
-}
-
-async function generateProgWeeks() {
-  const dateVal = document.getElementById('prog-gen-date')?.value;
-  const count = parseInt(document.getElementById('prog-gen-count')?.value) || 0;
-  const phase = document.getElementById('prog-gen-phase')?.value || null;
-  if (!dateVal || count < 1) { notify('Date et nombre de semaines requis', 'warning'); return; }
-
-  // Snap to Monday
-  const start = new Date(dateVal + 'T00:00:00');
-  const addDays = (8 - start.getDay()) % 7;
-  if (addDays > 0) start.setDate(start.getDate() + addDays);
-
-  const rows = [];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i * 7);
-    rows.push({ athlete_id: currentAthleteId, coach_id: currentUser.id, week_date: toDateStr(d), phase });
-  }
-  const { error } = await supabaseClient.from('programming_weeks').insert(rows);
-  if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-  document.getElementById('prog-generate-form')?.classList.remove('open');
-  await loadProgrammingWeeks();
-  notify(`${count} semaines générées`, 'success');
+function getNextMonday(fromDate) {
+  const d = new Date(fromDate);
+  const add = (8 - d.getDay()) % 7;
+  if (add > 0) d.setDate(d.getDate() + add);
+  return d;
 }
 
 async function addProgWeek() {
   const weeks = window._progWeeksCache || [];
   let nextDate;
   if (weeks.length) {
-    const last = new Date(weeks[weeks.length - 1].week_date + 'T00:00:00');
-    last.setDate(last.getDate() + 7);
-    nextDate = last;
+    nextDate = new Date(weeks[weeks.length - 1].week_date + 'T00:00:00');
+    nextDate.setDate(nextDate.getDate() + 7);
   } else {
-    nextDate = new Date();
-    const addDays = (8 - nextDate.getDay()) % 7;
-    if (addDays > 0) nextDate.setDate(nextDate.getDate() + addDays);
+    nextDate = getNextMonday(new Date());
   }
   const { error } = await supabaseClient.from('programming_weeks').insert({
     athlete_id: currentAthleteId, coach_id: currentUser.id, week_date: toDateStr(nextDate),
@@ -415,51 +405,33 @@ async function addProgWeek() {
   await loadProgrammingWeeks();
 }
 
-// ── Modal-based edit ──
-
-function editProgWeek(id) {
-  const w = (window._progWeeksCache || []).find(x => x.id === id);
-  if (!w) return;
-
-  const programs = window._progPrograms || [];
-  const progSelect = document.getElementById('pgm-prog');
-  progSelect.innerHTML = '<option value="">— aucun —</option>' +
-    programs.map(p => `<option value="${p.id}"${w.training_program_id === p.id ? ' selected' : ''}>${escHtml(p.nom)}</option>`).join('');
-
-  document.getElementById('pgm-id').value = w.id;
-  document.getElementById('pgm-date').value = w.week_date || '';
-  document.getElementById('pgm-phase').value = w.phase || '';
-  document.getElementById('pgm-details').value = w.details || '';
-  document.getElementById('pgm-pdc').value = w.pdc_moyenne || '';
-  document.getElementById('pgm-notes').value = w.notes_bloc || '';
-  openModal('modal-prog-week');
-}
-
-async function saveProgWeek() {
-  const id = document.getElementById('pgm-id').value;
-  const data = {
-    week_date:           document.getElementById('pgm-date').value,
-    phase:               document.getElementById('pgm-phase').value || null,
-    training_program_id: document.getElementById('pgm-prog').value || null,
-    details:             document.getElementById('pgm-details').value || null,
-    pdc_moyenne:         parseFloat(document.getElementById('pgm-pdc').value) || null,
-    notes_bloc:          document.getElementById('pgm-notes').value || null,
-  };
-  const { error } = await supabaseClient.from('programming_weeks').update(data).eq('id', id);
+async function addProgWeeks() {
+  const count = parseInt(document.getElementById('prog-add-count')?.value) || 12;
+  if (count < 1) return;
+  const weeks = window._progWeeksCache || [];
+  let start;
+  if (weeks.length) {
+    start = new Date(weeks[weeks.length - 1].week_date + 'T00:00:00');
+    start.setDate(start.getDate() + 7);
+  } else {
+    start = getNextMonday(new Date());
+  }
+  const rows = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + i * 7);
+    rows.push({ athlete_id: currentAthleteId, coach_id: currentUser.id, week_date: toDateStr(d) });
+  }
+  const { error } = await supabaseClient.from('programming_weeks').insert(rows);
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-  closeModal('modal-prog-week');
   await loadProgrammingWeeks();
-  notify('Sauvegardé', 'success');
+  notify(`${count} semaines ajoutées`, 'success');
 }
 
-async function deleteProgWeek() {
-  const id = document.getElementById('pgm-id').value;
+async function deleteProgWeek(id) {
   if (!confirm('Supprimer cette semaine ?')) return;
   const { error } = await supabaseClient.from('programming_weeks').delete().eq('id', id);
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-  closeModal('modal-prog-week');
   await loadProgrammingWeeks();
-  notify('Semaine supprimée', 'success');
 }
 
 // ===== DELETE ATHLETE =====
