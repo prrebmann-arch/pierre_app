@@ -25,6 +25,11 @@ async function loadAthleteTabBilans() {
     return;
   }
 
+  // Helper: local YYYY-MM-DD (avoids UTC shift from toISOString)
+  function toDateStr(d) {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   // Helper: get Monday of a given date's week
   function getMonday(date) {
     const d = new Date(date);
@@ -40,7 +45,7 @@ async function loadAthleteTabBilans() {
   bilans.forEach(b => {
     const date = new Date(b.date + 'T00:00:00');
     const monday = getMonday(date);
-    const key = monday.toISOString().slice(0, 10);
+    const key = toDateStr(monday);
     if (!weeks[key]) weeks[key] = { monday, bilans: [], bilansByDayIdx: {} };
     weeks[key].bilans.push(b);
     // dayIdx: 0=Mon, 1=Tue, ..., 6=Sun
@@ -53,7 +58,7 @@ async function loadAthleteTabBilans() {
   const sortedKeys = Object.keys(weeks).sort().reverse();
 
   // Current week Monday
-  const todayMonday = getMonday(new Date()).toISOString().slice(0, 10);
+  const todayMonday = toDateStr(getMonday(new Date()));
 
   // Build programming_weeks lookup by ISO year-weekNumber
   const progLookup = {};
@@ -93,10 +98,10 @@ async function loadAthleteTabBilans() {
 
   // Find all nutrition periods for a given week (handles mid-week changes)
   function getNutriPeriodsForWeek(weekMonday) {
-    const mondayStr = weekMonday.toISOString().slice(0, 10);
+    const mondayStr = toDateStr(weekMonday);
     const sunday = new Date(weekMonday);
     sunday.setDate(sunday.getDate() + 6);
-    const sundayStr = sunday.toISOString().slice(0, 10);
+    const sundayStr = toDateStr(sunday);
 
     // Dates where diet changed during this week
     const changeDates = [...new Set(
