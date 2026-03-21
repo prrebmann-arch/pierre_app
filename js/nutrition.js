@@ -287,9 +287,11 @@ async function handleNutritionPlanSubmit(e) {
   };
 
   planData.valid_from = new Date().toISOString().split('T')[0];
+  planData.actif = true;
 
   if (window.editingPlanId) {
-    // Insert new version instead of updating (keeps history for bilans)
+    // Deactivate old version, insert new one (keeps history for bilans)
+    await supabaseClient.from('nutrition_plans').update({ actif: false }).eq('id', window.editingPlanId);
     const { data, error } = await supabaseClient
       .from('nutrition_plans')
       .insert(planData)
@@ -446,8 +448,9 @@ async function loadAthleteTabNutrition() {
     .select('*')
     .eq('athlete_id', currentAthleteId);
 
-  // Sort by valid_from desc to pick the most recent version per meal_type
-  const sortedPlans = (plans || []).sort((a, b) => (b.valid_from || '').localeCompare(a.valid_from || ''));
+  // Only show active plans (most recent versions), fallback to valid_from sort
+  const activePlans = (plans || []).filter(p => p.actif !== false);
+  const sortedPlans = activePlans.length ? activePlans : (plans || []).sort((a, b) => (b.valid_from || '').localeCompare(a.valid_from || ''));
   const trainingPlan = sortedPlans.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || null;
   const restPlan = sortedPlans.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null;
   window.currentNutriPlans = { training: trainingPlan, rest: restPlan };
@@ -871,9 +874,11 @@ async function saveNutritionPlanInline() {
     meal_type: window._npMealType || 'training'
   };
   planData.valid_from = new Date().toISOString().split('T')[0];
+  planData.actif = true;
   let error;
   if (window._npEditId) {
-    // Insert new version instead of updating (keeps history for bilans)
+    // Deactivate old version, insert new one (keeps history for bilans)
+    await supabaseClient.from('nutrition_plans').update({ actif: false }).eq('id', window._npEditId);
     ({ error } = await supabaseClient.from('nutrition_plans').insert({ ...planData, athlete_id: currentAthleteId, coach_id: currentUser.id }));
   } else {
     ({ error } = await supabaseClient.from('nutrition_plans').insert({ ...planData, athlete_id: currentAthleteId, coach_id: currentUser.id }));

@@ -150,7 +150,9 @@ async function copyNutritionTemplate(templateId) {
       proteines: template.proteines,
       glucides: template.glucides,
       lipides: template.lipides,
-      meals_data: template.meals_data || null
+      meals_data: template.meals_data || null,
+      actif: true,
+      valid_from: new Date().toISOString().split('T')[0]
     })
     .select();
 
@@ -254,7 +256,9 @@ async function copyNutritionTemplateWithType(templateId, mealType) {
     lipides: template.lipides,
     meal_type: mealType || window.currentNutriTab || 'training',
     repas_detail: template.repas_detail,
-    meals_data: template.meals_data || null
+    meals_data: template.meals_data || null,
+    actif: true,
+    valid_from: new Date().toISOString().split('T')[0]
   }).select();
   if (insertError) { notify('Erreur: ' + insertError.message, 'error'); return; }
   notify('Template copié !', 'success');

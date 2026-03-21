@@ -91,16 +91,36 @@ async function loadAthleteTabBilans() {
       : null;
   });
 
-  // Find the active nutrition plan for a given week
-  function getNutriForWeek(weekMonday) {
+  // Find all nutrition periods for a given week (handles mid-week changes)
+  function getNutriPeriodsForWeek(weekMonday) {
+    const mondayStr = weekMonday.toISOString().slice(0, 10);
     const sunday = new Date(weekMonday);
     sunday.setDate(sunday.getDate() + 6);
     const sundayStr = sunday.toISOString().slice(0, 10);
-    const valid = nutriSorted.filter(p => !p.valid_from || p.valid_from <= sundayStr);
-    return {
-      training: valid.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || valid[0] || null,
-      rest: valid.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null,
-    };
+
+    // Dates where diet changed during this week
+    const changeDates = [...new Set(
+      nutriSorted
+        .filter(p => p.valid_from && p.valid_from > mondayStr && p.valid_from <= sundayStr)
+        .map(p => p.valid_from)
+    )].sort();
+
+    const timePoints = [mondayStr, ...changeDates];
+    const periods = [];
+
+    timePoints.forEach((dateStr) => {
+      const validAtDate = nutriSorted.filter(p => !p.valid_from || p.valid_from <= dateStr);
+      const training = validAtDate.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || validAtDate[0] || null;
+      const rest = validAtDate.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null;
+
+      // Skip if same plans as previous period
+      const last = periods[periods.length - 1];
+      if (last && last.training?.id === training?.id && last.rest?.id === rest?.id) return;
+
+      periods.push({ from: dateStr, training, rest });
+    });
+
+    return periods;
   }
 
   const dayLabels = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -163,24 +183,30 @@ async function loadAthleteTabBilans() {
     const borderLeft = phase ? `border-left:3px solid ${phase.color};` : '';
 
     // ── Expanded body ──
-    // Nutrition objectives (per week — uses valid_from history)
-    const weekNutri = getNutriForWeek(w.monday);
+    // Nutrition objectives (per week — handles mid-week diet changes)
+    const nutriPeriods = getNutriPeriodsForWeek(w.monday);
     let nutriHtml = '';
-    if (weekNutri.training || weekNutri.rest) {
-      nutriHtml = '<div class="bw-nutri">';
-      if (weekNutri.training) {
-        nutriHtml += `<div class="bw-nutri-item">
-          <span class="bw-nutri-label">Jour ON</span>
-          <span>${weekNutri.training.calories_objectif || 0} kcal · P:${weekNutri.training.proteines || 0}g G:${weekNutri.training.glucides || 0}g L:${weekNutri.training.lipides || 0}g</span>
-        </div>`;
-      }
-      if (weekNutri.rest) {
-        nutriHtml += `<div class="bw-nutri-item">
-          <span class="bw-nutri-label">Jour OFF</span>
-          <span>${weekNutri.rest.calories_objectif || 0} kcal · P:${weekNutri.rest.proteines || 0}g G:${weekNutri.rest.glucides || 0}g L:${weekNutri.rest.lipides || 0}g</span>
-        </div>`;
-      }
-      nutriHtml += '</div>';
+    if (nutriPeriods.length) {
+      nutriHtml = nutriPeriods.map((period, pi) => {
+        const showDate = nutriPeriods.length > 1;
+        const dateLabel = showDate
+          ? `<div class="bw-nutri-date">À partir du ${new Date(period.from + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>`
+          : '';
+        let items = '';
+        if (period.training) {
+          items += `<div class="bw-nutri-item">
+            <span class="bw-nutri-label">Jour ON</span>
+            <span>${period.training.calories_objectif || 0} kcal · P:${period.training.proteines || 0}g G:${period.training.glucides || 0}g L:${period.training.lipides || 0}g</span>
+          </div>`;
+        }
+        if (period.rest) {
+          items += `<div class="bw-nutri-item">
+            <span class="bw-nutri-label">Jour OFF</span>
+            <span>${period.rest.calories_objectif || 0} kcal · P:${period.rest.proteines || 0}g G:${period.rest.glucides || 0}g L:${period.rest.lipides || 0}g</span>
+          </div>`;
+        }
+        return `<div class="bw-nutri${showDate ? ' bw-nutri-multi' : ''}">${dateLabel}<div class="bw-nutri-items">${items}</div></div>`;
+      }).join('');
     }
 
     // Daily detail rows
