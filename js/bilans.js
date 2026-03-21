@@ -70,6 +70,15 @@ async function loadAthleteTabBilans() {
 
   // ── Programming weeks lookup ──
 
+  // Compute phase counters
+  let _lastPh = null, _phCtr = 0;
+  progWeeks.forEach(pw => {
+    if (pw.phase && pw.phase === _lastPh) { _phCtr++; }
+    else if (pw.phase) { _phCtr = 1; _lastPh = pw.phase; }
+    else { _phCtr = 0; _lastPh = null; }
+    pw._phaseNum = _phCtr;
+  });
+
   const progLookup = {};
   progWeeks.forEach(pw => {
     if (pw.week_date) {
@@ -165,7 +174,8 @@ async function loadAthleteTabBilans() {
     if (isCurrent) statusHtml = '<span class="bw-status bw-status-current">EN COURS</span>';
     else if (isFuture) statusHtml = '<span class="bw-status bw-status-future">À VENIR</span>';
 
-    const phaseBadge = phase ? `<span class="bw-phase" style="background:${phase.color};">${phase.label}</span>` : '';
+    const phaseCounter = prog?._phaseNum ? ` · S${prog._phaseNum}` : '';
+    const phaseBadge = phase ? `<span class="bw-phase" style="background:${phase.color};">${phase.short || phase.label}${phaseCounter}</span>` : '';
 
     const dotsHtml = dayLabels.map((l, di) =>
       `<span class="bw-dot${w.bilansByDayIdx[di] ? ' filled' : ''}">${l}</span>`

@@ -20,7 +20,8 @@ let mealCount = 4;
 
 // ===== PHASE DEFINITIONS =====
 const PROG_PHASES = {
-  seche:          { label: 'SÈCHE',         color: '#c0392b' },
-  reverse:        { label: 'REVERSE',        color: '#2471a3' },
-  prise_de_masse: { label: 'PRISE DE MASSE', color: '#1e8449' },
+  seche:          { label: 'SÈCHE',          short: 'SÈCHE', color: '#c0392b' },
+  reverse:        { label: 'REVERSE',        short: 'REV',   color: '#2471a3' },
+  prise_de_masse: { label: 'PRISE DE MASSE', short: 'MASS',  color: '#1e8449' },
+  mini_cut:       { label: 'MINI CUT',       short: 'MCUT',  color: '#e67e22' },
 };
