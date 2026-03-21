@@ -88,23 +88,31 @@ async function loadAthleteTabInfos() {
     </div>
     <div class="card">
       <div class="card-header">
-        <div class="card-title"><i class="fas fa-calendar-alt"></i> Objectifs &amp; Programmation</div>
+        <div class="card-title"><i class="fas fa-calendar-alt"></i> Programmation</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="showProgGenerateForm()"><i class="fas fa-magic"></i> Générer semaines</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleProgGenForm()"><i class="fas fa-magic"></i> Générer</button>
           <button class="btn btn-outline btn-sm" onclick="addProgWeek()"><i class="fas fa-plus"></i> Semaine</button>
         </div>
       </div>
-      <div id="prog-generate-form" style="display:none;margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:8px;">
-        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
-          <div><label class="label-sm">Date de départ</label><br>
-            <input type="date" id="prog-gen-date" class="inline-input" style="margin-top:4px;">
-          </div>
-          <div><label class="label-sm">Nombre de semaines</label><br>
-            <input type="number" id="prog-gen-count" value="12" min="1" max="52" class="inline-input" style="width:80px;margin-top:4px;">
-          </div>
-          <button class="btn btn-red btn-sm" onclick="generateProgWeeks()"><i class="fas fa-magic"></i> Générer</button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('prog-generate-form').style.display='none'">Annuler</button>
+      <div class="pg-gen-form" id="prog-generate-form">
+        <div class="pg-gen-field">
+          <label>Date de départ</label>
+          <input type="date" id="prog-gen-date">
         </div>
+        <div class="pg-gen-field">
+          <label>Nb semaines</label>
+          <input type="number" id="prog-gen-count" value="12" min="1" max="52" style="width:70px;">
+        </div>
+        <div class="pg-gen-field">
+          <label>Phase</label>
+          <select id="prog-gen-phase">
+            <option value="">— aucune —</option>
+            ${Object.entries(PROG_PHASES).map(([k,v]) => '<option value="'+k+'">'+v.label+'</option>').join('')}
+          </select>
+        </div>
+        <button class="btn btn-red btn-sm" onclick="generateProgWeeks()"><i class="fas fa-magic"></i> Générer</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleProgGenForm()">Annuler</button>
+        <div class="pg-gen-info"><i class="fas fa-info-circle"></i> Semaines alignées sur le ${['lundi','mardi','mercredi','jeudi','vendredi','samedi','dimanche'][a.bilan_day ?? 0]} (jour de bilan)</div>
       </div>
       <div id="prog-table-container"><div class="text-center text-muted" style="padding:20px;"><i class="fas fa-spinner fa-spin"></i></div></div>
     </div>
@@ -232,140 +240,233 @@ async function loadProgrammingWeeks() {
 function renderProgrammingTable(weeks) {
   const c = document.getElementById('prog-table-container');
   if (!c) return;
+
   if (!weeks.length) {
-    c.innerHTML = '<div style="text-align:center;color:var(--text3);padding:30px;">Aucune semaine planifiée — utilise <strong>Générer semaines</strong> pour démarrer.</div>';
+    c.innerHTML = `<div class="pg-empty">
+      <i class="fas fa-calendar-alt"></i>
+      <p>Aucune semaine planifiée</p>
+      <p style="font-size:13px;margin-top:8px;">Utilise <strong>Générer</strong> pour démarrer la programmation.</p>
+    </div>`;
     return;
   }
-  const today = new Date().toISOString().split('T')[0];
+
+  const todayStr = toDateStr(new Date());
   const programs = window._progPrograms || [];
-  const rows = weeks.map((w, i) => {
+
+  // Mark current week
+  weeks.forEach((w, i) => {
     const nextDate = weeks[i + 1]?.week_date;
-    const isCurrent = w.week_date <= today && (!nextDate || nextDate > today);
-    const phase = PROG_PHASES[w.phase];
-    const phaseBadge = phase
-      ? `<span style="background:${phase.color};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;white-space:nowrap;">${phase.label}</span>`
-      : '<span style="color:var(--text3);">—</span>';
-    const progName = programs.find(p => p.id === w.training_program_id)?.nom || '—';
-    const rowStyle = isCurrent
-      ? 'background:rgba(99,102,241,0.08);border-left:3px solid var(--primary);'
-      : 'border-left:3px solid transparent;';
-    return `<tr id="prog-row-${w.id}" style="${rowStyle}">
-      <td style="padding:7px 8px;font-size:12px;color:var(--text3);">${i + 1}</td>
-      <td style="padding:7px 8px;font-size:12px;white-space:nowrap;font-weight:${isCurrent?'700':'400'};">${formatDate(w.week_date)}</td>
-      <td style="padding:7px 8px;font-size:12px;max-width:160px;">${w.details ? escHtml(w.details) : '<span style="color:var(--text3);">—</span>'}</td>
-      <td style="padding:7px 8px;">${phaseBadge}</td>
-      <td style="padding:7px 8px;font-size:12px;">${progName !== '—' ? `<span style="font-size:11px;">${escHtml(progName)}</span>` : '<span style="color:var(--text3);">—</span>'}</td>
-      <td style="padding:7px 8px;font-size:12px;text-align:center;">${w.pdc_moyenne ? `<strong>${w.pdc_moyenne}</strong>` : '<span style="color:var(--text3);">—</span>'}</td>
-      <td style="padding:7px 8px;font-size:12px;max-width:200px;color:var(--text3);">${w.notes_bloc ? escHtml(w.notes_bloc) : ''}</td>
-      <td style="padding:7px 8px;">
-        <button class="btn btn-outline btn-sm" onclick="editProgRow('${w.id}')" title="Modifier"><i class="fas fa-pen"></i></button>
-      </td>
-    </tr>`;
-  }).join('');
-  c.innerHTML = `<div style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;">
-      <thead><tr style="border-bottom:1px solid var(--border);">
-        <th style="padding:8px;text-align:left;font-size:11px;color:var(--text3);">SEM</th>
-        <th style="padding:8px;text-align:left;font-size:11px;color:var(--text3);">DATE</th>
-        <th style="padding:8px;text-align:left;font-size:11px;color:var(--text3);">DÉTAILS</th>
-        <th style="padding:8px;text-align:left;font-size:11px;color:var(--text3);">PHASE</th>
-        <th style="padding:8px;text-align:left;font-size:11px;color:var(--text3);">TRAINING</th>
-        <th style="padding:8px;text-align:center;font-size:11px;color:var(--text3);">PDC MOY.</th>
-        <th style="padding:8px;text-align:left;font-size:11px;color:var(--text3);">NOTES BLOC</th>
-        <th style="padding:8px;"></th>
-      </tr></thead>
-      <tbody id="prog-tbody">${rows}</tbody>
-    </table>
-  </div>`;
+    w._isCurrent = w.week_date <= todayStr && (!nextDate || nextDate > todayStr);
+  });
+
+  // Group consecutive weeks by phase
+  const blocks = [];
+  let curBlock = null;
+  weeks.forEach((w, i) => {
+    const ph = w.phase || '_none';
+    if (!curBlock || curBlock.phase !== ph) {
+      curBlock = { phase: ph, weeks: [] };
+      blocks.push(curBlock);
+    }
+    curBlock.weeks.push({ ...w, _gi: i });
+  });
+  window._progBlocks = blocks;
+
+  const totalWeeks = weeks.length;
+  const currentIdx = weeks.findIndex(w => w._isCurrent);
+
+  // ── Timeline bar ──
+  let html = '<div class="pg-container">';
+  html += '<div class="pg-timeline">';
+  blocks.forEach(block => {
+    const pct = (block.weeks.length / totalWeeks * 100).toFixed(1);
+    const pi = PROG_PHASES[block.phase] || { label: '—', color: '#444' };
+    const label = block.weeks.length >= 3 ? pi.label : (block.weeks.length >= 2 ? pi.label.charAt(0) : '');
+    html += `<div class="pg-timeline-seg" style="width:${pct}%;background:${pi.color};" title="${pi.label} — ${block.weeks.length} sem.">${label}</div>`;
+  });
+  if (currentIdx >= 0) {
+    const pct = ((currentIdx + 0.5) / totalWeeks * 100).toFixed(1);
+    html += `<div class="pg-timeline-marker" style="left:${pct}%;"></div>`;
+  }
+  html += '</div>';
+
+  // ── Phase blocks ──
+  blocks.forEach((block, bi) => {
+    const pi = PROG_PHASES[block.phase] || { label: 'NON PLANIFIÉ', color: '#444' };
+    const hasCurrent = block.weeks.some(w => w._isCurrent);
+    const isOpen = hasCurrent;
+
+    const startDate = block.weeks[0].week_date;
+    const endD = new Date(block.weeks[block.weeks.length - 1].week_date + 'T00:00:00');
+    endD.setDate(endD.getDate() + 6);
+
+    const startLabel = formatDate(startDate);
+    const endLabel = endD.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+
+    // Weight stats
+    const pdcVals = block.weeks.filter(w => w.pdc_moyenne).map(w => parseFloat(w.pdc_moyenne));
+    const pdcFirst = pdcVals[0] || null;
+    const pdcLast = pdcVals.length > 1 ? pdcVals[pdcVals.length - 1] : null;
+    const pdcDelta = (pdcFirst && pdcLast) ? (pdcLast - pdcFirst).toFixed(1) : null;
+
+    html += `<div class="pg-block${isOpen ? ' pg-open' : ''}" style="border-left:3px solid ${pi.color};">`;
+
+    // Header
+    html += `<div class="pg-block-header" onclick="this.parentElement.classList.toggle('pg-open')">`;
+    html += `<div class="pg-block-left">`;
+    html += `<span class="pg-phase" style="background:${pi.color};">${pi.label}</span>`;
+    html += `<div class="pg-block-info">`;
+    html += `<span class="pg-block-dates">${startLabel} → ${endLabel}</span>`;
+    html += `<span class="pg-block-count">${block.weeks.length} semaine${block.weeks.length > 1 ? 's' : ''}</span>`;
+    html += `</div>`;
+    if (hasCurrent) html += `<span class="pg-current-badge">EN COURS</span>`;
+    html += `</div>`;
+
+    html += `<div class="pg-block-right">`;
+    if (pdcDelta !== null) {
+      const dn = parseFloat(pdcDelta);
+      const dc = dn < 0 ? 'var(--success)' : dn > 0 ? 'var(--warning)' : 'var(--text)';
+      html += `<div class="pg-block-stat">`;
+      html += `<span class="pg-block-stat-label">Δ POIDS</span>`;
+      html += `<span class="pg-block-stat-value" style="color:${dc};">${dn > 0 ? '+' : ''}${pdcDelta} kg</span>`;
+      html += `</div>`;
+    }
+    html += `<i class="fas fa-chevron-down pg-chevron"></i>`;
+    html += `</div></div>`;
+
+    // Body
+    html += `<div class="pg-block-body"><div class="pg-weeks">`;
+    html += `<div class="pg-week-hdr"><span>#</span><span>DATE</span><span>DÉTAILS</span><span>PROGRAMME</span><span>PDC</span><span></span></div>`;
+
+    block.weeks.forEach(w => {
+      const pn = programs.find(p => p.id === w.training_program_id)?.nom || '';
+      html += `<div class="pg-week-row${w._isCurrent ? ' pg-week-current' : ''}">`;
+      html += `<span class="pg-week-num">S${w._gi + 1}</span>`;
+      html += `<span class="pg-week-date">${formatDate(w.week_date)}</span>`;
+      html += `<span class="pg-week-details">${w.details ? escHtml(w.details) : '<span style="color:var(--text3);">—</span>'}</span>`;
+      html += pn ? `<span class="pg-week-program">${escHtml(pn)}</span>` : '<span></span>';
+      html += `<span class="pg-week-pdc">${w.pdc_moyenne ? w.pdc_moyenne + ' kg' : '<span style="color:var(--text3);">—</span>'}</span>`;
+      html += `<button class="pg-week-edit" onclick="event.stopPropagation();editProgWeek('${w.id}')" title="Modifier"><i class="fas fa-pen"></i></button>`;
+      html += `</div>`;
+      if (w.notes_bloc) {
+        html += `<div class="pg-week-notes"><i class="fas fa-sticky-note" style="margin-right:4px;"></i>${escHtml(w.notes_bloc)}</div>`;
+      }
+    });
+
+    html += `</div></div></div>`;
+  });
+
+  html += '</div>';
+  c.innerHTML = html;
 }
 
-function showProgGenerateForm() {
-  const f = document.getElementById('prog-generate-form');
-  if (f) { f.style.display = f.style.display === 'none' ? 'block' : 'none'; }
+function toggleProgGenForm() {
+  document.getElementById('prog-generate-form')?.classList.toggle('open');
 }
 
 async function generateProgWeeks() {
   const dateVal = document.getElementById('prog-gen-date')?.value;
   const count = parseInt(document.getElementById('prog-gen-count')?.value) || 0;
+  const phase = document.getElementById('prog-gen-phase')?.value || null;
   if (!dateVal || count < 1) { notify('Date et nombre de semaines requis', 'warning'); return; }
-  const rows = [];
+
+  // Snap start date to the bilan day
+  const bilanDay = currentAthleteObj?.bilan_day ?? 0; // 0=Mon .. 6=Sun
+  const jsTarget = (bilanDay + 1) % 7; // JS: 0=Sun, 1=Mon, ..., 6=Sat
   const start = new Date(dateVal + 'T00:00:00');
+  let diff = jsTarget - start.getDay();
+  if (diff < 0) diff += 7;
+  if (diff > 0) start.setDate(start.getDate() + diff);
+
+  const rows = [];
   for (let i = 0; i < count; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i * 7);
-    rows.push({ athlete_id: currentAthleteId, coach_id: currentUser.id, week_date: d.toISOString().split('T')[0] });
+    rows.push({
+      athlete_id: currentAthleteId,
+      coach_id: currentUser.id,
+      week_date: toDateStr(d),
+      phase: phase,
+    });
   }
   const { error } = await supabaseClient.from('programming_weeks').insert(rows);
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
-  document.getElementById('prog-generate-form').style.display = 'none';
+  document.getElementById('prog-generate-form')?.classList.remove('open');
   await loadProgrammingWeeks();
   notify(`${count} semaines générées`, 'success');
 }
 
 async function addProgWeek() {
   const weeks = window._progWeeksCache || [];
-  let nextDate = new Date();
+  const bilanDay = currentAthleteObj?.bilan_day ?? 0;
+  let nextDate;
+
   if (weeks.length) {
     const last = new Date(weeks[weeks.length - 1].week_date + 'T00:00:00');
     last.setDate(last.getDate() + 7);
     nextDate = last;
+  } else {
+    nextDate = new Date();
+    const jsTarget = (bilanDay + 1) % 7;
+    let diff = jsTarget - nextDate.getDay();
+    if (diff < 0) diff += 7;
+    nextDate.setDate(nextDate.getDate() + diff);
   }
+
   const { error } = await supabaseClient.from('programming_weeks').insert({
-    athlete_id: currentAthleteId, coach_id: currentUser.id,
-    week_date: nextDate.toISOString().split('T')[0]
+    athlete_id: currentAthleteId,
+    coach_id: currentUser.id,
+    week_date: toDateStr(nextDate),
   });
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
   await loadProgrammingWeeks();
 }
 
-function editProgRow(id) {
+// ── Modal-based edit ──
+
+function editProgWeek(id) {
   const w = (window._progWeeksCache || []).find(x => x.id === id);
   if (!w) return;
-  const row = document.getElementById('prog-row-' + id);
-  if (!row) return;
-  const idx = (window._progWeeksCache || []).findIndex(x => x.id === id);
+
   const programs = window._progPrograms || [];
-  const inp = 'background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:4px 8px;color:var(--text);font-size:12px;';
-  const progOpts = '<option value="">— programme —</option>' + programs.map(p =>
-    `<option value="${p.id}"${w.training_program_id === p.id ? ' selected' : ''}>${escHtml(p.nom)}</option>`).join('');
-  const phaseOpts = '<option value="">— phase —</option>' + Object.entries(PROG_PHASES).map(([k, v]) =>
-    `<option value="${k}"${w.phase === k ? ' selected' : ''}>${v.label}</option>`).join('');
-  row.innerHTML = `
-    <td style="padding:6px;font-size:12px;color:var(--text3);">${idx + 1}</td>
-    <td style="padding:6px;"><input type="date" id="pew-${id}-date" value="${w.week_date}" style="${inp}width:130px;"></td>
-    <td style="padding:6px;"><input type="text" id="pew-${id}-details" value="${escHtml(w.details||'')}" placeholder="Détails" style="${inp}width:100%;"></td>
-    <td style="padding:6px;"><select id="pew-${id}-phase" style="${inp}">${phaseOpts}</select></td>
-    <td style="padding:6px;"><select id="pew-${id}-prog" style="${inp}">${progOpts}</select></td>
-    <td style="padding:6px;"><input type="number" id="pew-${id}-pdc" value="${w.pdc_moyenne||''}" step="0.1" placeholder="kg" style="${inp}width:65px;"></td>
-    <td style="padding:6px;"><input type="text" id="pew-${id}-notes" value="${escHtml(w.notes_bloc||'')}" placeholder="Notes..." style="${inp}width:100%;"></td>
-    <td style="padding:6px;white-space:nowrap;display:flex;gap:4px;">
-      <button class="btn btn-red btn-sm" onclick="saveProgRow('${id}')"><i class="fas fa-check"></i></button>
-      <button class="btn btn-outline btn-sm" onclick="renderProgrammingTable(window._progWeeksCache||[])"><i class="fas fa-times"></i></button>
-      <button class="btn btn-outline btn-sm" style="color:var(--danger);" onclick="deleteProgRow('${id}')"><i class="fas fa-trash"></i></button>
-    </td>`;
+  const progSelect = document.getElementById('pgm-prog');
+  progSelect.innerHTML = '<option value="">— aucun —</option>' +
+    programs.map(p => `<option value="${p.id}"${w.training_program_id === p.id ? ' selected' : ''}>${escHtml(p.nom)}</option>`).join('');
+
+  document.getElementById('pgm-id').value = w.id;
+  document.getElementById('pgm-date').value = w.week_date || '';
+  document.getElementById('pgm-phase').value = w.phase || '';
+  document.getElementById('pgm-details').value = w.details || '';
+  document.getElementById('pgm-pdc').value = w.pdc_moyenne || '';
+  document.getElementById('pgm-notes').value = w.notes_bloc || '';
+  openModal('modal-prog-week');
 }
 
-async function saveProgRow(id) {
-  const g = (sfx) => document.getElementById(`pew-${id}-${sfx}`);
+async function saveProgWeek() {
+  const id = document.getElementById('pgm-id').value;
   const data = {
-    week_date:           g('date')?.value,
-    details:             g('details')?.value || null,
-    phase:               g('phase')?.value || null,
-    training_program_id: g('prog')?.value || null,
-    pdc_moyenne:         parseFloat(g('pdc')?.value) || null,
-    notes_bloc:          g('notes')?.value || null,
+    week_date:           document.getElementById('pgm-date').value,
+    phase:               document.getElementById('pgm-phase').value || null,
+    training_program_id: document.getElementById('pgm-prog').value || null,
+    details:             document.getElementById('pgm-details').value || null,
+    pdc_moyenne:         parseFloat(document.getElementById('pgm-pdc').value) || null,
+    notes_bloc:          document.getElementById('pgm-notes').value || null,
   };
   const { error } = await supabaseClient.from('programming_weeks').update(data).eq('id', id);
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
+  closeModal('modal-prog-week');
   await loadProgrammingWeeks();
   notify('Sauvegardé', 'success');
 }
 
-async function deleteProgRow(id) {
+async function deleteProgWeek() {
+  const id = document.getElementById('pgm-id').value;
   if (!confirm('Supprimer cette semaine ?')) return;
   const { error } = await supabaseClient.from('programming_weeks').delete().eq('id', id);
   if (error) { notify('Erreur: ' + error.message, 'error'); return; }
+  closeModal('modal-prog-week');
   await loadProgrammingWeeks();
+  notify('Semaine supprimée', 'success');
 }
 
 // ===== DELETE ATHLETE =====

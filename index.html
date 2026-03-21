@@ -474,6 +474,59 @@
   </div>
 </div>
 
+<!-- MODAL: Edit Programming Week -->
+<div class="modal-overlay" id="modal-prog-week">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Modifier la semaine</h2>
+      <button class="modal-close" onclick="closeModal('modal-prog-week')">×</button>
+    </div>
+    <input type="hidden" id="pgm-id">
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="pgm-date">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Phase</label>
+        <select id="pgm-phase">
+          <option value="">— aucune —</option>
+          <option value="seche">SÈCHE</option>
+          <option value="reverse">REVERSE</option>
+          <option value="prise_de_masse">PRISE DE MASSE</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Programme</label>
+        <select id="pgm-prog">
+          <option value="">— aucun —</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Détails</label>
+      <input type="text" id="pgm-details" placeholder="Ex: Deload, Force H1, Hypertrophie...">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>PDC moyenne (kg)</label>
+        <input type="number" id="pgm-pdc" step="0.1" placeholder="74.5">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="pgm-notes" rows="2" placeholder="Notes sur cette semaine..."></textarea>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:20px;">
+      <button type="button" class="btn btn-outline" onclick="deleteProgWeek()" style="color:var(--danger);"><i class="fas fa-trash"></i> Supprimer</button>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('modal-prog-week')">Annuler</button>
+        <button type="button" class="btn btn-red" onclick="saveProgWeek()"><i class="fas fa-check"></i> Sauvegarder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- NOTIFICATION -->
 <div class="notification" id="notification">
   <i class="fas fa-check-circle"></i>

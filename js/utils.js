@@ -20,6 +20,10 @@ function notify(message, type = 'success') {
   setTimeout(() => notification.classList.remove('show'), 3000);
 }
 
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function formatDate(d) {
   if (!d) return '';
   const dt = new Date(d + 'T00:00:00');
