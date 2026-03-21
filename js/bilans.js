@@ -23,6 +23,15 @@ async function loadAthleteTabBilans() {
   // Jour du bilan hebdo (0=lundi, ..., 6=dimanche)
   const bilanDay = currentAthleteObj.bilan_day ?? 0;
 
+  // Build photo history index (sorted oldest→newest)
+  window._photoHistory = { front: [], side: [], back: [] };
+  bilans.forEach(b => {
+    if (b.photo_front) window._photoHistory.front.push({ date: b.date, url: b.photo_front });
+    if (b.photo_side) window._photoHistory.side.push({ date: b.date, url: b.photo_side });
+    if (b.photo_back) window._photoHistory.back.push({ date: b.date, url: b.photo_back });
+  });
+  Object.values(window._photoHistory).forEach(arr => arr.sort((a, b) => a.date.localeCompare(b.date)));
+
   if (!bilans.length) {
     el.innerHTML = '<div class="card"><div class="empty-state"><i class="fas fa-chart-line"></i><p>Aucun bilan enregistré</p><p style="font-size:12px;color:var(--text3);margin-top:8px;">L\'athlète doit remplir ses check-ins journaliers.</p></div></div>';
     return;
@@ -272,12 +281,12 @@ async function loadAthleteTabBilans() {
       if (hasDetails) {
         let details = '';
 
-        // Photos (bilan day)
+        // Photo compare buttons (bilan day)
         if (hasPhotos) {
-          details += `<div class="bw-photos">`;
-          if (b.photo_front) details += `<div class="bw-photo"><div class="bw-photo-label">Face</div><img src="${b.photo_front}" alt="Face" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
-          if (b.photo_side) details += `<div class="bw-photo"><div class="bw-photo-label">Profil</div><img src="${b.photo_side}" alt="Profil" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
-          if (b.photo_back) details += `<div class="bw-photo"><div class="bw-photo-label">Dos</div><img src="${b.photo_back}" alt="Dos" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
+          details += `<div class="bw-photo-btns">`;
+          if (b.photo_front) details += `<button class="bw-photo-btn" onclick="event.stopPropagation();openPhotoCompare('front','${b.date}')"><i class="fas fa-user"></i> Face</button>`;
+          if (b.photo_side) details += `<button class="bw-photo-btn" onclick="event.stopPropagation();openPhotoCompare('side','${b.date}')"><i class="fas fa-user-alt"></i> Profil</button>`;
+          if (b.photo_back) details += `<button class="bw-photo-btn" onclick="event.stopPropagation();openPhotoCompare('back','${b.date}')"><i class="fas fa-user-alt-slash"></i> Dos</button>`;
           details += `</div>`;
         }
 
@@ -369,4 +378,127 @@ function bwTag(value, inverted) {
 
 function toggleBilanWeek(headerEl) {
   headerEl.closest('.bw-card').classList.toggle('bw-open');
+}
+
+// ===== PHOTO COMPARE VIEWER =====
+
+function openPhotoCompare(type, currentDate) {
+  const photos = window._photoHistory[type];
+  if (!photos || !photos.length) return;
+
+  const rightIdx = photos.findIndex(p => p.date === currentDate);
+  if (rightIdx < 0) return;
+
+  let leftIdx = rightIdx - 1;
+  if (leftIdx < 0) leftIdx = 0;
+
+  window._pcState = { type, photos, rightIdx, leftIdx };
+
+  // Create overlay if not exists
+  if (!document.getElementById('photo-compare-overlay')) {
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="photo-compare-overlay" class="pc-overlay" onclick="if(event.target===this)closePhotoCompare()">
+        <div class="pc-viewer">
+          <div class="pc-header">
+            <div class="pc-tabs" id="pc-tabs"></div>
+            <button class="pc-close" onclick="closePhotoCompare()"><i class="fas fa-times"></i></button>
+          </div>
+          <div class="pc-body">
+            <div class="pc-side pc-left">
+              <button class="pc-nav pc-nav-prev" id="pc-prev" onclick="pcNavigate(-1)"><i class="fas fa-chevron-left"></i></button>
+              <div class="pc-img-wrap">
+                <img id="pc-img-left" src="" alt="">
+                <div class="pc-date" id="pc-date-left"></div>
+              </div>
+              <button class="pc-nav pc-nav-next" id="pc-next" onclick="pcNavigate(1)"><i class="fas fa-chevron-right"></i></button>
+            </div>
+            <div class="pc-divider"></div>
+            <div class="pc-side pc-right">
+              <div class="pc-img-wrap">
+                <img id="pc-img-right" src="" alt="">
+                <div class="pc-date" id="pc-date-right"></div>
+              </div>
+              <div class="pc-badge-current">ACTUEL</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `);
+  }
+
+  document.getElementById('photo-compare-overlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderPhotoCompare();
+}
+
+function renderPhotoCompare() {
+  const { type, photos, rightIdx, leftIdx } = window._pcState;
+  const typeLabels = { front: 'Face', side: 'Profil', back: 'Dos' };
+  const typeIcons = { front: 'fa-user', side: 'fa-user-alt', back: 'fa-user-alt-slash' };
+
+  // Tabs
+  const tabsEl = document.getElementById('pc-tabs');
+  tabsEl.innerHTML = ['front', 'side', 'back'].map(t => {
+    const hasPhotos = window._photoHistory[t].length > 0;
+    const active = t === type ? 'active' : '';
+    return hasPhotos
+      ? `<button class="pc-tab ${active}" onclick="pcSwitchType('${t}')"><i class="fas ${typeIcons[t]}"></i> ${typeLabels[t]}</button>`
+      : '';
+  }).join('');
+
+  // Right photo (current)
+  const right = photos[rightIdx];
+  document.getElementById('pc-img-right').src = right.url;
+  document.getElementById('pc-date-right').textContent = formatBilanDate(right.date);
+
+  // Left photo (comparison)
+  const left = photos[leftIdx];
+  const imgLeft = document.getElementById('pc-img-left');
+  imgLeft.classList.add('pc-fade');
+  setTimeout(() => {
+    imgLeft.src = left.url;
+    document.getElementById('pc-date-left').textContent = formatBilanDate(left.date);
+    imgLeft.classList.remove('pc-fade');
+  }, 150);
+
+  // Navigation buttons state
+  document.getElementById('pc-prev').disabled = leftIdx <= 0;
+  document.getElementById('pc-next').disabled = leftIdx >= rightIdx;
+}
+
+function pcNavigate(dir) {
+  const s = window._pcState;
+  const newIdx = s.leftIdx + dir;
+  if (newIdx < 0 || newIdx > s.rightIdx) return;
+  s.leftIdx = newIdx;
+  renderPhotoCompare();
+}
+
+function pcSwitchType(type) {
+  const photos = window._photoHistory[type];
+  if (!photos.length) return;
+  const s = window._pcState;
+
+  // Find the closest date to the current right photo in the new type
+  const currentDate = s.photos[s.rightIdx].date;
+  let rightIdx = photos.findIndex(p => p.date === currentDate);
+  if (rightIdx < 0) rightIdx = photos.length - 1;
+
+  let leftIdx = s.leftIdx;
+  if (leftIdx >= rightIdx) leftIdx = rightIdx - 1;
+  if (leftIdx < 0) leftIdx = 0;
+
+  window._pcState = { type, photos, rightIdx, leftIdx };
+  renderPhotoCompare();
+}
+
+function closePhotoCompare() {
+  const overlay = document.getElementById('photo-compare-overlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function formatBilanDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
 }
