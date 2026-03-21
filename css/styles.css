@@ -467,6 +467,35 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .bw-tag-ok   { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
 .bw-tag-bad  { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 
+/* Bilan day highlight */
+.bw-bilan-day { background: rgba(245, 158, 11, 0.05); border-radius: 6px; }
+
+/* Photos grid */
+.bw-photos {
+  display: flex; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.bw-photo {
+  flex: 1; min-width: 100px; max-width: 180px;
+  border-radius: 8px; overflow: hidden;
+  background: var(--bg4); border: 1px solid var(--border);
+}
+.bw-photo img {
+  width: 100%; aspect-ratio: 3/4; object-fit: cover;
+  display: block; cursor: pointer; transition: opacity 0.15s;
+}
+.bw-photo img:hover { opacity: 0.85; }
+.bw-photo-label {
+  text-align: center; font-size: 10px; font-weight: 700;
+  color: var(--text3); padding: 4px 0;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* Mensurations in detail row */
+.bw-detail-mens {
+  padding-bottom: 8px; margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
 /* Expand button & detail sub-row */
 .bw-note-btn {
   background: none; border: none; color: var(--text3); cursor: pointer;

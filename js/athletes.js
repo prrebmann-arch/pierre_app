@@ -125,6 +125,7 @@ function fillEditAthleteForm() {
   document.getElementById('edit-athlete-poids').value = currentAthleteObj.poids_actuel || '';
   document.getElementById('edit-athlete-poids-obj').value = currentAthleteObj.poids_objectif || '';
   document.getElementById('edit-athlete-objectif').value = currentAthleteObj.objectif || 'maintenance';
+  document.getElementById('edit-athlete-bilan-day').value = currentAthleteObj.bilan_day ?? 0;
 }
 
 document.getElementById('edit-athlete-form').addEventListener('submit', async (e) => {
@@ -136,7 +137,8 @@ document.getElementById('edit-athlete-form').addEventListener('submit', async (e
     email: document.getElementById('edit-athlete-email').value,
     poids_actuel: parseFloat(document.getElementById('edit-athlete-poids').value) || null,
     poids_objectif: parseFloat(document.getElementById('edit-athlete-poids-obj').value) || null,
-    objectif: document.getElementById('edit-athlete-objectif').value
+    objectif: document.getElementById('edit-athlete-objectif').value,
+    bilan_day: parseInt(document.getElementById('edit-athlete-bilan-day').value)
   };
 
   const { error } = await supabaseClient.from('athletes').update(updateData).eq('id', currentAthleteId).select();

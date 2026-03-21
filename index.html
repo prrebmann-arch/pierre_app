@@ -233,13 +233,27 @@
           <input type="number" id="edit-athlete-poids-obj" step="0.1">
         </div>
       </div>
-      <div class="form-group">
-        <label>Objectif</label>
-        <select id="edit-athlete-objectif">
-          <option value="prise_masse">Prise de masse</option>
-          <option value="seche">Sèche</option>
-          <option value="maintenance">Maintenance</option>
-        </select>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Objectif</label>
+          <select id="edit-athlete-objectif">
+            <option value="prise_masse">Prise de masse</option>
+            <option value="seche">Sèche</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Jour du bilan hebdo</label>
+          <select id="edit-athlete-bilan-day">
+            <option value="0">Lundi</option>
+            <option value="1">Mardi</option>
+            <option value="2">Mercredi</option>
+            <option value="3">Jeudi</option>
+            <option value="4">Vendredi</option>
+            <option value="5">Samedi</option>
+            <option value="6">Dimanche</option>
+          </select>
+        </div>
       </div>
       <button type="submit" class="btn btn-red">Mettre à jour</button>
     </form>
@@ -415,7 +429,7 @@
       <div class="form-group">
         <label>Nom du template</label>
         <input type="text" id="workout-template-name" required>
-      </div>
+ ù     </div>
       <div class="form-group">
         <label>Description</label>
         <textarea id="workout-template-description" rows="3"></textarea>

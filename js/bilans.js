@@ -20,6 +20,9 @@ async function loadAthleteTabBilans() {
   const progWeeks = progRes.data || [];
   const nutriPlans = nutriRes.data || [];
 
+  // Jour du bilan hebdo (0=lundi, ..., 6=dimanche)
+  const bilanDay = currentAthleteObj.bilan_day ?? 0;
+
   if (!bilans.length) {
     el.innerHTML = '<div class="card"><div class="empty-state"><i class="fas fa-chart-line"></i><p>Aucun bilan enregistré</p><p style="font-size:12px;color:var(--text3);margin-top:8px;">L\'athlète doit remplir ses check-ins journaliers.</p></div></div>';
     return;
@@ -246,11 +249,15 @@ async function loadAthleteTabBilans() {
       let di = d.getDay() - 1; if (di < 0) di = 6;
       const dayStr = dayNames[di] + ' ' + d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
       const noteId = 'bn-' + b.id;
+      const isBilanDay = di === bilanDay;
+      const hasPhotos = b.photo_front || b.photo_side || b.photo_back;
+      const hasMens = b.belly_measurement || b.hip_measurement || b.thigh_measurement;
       const hasDetails = b.general_notes || b.cardio_minutes || b.steps || b.session_performance
-        || b.session_enjoyment || b.bedtime || b.wakeup || b.sleep_efficiency || b.sick_signs;
+        || b.session_enjoyment || b.bedtime || b.wakeup || b.sleep_efficiency || b.sick_signs
+        || hasPhotos || hasMens;
 
-      daysHtml += `<div class="bw-day-row">
-        <span class="bw-dr-date">${dayStr}</span>
+      daysHtml += `<div class="bw-day-row${isBilanDay ? ' bw-bilan-day' : ''}">
+        <span class="bw-dr-date">${dayStr}${isBilanDay ? ' <i class="fas fa-star" style="color:var(--warning);font-size:9px;"></i>' : ''}</span>
         <span class="bw-dr">${b.weight != null ? b.weight + ' kg' : '—'}</span>
         <span class="bw-dr">${bwTag(b.energy)}</span>
         <span class="bw-dr">${bwTag(b.sleep_quality)}</span>
@@ -263,7 +270,28 @@ async function loadAthleteTabBilans() {
 
       // Expandable detail sub-row
       if (hasDetails) {
-        let details = '<div class="bw-detail-grid">';
+        let details = '';
+
+        // Photos (bilan day)
+        if (hasPhotos) {
+          details += `<div class="bw-photos">`;
+          if (b.photo_front) details += `<div class="bw-photo"><div class="bw-photo-label">Face</div><img src="${b.photo_front}" alt="Face" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
+          if (b.photo_side) details += `<div class="bw-photo"><div class="bw-photo-label">Profil</div><img src="${b.photo_side}" alt="Profil" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
+          if (b.photo_back) details += `<div class="bw-photo"><div class="bw-photo-label">Dos</div><img src="${b.photo_back}" alt="Dos" onclick="window.open(this.src,'_blank')" onerror="this.parentElement.style.display='none'"></div>`;
+          details += `</div>`;
+        }
+
+        // Mensurations (bilan day)
+        if (hasMens) {
+          details += '<div class="bw-detail-grid bw-detail-mens">';
+          if (b.belly_measurement) details += `<div class="bw-detail-item"><span class="bw-detail-label">Ventre</span><span>${b.belly_measurement} cm</span></div>`;
+          if (b.hip_measurement) details += `<div class="bw-detail-item"><span class="bw-detail-label">Hanches</span><span>${b.hip_measurement} cm</span></div>`;
+          if (b.thigh_measurement) details += `<div class="bw-detail-item"><span class="bw-detail-label">Cuisses</span><span>${b.thigh_measurement} cm</span></div>`;
+          details += '</div>';
+        }
+
+        // Other metrics
+        details += '<div class="bw-detail-grid">';
         if (b.session_performance != null) details += `<div class="bw-detail-item"><span class="bw-detail-label">Performance</span>${bwTag(b.session_performance)}</div>`;
         if (b.session_enjoyment != null) details += `<div class="bw-detail-item"><span class="bw-detail-label">Plaisir</span>${bwTag(b.session_enjoyment)}</div>`;
         if (b.cardio_minutes != null) details += `<div class="bw-detail-item"><span class="bw-detail-label">Cardio</span><span>${b.cardio_minutes} min</span></div>`;
