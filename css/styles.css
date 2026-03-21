@@ -411,10 +411,35 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
   margin-bottom: 2px; letter-spacing: 0.3px;
 }
 
+/* Mensurations section */
+.bw-mens {
+  display: flex; gap: 24px; flex-wrap: wrap;
+  padding: 12px 20px; background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.bw-mens-item { display: flex; align-items: center; gap: 8px; }
+.bw-mens-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.3px; }
+.bw-mens-val { font-size: 13px; font-weight: 600; color: var(--text); }
+
+/* Weekly notes (positive / negative) */
+.bw-week-notes {
+  padding: 12px 20px; border-bottom: 1px solid var(--border);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.bw-week-note {
+  display: flex; align-items: flex-start; gap: 10px; font-size: 13px;
+}
+.bw-week-note-icon { flex-shrink: 0; margin-top: 2px; font-size: 13px; }
+.bw-week-note-label {
+  display: block; font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;
+}
+.bw-week-note-text { display: block; color: var(--text2); line-height: 1.4; }
+
 /* Daily detail table */
 .bw-days-table { padding: 0 20px 12px; }
 .bw-day-hdr {
-  display: grid; grid-template-columns: 110px repeat(7, 1fr) 44px;
+  display: grid; grid-template-columns: 110px repeat(7, 1fr) 36px;
   gap: 4px; padding: 10px 0 8px; border-bottom: 1px solid var(--border);
 }
 .bw-day-hdr span {
@@ -425,11 +450,10 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .bw-dh-end { text-align: center; }
 
 .bw-day-row {
-  display: grid; grid-template-columns: 110px repeat(7, 1fr) 44px;
+  display: grid; grid-template-columns: 110px repeat(7, 1fr) 36px;
   gap: 4px; padding: 10px 0; align-items: center;
   border-bottom: 1px solid rgba(51, 51, 51, 0.4);
 }
-.bw-day-row:last-child { border-bottom: none; }
 .bw-dr-date { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; }
 .bw-dr { font-size: 13px; text-align: center; color: var(--text2); }
 .bw-dr-end { text-align: center; }
@@ -443,20 +467,34 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .bw-tag-ok   { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
 .bw-tag-bad  { background: rgba(239, 68, 68, 0.15); color: var(--danger); }
 
-/* Notes button & expandable row */
+/* Expand button & detail sub-row */
 .bw-note-btn {
-  background: none; border: none; color: var(--primary); cursor: pointer;
-  font-size: 14px; padding: 4px; border-radius: 4px; transition: background 0.15s;
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  font-size: 11px; padding: 4px 6px; border-radius: 4px; transition: all 0.15s;
 }
-.bw-note-btn:hover { background: rgba(179, 8, 8, 0.15); }
+.bw-note-btn:hover { background: var(--bg4); color: var(--text); }
 
 .bw-note-row {
   max-height: 0; overflow: hidden; transition: max-height 0.25s ease;
-  padding: 0 20px; background: var(--bg3); border-radius: 0 0 6px 6px;
+  margin: 0 0 4px; background: var(--bg3); border-radius: 8px;
 }
-.bw-note-row.open { max-height: 300px; padding: 10px 20px; }
-.bw-note { font-size: 12px; color: var(--text2); padding: 4px 0; display: flex; align-items: flex-start; gap: 8px; }
-.bw-note-icon { flex-shrink: 0; font-size: 12px; margin-top: 1px; }
+.bw-note-row.open { max-height: 400px; padding: 12px 16px; }
+
+/* Detail grid inside expanded row */
+.bw-detail-grid {
+  display: flex; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 8px;
+}
+.bw-detail-item {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2);
+}
+.bw-detail-label {
+  font-size: 10px; font-weight: 600; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.3px;
+}
+.bw-detail-note {
+  font-size: 12px; color: var(--text2); line-height: 1.4;
+  padding-top: 8px; border-top: 1px solid var(--border);
+}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -466,7 +504,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
   .bw-stat { min-width: 48px; }
   .bw-stat-value { font-size: 14px; }
   .bw-days-table { overflow-x: auto; }
-  .bw-day-hdr, .bw-day-row { grid-template-columns: 90px repeat(7, minmax(55px, 1fr)) 36px; min-width: 620px; }
+  .bw-day-hdr, .bw-day-row { grid-template-columns: 90px repeat(7, minmax(50px, 1fr)) 30px; min-width: 580px; }
+  .bw-mens { gap: 16px; }
 }
 
 /* ===== MODALS ===== */
