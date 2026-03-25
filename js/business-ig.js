@@ -14,9 +14,9 @@ function bizConnectInstagram() {
   }
 
   const redirectUri = encodeURIComponent(_bizIgRedirectUri());
-  // Facebook Login for Business with config_id (contains permissions + elements)
-  const configId = '1473384817846897';
-  const authUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&response_type=code&config_id=${configId}`;
+  // Facebook Login with old-style permissions that work with facebook.com/dialog/oauth
+  const scope = 'pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_comments,instagram_manage_insights';
+  const authUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
 
   devError('[IG OAuth] Redirecting to:', authUrl);
   window.location.href = authUrl;
