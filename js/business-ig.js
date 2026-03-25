@@ -1,18 +1,23 @@
 // ===== BUSINESS — INSTAGRAM ANALYTICS =====
 
+// ── Canonical redirect URI (must match Meta Developer Dashboard exactly) ──
+function _bizIgRedirectUri() {
+  return window.location.origin + '/';
+}
+
 // ── Instagram OAuth Connect ──
 function bizConnectInstagram() {
-  // Instagram API app ID (from meta tag)
   const appId = document.querySelector('meta[name="meta-app-id"]')?.content;
   if (!appId) {
     notify('Instagram non configuré. Contactez le support.', 'error');
     return;
   }
 
-  const redirectUri = encodeURIComponent(window.location.origin + '/');
-  const scope = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments';
-  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code&enable_fb_login=0`;
+  const redirectUri = encodeURIComponent(_bizIgRedirectUri());
+  const scope = 'instagram_business_basic,instagram_business_content_publish,instagram_business_manage_messages,instagram_business_manage_comments';
+  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
 
+  devError('[IG OAuth] Redirecting to:', authUrl);
   window.location.href = authUrl;
 }
 
@@ -22,24 +27,42 @@ async function _bizCheckIgCallback() {
   const code = params.get('code');
   if (!code) return;
 
-  // Clean URL
+  devError('[IG Callback] Code received, waiting for auth...');
+
+  // Clean URL immediately to avoid re-processing on refresh
   window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+
+  // Wait for currentUser to be available (auth is async)
+  const user = await _bizWaitForUser(15000);
+  if (!user) {
+    notify('Session expirée. Reconnectez-vous et réessayez Instagram.', 'error');
+    devError('[IG Callback] currentUser not available after timeout');
+    return;
+  }
 
   notify('Connexion Instagram en cours...', 'success');
 
   try {
-    const redirectUri = window.location.origin + window.location.pathname;
+    // Use the exact same redirect URI as the auth request
+    const redirectUri = _bizIgRedirectUri();
+    devError('[IG Callback] Exchanging code with redirect_uri:', redirectUri);
+
     const resp = await fetch('/api/ig-auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code, redirect_uri: redirectUri }),
     });
     const data = await resp.json();
-    if (data.error) { notify('Erreur: ' + data.error, 'error'); return; }
+
+    if (!resp.ok || data.error) {
+      notify('Erreur Instagram: ' + (data.error || `HTTP ${resp.status}`), 'error');
+      devError('[IG Callback] Token exchange failed:', data);
+      return;
+    }
 
     // Save to Supabase
     const { error } = await supabaseClient.from('ig_accounts').upsert({
-      user_id: currentUser.id,
+      user_id: user.id,
       ig_user_id: data.ig_user_id,
       ig_username: data.ig_username,
       access_token: data.access_token,
@@ -52,6 +75,7 @@ async function _bizCheckIgCallback() {
     if (error) { handleError(error, 'ig-connect'); return; }
 
     notify(`Instagram @${data.ig_username} connecté !`, 'success');
+    devError('[IG Callback] Success! Connected as @' + data.ig_username);
 
     // Auto-sync
     await bizSyncIgData();
@@ -59,6 +83,23 @@ async function _bizCheckIgCallback() {
     notify('Erreur de connexion Instagram', 'error');
     devError('[IG Auth]', err);
   }
+}
+
+// Wait for currentUser to be set (polls every 200ms, up to timeout)
+function _bizWaitForUser(timeout = 15000) {
+  return new Promise(resolve => {
+    if (typeof currentUser !== 'undefined' && currentUser) return resolve(currentUser);
+    const start = Date.now();
+    const interval = setInterval(() => {
+      if (typeof currentUser !== 'undefined' && currentUser) {
+        clearInterval(interval);
+        resolve(currentUser);
+      } else if (Date.now() - start > timeout) {
+        clearInterval(interval);
+        resolve(null);
+      }
+    }, 200);
+  });
 }
 
 async function bizSyncIgData() {
@@ -79,20 +120,22 @@ async function bizSyncIgData() {
           const likes = item.like_count || 0;
           const comments = item.comments_count || 0;
 
-          // Try to fetch insights (may fail depending on token permissions)
-          let reach = 0, views = 0, saved = 0, shares = 0;
+          let reach = 0, saved = 0, shares = 0;
+
+          // Fetch insights (reach/saved/shares confirmed working)
           try {
-            const iRes = await fetch(`https://graph.instagram.com/v25.0/${item.id}/insights?metric=reach,saved,shares,views,total_interactions&access_token=${acct.access_token}`);
+            const iRes = await fetch(`https://graph.instagram.com/v25.0/${item.id}/insights?metric=reach,saved,shares&access_token=${acct.access_token}`);
             const iData = await iRes.json();
             if (iData.data) {
               iData.data.forEach(m => {
                 if (m.name === 'reach') reach = m.values?.[0]?.value || 0;
                 if (m.name === 'saved') saved = m.values?.[0]?.value || 0;
                 if (m.name === 'shares') shares = m.values?.[0]?.value || 0;
-                if (m.name === 'views') views = m.values?.[0]?.value || 0;
               });
             }
           } catch {}
+
+          const views = reach;
 
           const totalEng = likes + comments + saved + shares;
           const engRate = reach > 0 ? (totalEng / reach * 100) : 0;
@@ -174,6 +217,32 @@ async function bizSyncIgData() {
       }
     } catch {}
 
+    // Auto-snapshot after sync — re-read fresh reels from DB
+    try {
+      const profileRes = await fetch(`https://graph.instagram.com/v25.0/me?fields=followers_count&access_token=${acct.access_token}`);
+      const profile = await profileRes.json();
+      const { data: freshReels } = await supabaseClient.from('ig_reels').select('views,reach').eq('user_id', currentUser.id);
+      const totalViews = (freshReels || []).reduce((s, r) => s + (r.views || 0), 0);
+      const totalReach = (freshReels || []).reduce((s, r) => s + (r.reach || 0), 0);
+
+      // Insert new snapshot row
+      await supabaseClient.from('ig_snapshots').insert({
+        user_id: currentUser.id,
+        snapshot_date: new Date().toISOString().slice(0, 10),
+        followers: profile.followers_count || 0,
+        total_views: totalViews,
+        total_reach: totalReach,
+        new_followers: (profile.followers_count || 0) - (acct.starting_followers || 0),
+      });
+
+      // Keep max 10 snapshots per user — delete oldest beyond 10
+      const { data: allSnaps } = await supabaseClient.from('ig_snapshots').select('id,created_at').eq('user_id', currentUser.id).order('created_at', { ascending: false });
+      if (allSnaps && allSnaps.length > 10) {
+        const toDelete = allSnaps.slice(10).map(s => s.id);
+        await supabaseClient.from('ig_snapshots').delete().in('id', toDelete);
+      }
+    } catch (e) { devError('[IG Snapshot]', e); }
+
     notify('Instagram synchronisé !', 'success');
   } catch (err) {
     notify('Erreur de synchronisation', 'error');
@@ -181,15 +250,10 @@ async function bizSyncIgData() {
   }
 }
 
-// Check callback on script load
-if (typeof currentUser !== 'undefined' && currentUser) {
-  _bizCheckIgCallback();
-} else {
-  // Defer until auth is ready
-  window.addEventListener('load', () => setTimeout(_bizCheckIgCallback, 2000));
-}
+// Check callback on script load — _bizCheckIgCallback now waits for currentUser internally
+_bizCheckIgCallback();
 
-let _bizIgTab = 'stories';
+let _bizIgTab = 'general';
 window._bizIgStories = [];
 window._bizIgSequences = [];
 window._bizIgSequenceItems = [];
@@ -252,15 +316,42 @@ async function _bizIgAutoSync() {
   } catch (e) { devError('[IG AutoSync]', e); }
 }
 
+// ── Shared "not connected" screen (shown from any sub-tab) ──
+function _bizIgNotConnectedHtml() {
+  return `
+    <div style="text-align:center;padding:60px;">
+      <i class="fab fa-instagram" style="font-size:48px;color:var(--text3);margin-bottom:16px;display:block;opacity:0.4;"></i>
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">Aucun compte connecté</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:20px;">Connectez votre compte Instagram pour commencer</div>
+      <button class="btn btn-red" onclick="bizConnectInstagram()"><i class="fab fa-instagram" style="margin-right:6px;"></i>Connecter Instagram</button>
+      <div style="font-size:11px;color:var(--text3);margin-top:12px;">Nécessite un compte Instagram Business ou Creator</div>
+    </div>`;
+}
+
 // ── Main render ──
 async function bizRenderInstagram() {
   const el = document.getElementById('biz-tab-content');
+
+  // Quick check: is there an IG account connected?
+  if (!window._bizIgAccount) {
+    try {
+      const { data } = await supabaseClient.from('ig_accounts').select('*').eq('user_id', currentUser.id).single();
+      window._bizIgAccount = data || null;
+    } catch { window._bizIgAccount = null; }
+  }
+
+  // If not connected → show connect screen immediately (no sub-tabs)
+  if (!window._bizIgAccount) {
+    el.innerHTML = _bizIgNotConnectedHtml();
+    return;
+  }
 
   // Auto-sync stories silently in background
   _bizIgAutoSync();
 
   el.innerHTML = `
-    <div style="display:flex;gap:6px;margin-bottom:20px;">
+    <div style="display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;">
+      <button class="btn ${_bizIgTab==='general'?'btn-red':'btn-outline'}" onclick="_bizIgTab='general';bizRenderInstagram()"><i class="fas fa-chart-line" style="margin-right:4px;"></i>Général</button>
       <button class="btn ${_bizIgTab==='stories'?'btn-red':'btn-outline'}" onclick="_bizIgTab='stories';bizRenderInstagram()"><i class="fas fa-images" style="margin-right:4px;"></i>Stories</button>
       <button class="btn ${_bizIgTab==='reels'?'btn-red':'btn-outline'}" onclick="_bizIgTab='reels';bizRenderInstagram()"><i class="fas fa-film" style="margin-right:4px;"></i>Reels</button>
       <button class="btn ${_bizIgTab==='overview'?'btn-red':'btn-outline'}" onclick="_bizIgTab='overview';bizRenderInstagram()"><i class="fas fa-chart-pie" style="margin-right:4px;"></i>Aperçu</button>
@@ -268,10 +359,544 @@ async function bizRenderInstagram() {
     <div id="biz-ig-content"><div style="text-align:center;padding:40px;"><i class="fas fa-spinner fa-spin"></i></div></div>`;
 
   switch (_bizIgTab) {
+    case 'general': await bizRenderIgGeneral(); break;
     case 'stories': await bizRenderIgStories(); break;
     case 'reels':   await bizRenderIgReels(); break;
     case 'overview': await bizRenderIgOverview(); break;
   }
+}
+
+// ═══════════════════════════════════════
+// ── GENERAL TAB ──
+// ═══════════════════════════════════════
+
+window._bizIgPeriod = '30d';
+
+const _BIZ_IG_PERIODS = [
+  { key: '7d',  label: '7 jours',  days: 7 },
+  { key: '30d', label: '30 jours', days: 30 },
+  { key: '90d', label: '90 jours', days: 90 },
+  { key: '6m',  label: '6 mois',   days: 180 },
+  { key: '1y',  label: '1 an',     days: 365 },
+];
+
+function _bizIgPeriodRange(key) {
+  const p = _BIZ_IG_PERIODS.find(x => x.key === key) || _BIZ_IG_PERIODS[1];
+  const end = new Date();
+  end.setHours(23, 59, 59, 999);
+  const start = new Date();
+  start.setDate(start.getDate() - p.days);
+  start.setHours(0, 0, 0, 0);
+  return { start, end };
+}
+
+function _bizIgGetQuarter(date) {
+  const d = date ? new Date(date) : new Date();
+  const q = Math.ceil((d.getMonth() + 1) / 3);
+  return `${d.getFullYear()}-Q${q}`;
+}
+
+async function bizRenderIgGeneral() {
+  const ct = document.getElementById('biz-ig-content');
+
+  try {
+    const [acctRes, reelsRes, pillarsRes, snapshotsRes, goalsRes] = await Promise.all([
+      supabaseClient.from('ig_accounts').select('*').eq('user_id', currentUser.id).single(),
+      supabaseClient.from('ig_reels').select('*').eq('user_id', currentUser.id).order('published_at', { ascending: false }),
+      supabaseClient.from('ig_content_pillars').select('*').eq('user_id', currentUser.id).order('name'),
+      supabaseClient.from('ig_snapshots').select('*').eq('user_id', currentUser.id).order('snapshot_date', { ascending: true }),
+      supabaseClient.from('ig_goals').select('*').eq('user_id', currentUser.id),
+    ]);
+    window._bizIgAccount = acctRes.data || null;
+    window._bizIgReels = reelsRes.data || [];
+    window._bizIgPillars = pillarsRes.data || [];
+    window._bizIgSnapshots = snapshotsRes.data || [];
+    window._bizIgGoals = goalsRes.data || [];
+  } catch (e) {
+    handleError(e, 'ig-general');
+  }
+
+  // Fetch live profile
+  const acct = window._bizIgAccount;
+  if (acct?.access_token) {
+    try {
+      const resp = await fetch(`https://graph.instagram.com/v25.0/me?fields=username,name,followers_count,follows_count,media_count,profile_picture_url&access_token=${acct.access_token}`);
+      window._bizIgProfile = await resp.json();
+    } catch (e) { window._bizIgProfile = {}; }
+  } else {
+    window._bizIgProfile = {};
+  }
+
+  _renderIgGeneralView(ct);
+}
+
+function _renderIgGeneralView(ct) {
+  if (!ct) ct = document.getElementById('biz-ig-content');
+
+  const acct = window._bizIgAccount;
+  const profile = window._bizIgProfile || {};
+  const allReels = window._bizIgReels || [];
+  const pillars = window._bizIgPillars || [];
+  const snapshots = window._bizIgSnapshots || [];
+  const goals = window._bizIgGoals || [];
+  const period = window._bizIgPeriod || '30d';
+  const quarter = _bizIgGetQuarter();
+
+  if (!acct) {
+    ct.innerHTML = `
+      <div style="text-align:center;padding:60px;">
+        <i class="fab fa-instagram" style="font-size:48px;color:var(--text3);margin-bottom:16px;display:block;opacity:0.4;"></i>
+        <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:8px;">Aucun compte connecté</div>
+        <div style="font-size:13px;color:var(--text3);margin-bottom:20px;">Connectez votre compte Instagram pour voir le tableau de bord</div>
+        <button class="btn btn-red" onclick="bizConnectInstagram()"><i class="fab fa-instagram" style="margin-right:6px;"></i>Connecter Instagram</button>
+      </div>`;
+    return;
+  }
+
+  // Filter reels by period
+  const { start: pStart, end: pEnd } = _bizIgPeriodRange(period);
+  const reels = allReels.filter(r => {
+    if (!r.published_at) return false;
+    const d = new Date(r.published_at);
+    return d >= pStart && d <= pEnd;
+  });
+
+  // Filter snapshots by period
+  const qSnapshots = snapshots.filter(s => {
+    const d = new Date(s.snapshot_date);
+    return d >= pStart && d <= pEnd;
+  });
+
+  // ── Period selector ──
+  const periodPills = _BIZ_IG_PERIODS.map(p =>
+    `<button class="btn ${p.key === period ? 'btn-red' : 'btn-outline'} btn-sm" onclick="window._bizIgPeriod='${p.key}';_renderIgGeneralView()">${p.label}</button>`
+  ).join('');
+
+  // ── Section 1 — KPI Row ──
+  const followers = profile.followers_count || 0;
+  const firstSnapshot = qSnapshots.length ? qSnapshots[0] : null;
+  const startFollowers = firstSnapshot ? firstSnapshot.followers : followers;
+  const newFollowers = followers - startFollowers;
+  const totalViews = reels.reduce((s, r) => s + (r.views || 0), 0);
+  const totalReach = reels.reduce((s, r) => s + (r.reach || 0), 0);
+  const totalInteractions = reels.reduce((s, r) => s + (r.likes || 0) + (r.comments || 0) + (r.saves || 0) + (r.shares || 0), 0);
+  const postedCount = reels.length;
+
+  const kpi = (label, value, color) => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center;min-width:100px;flex-shrink:0;">
+      <div style="font-size:22px;font-weight:700;${color ? 'color:' + color + ';' : 'color:var(--text);'}">${value}</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">${label}</div>
+    </div>`;
+
+  const kpiRow = `
+    <div style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px;margin-bottom:20px;">
+      ${kpi('Followers', followers.toLocaleString(), 'var(--success)')}
+      ${kpi('New', (newFollowers >= 0 ? '+' : '') + newFollowers.toLocaleString(), null)}
+      ${kpi('Views', totalViews.toLocaleString(), 'var(--primary)')}
+      ${kpi('Reached', totalReach.toLocaleString(), null)}
+      ${kpi('Visits', '\u2014', null)}
+      ${kpi('Interactions', totalInteractions.toLocaleString(), null)}
+      ${kpi('DMs', '\u2014', null)}
+      ${kpi('Link', '\u2014', null)}
+      ${kpi('Posted', postedCount, null)}
+    </div>`;
+
+  // ── Section 2 — Growth Trend ──
+  const growthSection = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 16px;">Growth Trend</h4>
+      ${qSnapshots.length
+        ? `<div style="position:relative;height:220px;width:100%;"><canvas id="ig-general-growth-chart"></canvas></div>`
+        : '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;"><i class="fas fa-chart-line" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.3;"></i>Aucun historique \u2014 les donn\u00e9es seront enregistr\u00e9es automatiquement</div>'}
+    </div>`;
+
+  // ── Section 3 — Performance by Format ──
+  const formats = {};
+  reels.forEach(r => {
+    const f = r.format || 'non_tagg\u00e9';
+    if (!formats[f]) formats[f] = { views: 0, count: 0 };
+    formats[f].views += (r.views || 0);
+    formats[f].count++;
+  });
+  const hasFormats = reels.some(r => r.format);
+
+  const formatSection = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 16px;">Performance par Format</h4>
+      ${hasFormats
+        ? `<div style="position:relative;height:160px;width:100%;"><canvas id="ig-general-format-chart"></canvas></div>`
+        : '<div style="text-align:center;padding:30px;color:var(--text3);font-size:12px;"><i class="fas fa-tags" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.3;"></i>Aucun reel tagg\u00e9 \u2014 ajoutez un format (talking_head, text_overlay, raw_documentary) \u00e0 vos reels</div>'}
+    </div>`;
+
+  // ── Section 4 — Transformation Results (based on snapshots) ──
+  const currentEngagement = reels.length ? (reels.reduce((s, r) => s + (r.engagement_rate || 0), 0) / reels.length).toFixed(2) : '0.00';
+  const currentViews = reels.reduce((s, r) => s + (r.views || 0), 0);
+  const bestReelViews = reels.length ? Math.max(...reels.map(r => r.views || 0)) : 0;
+
+  const transLine = (label, before, after, diff) => {
+    const diffStr = diff > 0 ? `<span style="color:var(--success);font-size:10px;margin-left:4px;">+${diff.toLocaleString()}</span>` : diff < 0 ? `<span style="color:var(--danger);font-size:10px;margin-left:4px;">${diff.toLocaleString()}</span>` : '';
+    return `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:12px;color:var(--text2);">${label}</span>
+      <div style="font-size:12px;">
+        <span style="color:var(--text3);">${before}</span>
+        <span style="color:var(--text3);margin:0 6px;">\u2192</span>
+        <span style="color:var(--text);font-weight:700;">${after}</span>${diffStr}
+      </div>
+    </div>`;
+  };
+
+  const periodLabel = (_BIZ_IG_PERIODS.find(p => p.key === period) || {}).label || period;
+  const transformSection = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+      <div style="height:3px;background:linear-gradient(90deg, var(--primary), var(--success));"></div>
+      <div style="padding:20px;">
+        <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;">\u00c9volution (${periodLabel})</h4>
+        ${firstSnapshot
+          ? `${transLine('Followers', firstSnapshot.followers.toLocaleString(), followers.toLocaleString(), followers - firstSnapshot.followers)}
+            ${transLine('Views', (firstSnapshot.total_views || 0).toLocaleString(), currentViews.toLocaleString(), currentViews - (firstSnapshot.total_views || 0))}
+            ${transLine('Reach', (firstSnapshot.total_reach || 0).toLocaleString(), reels.reduce((s, r) => s + (r.reach || 0), 0).toLocaleString(), reels.reduce((s, r) => s + (r.reach || 0), 0) - (firstSnapshot.total_reach || 0))}
+            ${transLine('Best Reel', '\u2014', bestReelViews.toLocaleString(), 0)}`
+          : `<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px;">
+              <i class="fas fa-chart-line" style="font-size:20px;display:block;margin-bottom:8px;opacity:0.3;"></i>
+              Pas encore de donn\u00e9es sur cette p\u00e9riode.<br>Chaque sync enregistre un snapshot \u2014 les donn\u00e9es s'accumuleront au fil du temps.
+            </div>`}
+      </div>
+    </div>`;
+
+  // ── Section 5 — Goals ──
+  const qGoals = goals.filter(g => g.quarter === quarter);
+  const goalMetrics = {
+    followers: { label: 'Followers', icon: 'fa-users', current: followers },
+    monthly_views: { label: 'Views (période)', icon: 'fa-eye', current: currentViews },
+    engagement_rate: { label: 'Engagement', icon: 'fa-heart', current: parseFloat(currentEngagement) },
+    weekly_output: { label: 'Reels / semaine', icon: 'fa-film', current: (() => {
+      const now = new Date();
+      const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1); weekStart.setHours(0,0,0,0);
+      return allReels.filter(r => r.published_at && new Date(r.published_at) >= weekStart).length;
+    })() },
+    dms_month: { label: 'DMs / mois', icon: 'fa-envelope', current: 0 },
+    viral_reels: { label: 'Reels viraux (100K+)', icon: 'fa-fire', current: reels.filter(r => (r.views || 0) >= 100000).length },
+  };
+
+  const goalBars = qGoals.map(g => {
+    const meta = goalMetrics[g.metric] || { label: g.metric, icon: 'fa-bullseye', current: 0 };
+    const pct = g.target_value > 0 ? Math.min(100, Math.round(meta.current / g.target_value * 100)) : 0;
+    const status = pct >= 100 ? '\u2705' : pct >= 80 ? '\u26a0\ufe0f' : '\u274c';
+    return `
+      <div style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <span style="font-size:12px;color:var(--text2);"><i class="fas ${meta.icon}" style="margin-right:4px;width:14px;text-align:center;"></i>${meta.label} ${status}</span>
+          <span style="font-size:11px;color:var(--text3);">${meta.current.toLocaleString()} / ${Number(g.target_value).toLocaleString()}</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:3px;height:6px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:var(--success);border-radius:3px;transition:width 0.3s;"></div>
+        </div>
+      </div>`;
+  }).join('');
+
+  const goalsSection = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0;">${quarter.replace('-', ' ')} Goals</h4>
+        <button class="btn btn-outline btn-sm" onclick="_bizIgEditGoalsModal('${quarter}')"><i class="fas fa-pen" style="margin-right:4px;"></i>Modifier</button>
+      </div>
+      ${qGoals.length
+        ? goalBars
+        : '<div style="text-align:center;padding:16px;color:var(--text3);font-size:12px;">Aucun objectif d\u00e9fini pour ce trimestre<br><button class="btn btn-red btn-sm" style="margin-top:8px;" onclick="_bizIgEditGoalsModal(\'' + quarter + '\')"><i class="fas fa-plus" style="margin-right:4px;"></i>D\u00e9finir des objectifs</button></div>'}
+    </div>`;
+
+  // ── Section 6 — Top Performing Reels ──
+  const sortedReels = [...reels].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 8);
+  const topReelRows = sortedReels.map((r, idx) => {
+    const caption = (r.caption || '').length > 50 ? escHtml(r.caption.slice(0, 50)) + '...' : escHtml(r.caption || '\u2014');
+    const pillar = pillars.find(p => p.id === r.pillar_id);
+    const pillarTag = pillar
+      ? `<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:${escHtml(pillar.color || '#6b7280')}20;color:${escHtml(pillar.color || '#6b7280')};font-weight:600;">${escHtml(pillar.name)}</span>`
+      : '<span style="color:var(--text3);font-size:10px;">\u2014</span>';
+    const thumb = r.thumbnail_url
+      ? `<img src="${escHtml(r.thumbnail_url)}" style="width:36px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer;" onclick="_bizIgPlayReel('${r.id}')">`
+      : `<div style="width:36px;height:48px;background:var(--bg3);border-radius:4px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-film" style="font-size:10px;color:var(--text3);"></i></div>`;
+    return `
+      <tr class="nd-tr" style="cursor:pointer;" onclick="_bizIgPlayReel('${r.id}')">
+        <td style="padding:6px 8px;font-size:12px;color:var(--text3);font-weight:600;">#${idx + 1}</td>
+        <td style="padding:6px 8px;">${thumb}</td>
+        <td style="font-size:12px;color:var(--text);max-width:200px;">${caption}</td>
+        <td>${pillarTag}</td>
+        <td style="font-size:12px;color:var(--text2);font-weight:600;">${(r.views || 0).toLocaleString()}</td>
+        <td style="font-size:12px;color:var(--text2);">${r.saves || 0}</td>
+        <td style="font-size:12px;color:var(--text2);">${r.shares || 0}</td>
+      </tr>`;
+  }).join('');
+
+  const topReelsSection = reels.length ? `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;">Top Performing Reels</h4>
+      <div class="nd-table-wrap">
+        <table class="nd-table">
+          <thead><tr><th>#</th><th></th><th>Caption</th><th>Pillar</th><th>Views</th><th>Saves</th><th>Shares</th></tr></thead>
+          <tbody>${topReelRows}</tbody>
+        </table>
+      </div>
+    </div>` : '';
+
+  // ── Section 7 — Content Pillars Distribution ──
+  const pillarCounts = {};
+  reels.forEach(r => {
+    const pid = r.pillar_id || '_none';
+    pillarCounts[pid] = (pillarCounts[pid] || 0) + 1;
+  });
+  const hasPillarData = pillars.length > 0 && reels.some(r => r.pillar_id);
+
+  const pillarLegend = pillars.filter(p => pillarCounts[p.id]).map(p => {
+    const count = pillarCounts[p.id] || 0;
+    const pct = reels.length ? Math.round(count / reels.length * 100) : 0;
+    return `
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:10px;height:10px;border-radius:50%;background:${escHtml(p.color || '#6b7280')};flex-shrink:0;"></div>
+        <span style="font-size:12px;color:var(--text);flex:1;">${escHtml(p.name)}</span>
+        <span style="font-size:11px;color:var(--text3);">${pct}% (${count})</span>
+      </div>`;
+  }).join('');
+
+  const pillarsSection = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 16px;">Content Pillars Distribution</h4>
+      ${hasPillarData
+        ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:center;">
+            <div style="position:relative;height:200px;"><canvas id="ig-general-pillars-chart"></canvas></div>
+            <div>${pillarLegend}</div>
+          </div>`
+        : '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">Assignez des piliers \u00e0 vos reels pour voir la r\u00e9partition</div>'}
+    </div>`;
+
+  // ── Section 8 — Audience placeholder ──
+  const audienceSection = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px;">
+      <h4 style="font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;"><i class="fas fa-globe" style="margin-right:6px;"></i>Audience</h4>
+      <div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">
+        <i class="fas fa-globe" style="font-size:28px;display:block;margin-bottom:8px;opacity:0.3;"></i>
+        Bient\u00f4t disponible \u2014 les donn\u00e9es d'audience seront ajout\u00e9es prochainement
+      </div>
+    </div>`;
+
+  // ── Assemble layout ──
+  ct.innerHTML = `
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
+      ${periodPills}
+      <div style="flex:1;"></div>
+      <button class="btn btn-outline btn-sm" onclick="bizSyncIgData().then(()=>bizRenderInstagram())"><i class="fas fa-sync" style="margin-right:4px;"></i>Sync</button>
+    </div>
+
+    ${kpiRow}
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:16px;margin-bottom:16px;">
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        ${growthSection}
+        ${formatSection}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        ${transformSection}
+        ${goalsSection}
+        ${audienceSection}
+      </div>
+    </div>
+
+    ${topReelsSection}
+    <div style="margin-top:16px;">${pillarsSection}</div>`;
+
+  // ── Render Chart.js charts ──
+  setTimeout(() => {
+    _bizIgRenderGrowthChart(qSnapshots);
+    _bizIgRenderFormatChart(formats, hasFormats);
+    _bizIgRenderPillarsChart(pillars, pillarCounts, hasPillarData);
+  }, 50);
+}
+
+// ── Chart renderers ──
+function _bizIgRenderGrowthChart(snapshots) {
+  const canvas = document.getElementById('ig-general-growth-chart');
+  if (!canvas || !snapshots.length) return;
+
+  const labels = snapshots.map(s => {
+    const d = new Date(s.snapshot_date);
+    return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  });
+
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#333';
+  const text3 = getComputedStyle(document.documentElement).getPropertyValue('--text3').trim() || '#888';
+
+  new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Followers', data: snapshots.map(s => s.followers || 0), borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3 },
+        { label: 'Views', data: snapshots.map(s => s.total_views || 0), borderColor: '#eab308', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3 },
+        { label: 'Reached', data: snapshots.map(s => s.total_reach || 0), borderColor: '#22c55e', backgroundColor: 'transparent', tension: 0.3, pointRadius: 3 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: text3, font: { size: 11 } } } },
+      scales: {
+        x: { grid: { color: borderColor }, ticks: { color: text3, font: { size: 10 } } },
+        y: { grid: { color: borderColor }, ticks: { color: text3, font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+function _bizIgRenderFormatChart(formats, hasFormats) {
+  const canvas = document.getElementById('ig-general-format-chart');
+  if (!canvas || !hasFormats) return;
+
+  const formatColors = { talking_head: '#3b82f6', text_overlay: '#f59e0b', raw_documentary: '#ef4444' };
+  const formatLabels = { talking_head: 'Talking Head', text_overlay: 'Text Overlay', raw_documentary: 'Raw/Documentary' };
+  const keys = Object.keys(formats).filter(k => k !== 'non_tagg\u00e9');
+  const labels = keys.map(k => formatLabels[k] || k);
+  const avgViews = keys.map(k => formats[k].count > 0 ? Math.round(formats[k].views / formats[k].count) : 0);
+  const colors = keys.map(k => formatColors[k] || '#6b7280');
+
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--border').trim() || '#333';
+  const text3 = getComputedStyle(document.documentElement).getPropertyValue('--text3').trim() || '#888';
+
+  new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{ label: 'Avg Views', data: avgViews, backgroundColor: colors, borderRadius: 4 }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: borderColor }, ticks: { color: text3, font: { size: 10 } } },
+        y: { grid: { display: false }, ticks: { color: text3, font: { size: 11 } } },
+      },
+    },
+  });
+}
+
+function _bizIgRenderPillarsChart(pillars, pillarCounts, hasPillarData) {
+  const canvas = document.getElementById('ig-general-pillars-chart');
+  if (!canvas || !hasPillarData) return;
+
+  const activePillars = pillars.filter(p => pillarCounts[p.id]);
+  const labels = activePillars.map(p => p.name);
+  const data = activePillars.map(p => pillarCounts[p.id] || 0);
+  const colors = activePillars.map(p => p.color || '#6b7280');
+
+  const text3 = getComputedStyle(document.documentElement).getPropertyValue('--text3').trim() || '#888';
+
+  new Chart(canvas, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: colors, borderWidth: 0 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw} reels` } },
+      },
+    },
+  });
+}
+
+// ── Set starting point ──
+async function _bizIgSetStartingPoint() {
+  const profile = window._bizIgProfile || {};
+  const allReels = window._bizIgReels || [];
+  const now = new Date();
+  const monthReels = allReels.filter(r => {
+    if (!r.published_at) return false;
+    const d = new Date(r.published_at);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+  const monthViews = monthReels.reduce((s, r) => s + (r.views || 0), 0);
+  const avgEng = allReels.length ? parseFloat((allReels.reduce((s, r) => s + (r.engagement_rate || 0), 0) / allReels.length).toFixed(2)) : 0;
+  const bestReel = allReels.length ? Math.max(...allReels.map(r => r.views || 0)) : 0;
+
+  const { error } = await supabaseClient.from('ig_accounts').update({
+    starting_followers: profile.followers_count || 0,
+    starting_date: new Date().toISOString().slice(0, 10),
+    starting_monthly_views: monthViews,
+    starting_engagement: avgEng,
+    starting_best_reel: bestReel,
+  }).eq('user_id', currentUser.id);
+
+  if (error) { handleError(error, 'ig-starting'); return; }
+  notify('Point de d\u00e9part enregistr\u00e9 !', 'success');
+  await bizRenderIgGeneral();
+}
+
+// ── Goals modal ──
+function _bizIgEditGoalsModal(quarter) {
+  const goals = (window._bizIgGoals || []).filter(g => g.quarter === quarter);
+  const metrics = [
+    { key: 'followers', label: 'Followers' },
+    { key: 'monthly_views', label: 'Monthly Views' },
+    { key: 'engagement_rate', label: 'Engagement Rate (%)' },
+    { key: 'weekly_output', label: 'Reels / semaine' },
+    { key: 'dms_month', label: 'DMs / mois' },
+    { key: 'viral_reels', label: 'Reels viraux (100K+)' },
+  ];
+
+  const rows = metrics.map(m => {
+    const existing = goals.find(g => g.metric === m.key);
+    const val = existing ? existing.target_value : '';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <label style="font-size:12px;color:var(--text2);width:160px;">${m.label}</label>
+        <input type="number" id="ig-goal-${m.key}" class="bt-input" value="${val}" placeholder="0" style="flex:1;">
+      </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'ig-goals-modal';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  overlay.innerHTML = `
+    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:440px;max-width:90vw;">
+      <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 20px;">Objectifs ${quarter.replace('-', ' ')}</h3>
+      ${rows}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+        <button class="btn btn-outline" onclick="document.getElementById('ig-goals-modal').remove()">Annuler</button>
+        <button class="btn btn-red" onclick="_bizIgSaveGoals('${quarter}')">Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+}
+
+async function _bizIgSaveGoals(quarter) {
+  const metrics = ['followers', 'monthly_views', 'engagement_rate', 'weekly_output', 'dms_month', 'viral_reels'];
+  const inserts = [];
+
+  for (const m of metrics) {
+    const el = document.getElementById(`ig-goal-${m}`);
+    const val = parseFloat(el?.value);
+    if (!isNaN(val) && val > 0) {
+      inserts.push({ user_id: currentUser.id, quarter, metric: m, target_value: val });
+    }
+  }
+
+  // Delete existing goals for this quarter, then insert new ones
+  await supabaseClient.from('ig_goals').delete().eq('user_id', currentUser.id).eq('quarter', quarter);
+  if (inserts.length) {
+    const { error } = await supabaseClient.from('ig_goals').insert(inserts);
+    if (error) { handleError(error, 'ig-goals-save'); return; }
+  }
+
+  document.getElementById('ig-goals-modal')?.remove();
+  notify('Objectifs enregistr\u00e9s !', 'success');
+  await bizRenderIgGeneral();
 }
 
 // ═══════════════════════════════════════
