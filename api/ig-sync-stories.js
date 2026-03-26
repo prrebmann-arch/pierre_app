@@ -31,7 +31,7 @@ module.exports = async function handler(req, res) {
       for (const story of (storiesData.data || [])) {
         let insights = {};
         try {
-          const iRes = await fetch(`https://graph.instagram.com/v25.0/${story.id}/insights?metric=impressions,reach,replies,exits,taps_forward,taps_back&access_token=${acct.access_token}`);
+          const iRes = await fetch(`https://graph.instagram.com/v25.0/${story.id}/insights?metric=views,reach,replies,shares,total_interactions,navigation&access_token=${acct.access_token}`);
           const iData = await iRes.json();
           (iData.data || []).forEach(m => { insights[m.name] = m.values?.[0]?.value || 0; });
         } catch {}
@@ -43,12 +43,12 @@ module.exports = async function handler(req, res) {
           thumbnail_url: story.thumbnail_url || null,
           caption: story.caption || null,
           story_type: story.media_type === 'VIDEO' ? 'video' : 'image',
-          impressions: insights.impressions || 0,
+          impressions: insights.views || 0,
           reach: insights.reach || 0,
           replies: insights.replies || 0,
-          exits: insights.exits || 0,
-          taps_forward: insights.taps_forward || 0,
-          taps_back: insights.taps_back || 0,
+          exits: insights.navigation || 0,
+          taps_forward: insights.total_interactions || 0,
+          taps_back: insights.shares || 0,
           published_at: story.timestamp,
           expires_at: new Date(new Date(story.timestamp).getTime() + 24 * 60 * 60 * 1000).toISOString(),
         }, { onConflict: 'ig_story_id' });

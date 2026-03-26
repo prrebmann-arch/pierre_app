@@ -145,63 +145,61 @@ function bizRenderAll() {
   const weeksLeft = targetDeadline ? Math.max(0, Math.ceil((new Date(targetDeadline + 'T00:00:00') - new Date()) / (7 * MS_PER_DAY))) : null;
   const totalWeeks = targetDeadline ? Math.max(1, Math.ceil((new Date(targetDeadline + 'T00:00:00') - new Date(bizConfig.created_at || new Date())) / (7 * MS_PER_DAY))) : 16;
 
-  let content = `
-    <!-- HEADER -->
+  const bizHeaderHtml = `
     <div class="biz-header">
-      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:20px;font-weight:800;color:var(--primary);letter-spacing:1px;">${escHtml(targetName)}</span>
-          <button class="nd2-btn" onclick="bizEditObjective()" title="Modifier l'objectif"><i class="fas fa-pen"></i></button>
-        </div>
-        <div style="display:flex;gap:16px;flex-wrap:wrap;">
-          ${bizStatHtml('MRR', mrr.total.toLocaleString('fr-FR') + '€', `/ ${targetMrr.toLocaleString('fr-FR')}€`)}
-          ${bizStatHtml('Online', mrr.online.toLocaleString('fr-FR') + '€', `(${mrr.onlineCount})`)}
-          ${bizStatHtml('Présentiel', mrr.offline.toLocaleString('fr-FR') + '€', `(${mrr.offlineCount})`)}
-          ${bizStatHtml('Clients', mrr.count)}
-          ${bizStatHtml('Followers', totalFollowers.toLocaleString('fr-FR'))}
-          ${bizStatHtml('Semaine', bizWeek, weeksLeft !== null ? `(${weeksLeft}j restants)` : `/ ${totalWeeks}`)}
-        </div>
+      <div class="biz-kpi-row">
+        ${bizKpi('MRR', mrr.total.toLocaleString('fr-FR') + '€', `/ ${targetMrr.toLocaleString('fr-FR')}€`)}
+        ${bizKpi('Online', mrr.online.toLocaleString('fr-FR') + '€', mrr.onlineCount + ' clients')}
+        ${bizKpi('Présentiel', mrr.offline.toLocaleString('fr-FR') + '€', mrr.offlineCount + ' clients')}
+        ${bizKpi('Clients', mrr.count)}
+        ${bizKpi('Followers', totalFollowers.toLocaleString('fr-FR'))}
+        ${bizKpi('Semaine', 'S' + bizWeek, weeksLeft !== null ? weeksLeft + 'j restants' : '/ ' + totalWeeks)}
       </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:10px;">
-        <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px;overflow:hidden;">
-          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--primary),var(--success));border-radius:4px;transition:width 0.5s;"></div>
-        </div>
+      <div class="biz-progress-wrap">
+        <div class="biz-progress-bar"><div class="biz-progress-fill" style="width:${pct}%;"></div></div>
         <span style="font-size:12px;font-weight:700;color:${pct >= 70 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)'};">${pct}%</span>
+        <button class="nd2-btn" onclick="bizEditObjective()" title="Modifier l'objectif"><i class="fas fa-pen"></i></button>
       </div>
+    </div>`;
+
+  window._bizHeaderHtml = bizHeaderHtml;
+
+  const tabs = [
+    ['dashboard','fa-chart-line','Dashboard'],['objectives','fa-bullseye','Objectifs'],
+    ['clients','fa-users','Clients'],['content','fa-calendar-alt','Contenu'],
+    ['instagram','fab fa-instagram','Instagram'],
+    ['messages','fa-comments','Messages'],
+  ];
+  const navHtml = tabs.map(([id,icon,label]) => {
+    const ic = icon.startsWith('fab') ? icon : 'fas ' + icon;
+    return `<button class="biz-nav-btn ${bizTab===id?'active':''}" onclick="bizSwitchTab('${id}')"><i class="${ic}"></i> ${label}</button>`;
+  }).join('');
+
+  const emptyTab = (icon, text) => `<div style="text-align:center;padding:60px;color:var(--text3);"><i class="${icon}" style="font-size:32px;margin-bottom:12px;display:block;opacity:0.3;"></i><div style="font-size:13px;">${text}</div></div>`;
+
+  container.innerHTML = `
+    <div class="biz-nav">${navHtml}
+      <div style="flex:1;"></div>
+      <button class="biz-nav-btn" onclick="bizSyncIgData().then(()=>{if(bizTab==='instagram')bizRenderInstagram();})" title="Sync Instagram"><i class="fab fa-instagram"></i> <i class="fas fa-sync-alt" style="font-size:9px;"></i></button>
     </div>
+    <div id="biz-tab-content"></div>`;
 
-    <!-- NAV — sous-onglets Business -->
-    <div style="display:flex;gap:6px;margin:16px 0;flex-wrap:wrap;">
-      <button class="btn ${bizTab==='dashboard'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('dashboard')"><i class="fas fa-chart-line"></i> Dashboard</button>
-      <button class="btn ${bizTab==='objectives'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('objectives')"><i class="fas fa-bullseye"></i> Objectifs</button>
-      <button class="btn ${bizTab==='clients'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('clients')"><i class="fas fa-users"></i> Clients</button>
-      <button class="btn ${bizTab==='instagram'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('instagram')"><i class="fab fa-instagram"></i> Instagram</button>
-      <button class="btn ${bizTab==='leads'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('leads')"><i class="fas fa-funnel-dollar"></i> Leads</button>
-      <button class="btn ${bizTab==='messages'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('messages')"><i class="fas fa-comments"></i> Messages</button>
-      <button class="btn ${bizTab==='automations'?'btn-red':'btn-outline'}" onclick="bizSwitchTab('automations')"><i class="fas fa-robot"></i> Auto</button>
-    </div>
-
-    <div id="biz-tab-content"></div>
-  `;
-
-  container.innerHTML = content;
-
+  const el = document.getElementById('biz-tab-content');
   switch (bizTab) {
     case 'dashboard': bizRenderDashboard(); break;
     case 'objectives': bizRenderObjectives(); break;
     case 'clients': bizRenderClients(); break;
-    case 'instagram': if (typeof bizRenderInstagram === 'function') bizRenderInstagram(); else document.getElementById('biz-tab-content').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3);"><i class="fab fa-instagram" style="font-size:40px;margin-bottom:12px;display:block;"></i><div style="font-size:14px;">Module Instagram — bientôt disponible</div><div style="font-size:12px;margin-top:4px;">Connectez votre compte Instagram pour commencer</div></div>'; break;
-    case 'leads': if (typeof bizRenderLeads === 'function') bizRenderLeads(); else document.getElementById('biz-tab-content').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3);"><i class="fas fa-funnel-dollar" style="font-size:40px;margin-bottom:12px;display:block;"></i><div style="font-size:14px;">CRM Leads — bientôt disponible</div></div>'; break;
-    case 'messages': if (typeof bizRenderMessages === 'function') bizRenderMessages(); else document.getElementById('biz-tab-content').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3);"><i class="fas fa-comments" style="font-size:40px;margin-bottom:12px;display:block;"></i><div style="font-size:14px;">Inbox Messages — bientôt disponible</div></div>'; break;
-    case 'automations': if (typeof bizRenderAutomations === 'function') bizRenderAutomations(); else document.getElementById('biz-tab-content').innerHTML = '<div style="text-align:center;padding:60px;color:var(--text3);"><i class="fas fa-robot" style="font-size:40px;margin-bottom:12px;display:block;"></i><div style="font-size:14px;">Automatisations — bientôt disponible</div></div>'; break;
+    case 'content': typeof cpRenderPlanner === 'function' ? cpRenderPlanner() : el.innerHTML = emptyTab('fas fa-calendar-alt','Planificateur de contenu — bientôt disponible'); break;
+    case 'instagram': typeof bizRenderInstagram === 'function' ? bizRenderInstagram() : el.innerHTML = emptyTab('fab fa-instagram','Connectez votre compte Instagram pour commencer'); break;
+    case 'messages': typeof bizRenderMessages === 'function' ? bizRenderMessages() : el.innerHTML = emptyTab('fas fa-comments','Inbox Messages — bientôt disponible'); break;
   }
 }
 
-function bizStatHtml(label, value, sub) {
-  return `<div style="display:flex;flex-direction:column;align-items:center;min-width:60px;">
-    <span style="font-size:9px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;">${label}</span>
-    <span style="font-size:16px;font-weight:700;">${value}</span>
-    ${sub ? `<span style="font-size:10px;color:var(--text3);">${sub}</span>` : ''}
+function bizKpi(label, value, sub) {
+  return `<div class="biz-kpi">
+    <div class="biz-kpi-label">${label}</div>
+    <div class="biz-kpi-value">${value}</div>
+    ${sub ? `<div class="biz-kpi-sub">${sub}</div>` : ''}
   </div>`;
 }
 
@@ -337,12 +335,19 @@ function bizRenderDashboard() {
   else if (mPct >= 40) { mEmoji='💪'; mText='Tu construis ta base. La constance paie toujours.'; }
   else if (mPct < 20) { mEmoji='🌱'; mText='Chaque expert a commencé par le début. Envoie tes DMs !'; }
 
-  el.innerHTML = `<div class="biz-grid">
-    <!-- COL 1 -->
+  el.innerHTML = (window._bizHeaderHtml || '') + `<div class="biz-grid">
+    <!-- COL 1 — Saisie quotidienne -->
     <div>
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-header"><div class="card-title">Aujourd'hui — S${bizWeek}</div></div>
-        <div style="display:flex;gap:4px;margin-bottom:14px;">
+        <div class="card-header">
+          <div class="card-title">Saisie du jour</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="bizChangeWeek(-1)" ${bizWeek<=1?'disabled':''}><i class="fas fa-chevron-left"></i></button>
+            <span style="font-size:13px;font-weight:700;">S${bizWeek}</span>
+            <button class="btn btn-outline btn-sm" onclick="bizChangeWeek(1)"><i class="fas fa-chevron-right"></i></button>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;margin-bottom:16px;">
           ${BIZ_DAYS.map(d => `<button class="biz-day-btn ${d===bizDay?'active':''}" onclick="bizSelectDay('${d}')">${BIZ_DAY_LABELS[d]}</button>`).join('')}
         </div>
         ${bizFieldRow('DMs envoyés','dms',dayEntry.dms||0,dDms)}
@@ -355,16 +360,6 @@ function bizRenderDashboard() {
         ${bizFieldRow('Meta Ads €','meta_ads_budget',dayEntry.meta_ads_budget||0,'','0.01')}
       </div>
 
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-header"><div class="card-title">Cette semaine</div></div>
-        ${bizWeekRow('DMs',wDms,bizObjectives.dms_target)}
-        ${bizWeekRow('RDVs pris',wRdvs,bizObjectives.rdvs_target)}
-        ${bizWeekRow('RDVs honorés',wRdvsA,bizObjectives.rdvs_attended_target)}
-        ${bizWeekRow('Clients signés',wCli,bizObjectives.clients_target)}
-        ${bizWeekRow('Reels',wReels,bizObjectives.reels_target)}
-        ${bizWeekRow('Followers',wFoll,bizObjectives.followers_target)}
-      </div>
-
       <div class="card">
         <div class="card-header"><div class="card-title">Tunnel de conversion</div></div>
         ${bizFunnelRow('💬','DMs envoyés',wDms,null)}
@@ -374,39 +369,40 @@ function bizRenderDashboard() {
       </div>
     </div>
 
-    <!-- COL 2 -->
+    <!-- COL 2 — Suivi semaine + Prédictions -->
     <div>
       <div class="card" style="margin-bottom:16px;">
-        <div class="card-header"><div class="card-title">Prédictions semaine</div></div>
+        <div class="card-header"><div class="card-title">Semaine S${bizWeek}</div></div>
+        ${bizWeekRow('DMs',wDms,bizObjectives.dms_target)}
+        ${bizWeekRow('RDVs pris',wRdvs,bizObjectives.rdvs_target)}
+        ${bizWeekRow('RDVs honorés',wRdvsA,bizObjectives.rdvs_attended_target)}
+        ${bizWeekRow('Clients signés',wCli,bizObjectives.clients_target)}
+        ${bizWeekRow('Reels',wReels,bizObjectives.reels_target)}
+        ${bizWeekRow('Followers',wFoll,bizObjectives.followers_target)}
+      </div>
+
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-header"><div class="card-title">Prédictions</div></div>
         ${bizPredRow('DMs',pDms)}
         ${bizPredRow('RDVs',pRdvs)}
         ${bizPredRow('Clients',pCli)}
         ${bizPredRow('Reels',pReels)}
         ${bizPredRow('Followers',pFoll)}
-        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:4px;">Projection MRR fin S${bizWeek}</div>
-          <div style="font-size:22px;font-weight:800;color:var(--success);">${(mrr.total + wCli * avgPrice).toLocaleString('fr-FR')}€</div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:16px;">
-        <div style="text-align:center;padding:16px;background:rgba(179,8,8,0.06);border-radius:10px;">
-          <div style="font-size:32px;margin-bottom:6px;">${mEmoji}</div>
-          <div style="font-size:13px;color:var(--text);line-height:1.5;">${mText}</div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:2px;">Projection MRR fin S${bizWeek}</div>
+          <div style="font-size:20px;font-weight:800;color:var(--success);">${(mrr.total + wCli * avgPrice).toLocaleString('fr-FR')}€</div>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-header"><div class="card-title">Semaine</div></div>
-        <div style="display:flex;align-items:center;justify-content:center;gap:16px;padding:8px 0;">
-          <button class="btn btn-outline btn-sm" onclick="bizChangeWeek(-1)" ${bizWeek<=1?'disabled':''}>← Préc.</button>
-          <span style="font-size:20px;font-weight:800;">S${bizWeek}</span>
-          <button class="btn btn-outline btn-sm" onclick="bizChangeWeek(1)" ${bizWeek>=16?'disabled':''}>Suiv. →</button>
+        <div style="text-align:center;padding:14px;background:var(--primary-glow);border-radius:var(--radius-sm);">
+          <div style="font-size:28px;margin-bottom:4px;">${mEmoji}</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.5;">${mText}</div>
         </div>
       </div>
     </div>
 
-    <!-- COL 3 -->
+    <!-- COL 3 — KPIs + Forecast -->
     <div>
       <div class="card" style="margin-bottom:16px;">
         <div class="card-header"><div class="card-title">Métriques clés</div></div>
@@ -419,11 +415,11 @@ function bizRenderDashboard() {
       </div>
 
       <div class="card">
-        <div class="card-header"><div class="card-title">Prévisionnel vs Réel — S${bizWeek}</div></div>
+        <div class="card-header"><div class="card-title">Réel vs Prévisionnel</div></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
-          ${bizForecastCard('Clients',mrr.count,fc.clients,deltaCli)}
-          ${bizForecastCard('MRR',mrr.total,fc.mrr,deltaMrr,'€')}
-          ${bizForecastCard('Followers',totalFollowers,(bizConfig.start_followers||0)+fc.followers,deltaFoll)}
+          ${bizForecastCard('Clients',mrr.count,fcClients,deltaCli)}
+          ${bizForecastCard('MRR',mrr.total,fcMrr,deltaMrr,'€')}
+          ${bizForecastCard('Followers',totalFollowers,fcFollowers,deltaFoll)}
         </div>
       </div>
     </div>
@@ -432,33 +428,37 @@ function bizRenderDashboard() {
 
 // ── Dashboard builders ──
 function bizFieldRow(label, field, val, target, step) {
-  return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(51,51,51,0.3);">
-    <span style="font-size:12px;color:var(--text2);">${label}</span>
-    ${target !== '' ? `<span style="font-size:10px;color:var(--text3);">obj: ${target}</span>` : '<span></span>'}
-    <input type="number" value="${val}" min="0" step="${step||'1'}" style="width:70px;text-align:center;padding:5px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-weight:600;" onchange="bizUpdateField('${field}',this.value)">
+  return `<div class="biz-data-row">
+    <span class="biz-data-label">${label}</span>
+    ${target !== '' ? `<span class="biz-data-target">obj: ${target}</span>` : '<span></span>'}
+    <input type="number" value="${val}" min="0" step="${step||'1'}" class="biz-data-input" onchange="bizUpdateField('${field}',this.value)">
   </div>`;
 }
 
 function bizWeekRow(label, val, target) {
   const ok = val >= target;
-  return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;font-size:12px;">
-    <span style="color:var(--text2);">${label}</span>
-    <span><span style="font-weight:700;color:${ok?'var(--success)':'var(--text)'};">${val}</span> <span style="color:var(--text3);">/ ${target}</span> <span style="color:${ok?'var(--success)':'var(--danger)'};">${ok?'✓':'✗'}</span></span>
+  const pct = target > 0 ? Math.min(100, Math.round(val / target * 100)) : 0;
+  return `<div class="biz-data-row">
+    <span class="biz-data-label" style="min-width:100px;">${label}</span>
+    <div style="flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin:0 12px;">
+      <div style="height:100%;width:${pct}%;background:${ok?'var(--success)':'var(--primary)'};border-radius:2px;transition:width 0.3s;"></div>
+    </div>
+    <span style="font-size:12px;"><strong style="color:${ok?'var(--success)':'var(--text)'};">${val}</strong><span style="color:var(--text3);"> / ${target}</span></span>
   </div>`;
 }
 
 function bizFunnelRow(icon, name, val, rate) {
-  return `<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;margin-bottom:4px;background:rgba(255,255,255,0.02);border-radius:8px;">
-    <span style="font-size:18px;width:28px;text-align:center;">${icon}</span>
-    <div style="flex:1;"><div style="font-size:11px;color:var(--text3);">${name}</div><div style="font-size:18px;font-weight:700;">${val}</div></div>
-    ${rate !== null ? `<span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;background:rgba(179,8,8,0.12);color:var(--primary);">${rate}</span>` : ''}
+  return `<div class="biz-funnel-row">
+    <span class="biz-funnel-icon">${icon}</span>
+    <div style="flex:1;"><div class="biz-funnel-label">${name}</div><div class="biz-funnel-value">${val}</div></div>
+    ${rate !== null ? `<span class="biz-funnel-rate">${rate}</span>` : ''}
   </div>`;
 }
 
 function bizPredRow(label, pct) {
-  return `<div style="display:flex;align-items:center;padding:7px 0;border-bottom:1px solid rgba(51,51,51,0.2);">
+  return `<div class="biz-pred-row">
     <span style="font-size:12px;color:var(--text2);min-width:70px;">${label}</span>
-    <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:0 10px;">
+    <div style="flex:1;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin:0 12px;">
       <div style="height:100%;width:${pct}%;background:${bizProbColor(pct)};border-radius:3px;transition:width 0.5s;"></div>
     </div>
     <span style="font-size:13px;font-weight:700;min-width:36px;text-align:right;color:${bizProbColor(pct)};">${pct}%</span>
@@ -466,9 +466,9 @@ function bizPredRow(label, pct) {
 }
 
 function bizMetricRow(label, val) {
-  return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(51,51,51,0.2);">
-    <span style="font-size:12px;color:var(--text2);">${label}</span>
-    <span style="font-size:13px;font-weight:700;">${val}</span>
+  return `<div class="biz-metric-row">
+    <span class="biz-metric-label">${label}</span>
+    <span class="biz-metric-value">${val}</span>
   </div>`;
 }
 
@@ -476,13 +476,13 @@ function bizForecastCard(label, real, forecast, delta, suffix) {
   suffix = suffix || '';
   const cls = delta >= 0 ? 'var(--success)' : 'var(--danger)';
   const sign = delta >= 0 ? '+' : '';
-  return `<div style="background:var(--bg3);border-radius:10px;padding:12px;text-align:center;">
-    <div style="font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">${label}</div>
-    <div style="display:flex;justify-content:space-around;">
+  return `<div class="biz-forecast-card">
+    <div class="biz-forecast-label">${label}</div>
+    <div style="display:flex;justify-content:space-around;margin-bottom:6px;">
       <div><div style="font-size:9px;color:var(--text3);">Réel</div><div style="font-size:15px;font-weight:700;">${real.toLocaleString('fr-FR')}${suffix}</div></div>
       <div><div style="font-size:9px;color:var(--text3);">Prévu</div><div style="font-size:15px;font-weight:700;color:var(--text3);">${forecast.toLocaleString('fr-FR')}${suffix}</div></div>
     </div>
-    <div style="font-size:11px;font-weight:600;color:${cls};margin-top:4px;">${sign}${delta.toLocaleString('fr-FR')}${suffix}</div>
+    <div style="font-size:11px;font-weight:600;color:${cls};">${sign}${delta.toLocaleString('fr-FR')}${suffix}</div>
   </div>`;
 }
 
@@ -544,31 +544,30 @@ async function bizRenderObjectives() {
   }
 
   el.innerHTML = `
-    <div style="max-width:800px;">
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-header"><div class="card-title">Objectifs hebdomadaires (à partir de S${bizWeek})</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:900px;">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Objectifs hebdo</div><span style="font-size:11px;color:var(--text3);">à partir de S${bizWeek}</span></div>
         ${bizObjInput('DMs / semaine','obj-dms',obj.dms_target)}
         ${bizObjInput('RDVs / semaine','obj-rdvs',obj.rdvs_target)}
         ${bizObjInput('RDVs honorés','obj-rdvsa',obj.rdvs_attended_target)}
         ${bizObjInput('Clients / semaine','obj-clients',obj.clients_target)}
         ${bizObjInput('Reels / semaine','obj-reels',obj.reels_target)}
         ${bizObjInput('Followers / semaine','obj-followers',obj.followers_target)}
-        <div style="margin-top:14px;">
+        <div style="margin-top:16px;">
           <button class="btn btn-red" onclick="bizSaveObj()"><i class="fas fa-check"></i> Sauvegarder</button>
-          <span style="font-size:11px;color:var(--text3);margin-left:8px;">Appliqué à partir de S${bizWeek}</span>
         </div>
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title">Historique des 16 semaines</div></div>
-        ${weeksHtml}
+        <div class="card-header"><div class="card-title">Historique</div></div>
+        <div style="max-height:500px;overflow-y:auto;">${weeksHtml}</div>
       </div>
     </div>`;
 }
 
 function bizObjInput(label, id, val) {
-  return `<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-    <span style="font-size:12px;color:var(--text2);min-width:140px;">${label}</span>
-    <input type="number" id="${id}" value="${val}" class="inline-input" style="width:80px;">
+  return `<div class="biz-data-row">
+    <span class="biz-data-label" style="min-width:130px;">${label}</span>
+    <input type="number" id="${id}" value="${val}" class="biz-data-input">
   </div>`;
 }
 
@@ -595,32 +594,39 @@ function bizRenderClients() {
   const mrr = bizMRR(bizClients);
 
   el.innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
       <div>
-        <span style="font-size:16px;font-weight:700;">${active.length} clients actifs</span>
-        <span style="font-size:13px;color:var(--text2);margin-left:10px;">MRR: ${mrr.total.toLocaleString('fr-FR')}€</span>
+        <span style="font-size:18px;font-weight:700;">${active.length} clients actifs</span>
+        <span style="font-size:13px;color:var(--text3);margin-left:12px;">MRR ${mrr.total.toLocaleString('fr-FR')}€</span>
       </div>
       <button class="btn btn-red" onclick="bizOpenAddClient()"><i class="fas fa-plus"></i> Ajouter</button>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
       <div class="card">
-        <div class="card-header"><div class="card-title">Online (${online.length}) — ${mrr.online.toLocaleString('fr-FR')}€/mois</div></div>
-        ${online.length ? online.map(c => bizClientRow(c)).join('') : '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">Aucun client online</div>'}
+        <div class="card-header">
+          <div class="card-title">Online</div>
+          <span style="font-size:12px;color:var(--text3);">${online.length} · ${mrr.online.toLocaleString('fr-FR')}€/mois</span>
+        </div>
+        ${online.length ? online.map(c => bizClientRow(c)).join('') : '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">Aucun client online</div>'}
       </div>
       <div class="card">
-        <div class="card-header"><div class="card-title">Présentiel (${offline.length}) — ${mrr.offline.toLocaleString('fr-FR')}€/mois</div></div>
-        ${offline.length ? offline.map(c => bizClientRow(c)).join('') : '<div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">Aucun client présentiel</div>'}
+        <div class="card-header">
+          <div class="card-title">Présentiel</div>
+          <span style="font-size:12px;color:var(--text3);">${offline.length} · ${mrr.offline.toLocaleString('fr-FR')}€/mois</span>
+        </div>
+        ${offline.length ? offline.map(c => bizClientRow(c)).join('') : '<div style="text-align:center;padding:24px;color:var(--text3);font-size:12px;">Aucun client présentiel</div>'}
       </div>
     </div>
 
     ${archived.length ? `
     <div class="card" style="margin-top:16px;">
       <div class="card-header" style="cursor:pointer;" onclick="document.getElementById('biz-archived').style.display=document.getElementById('biz-archived').style.display==='none'?'block':'none'">
-        <div class="card-title">Archivés (${archived.length}) ▾</div>
+        <div class="card-title" style="color:var(--text3);">Archivés (${archived.length})</div>
+        <i class="fas fa-chevron-down" style="font-size:10px;color:var(--text3);"></i>
       </div>
       <div id="biz-archived" style="display:none;">
-        ${archived.map(c => `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-bottom:3px;border-radius:6px;background:rgba(255,255,255,0.02);opacity:0.6;">
+        ${archived.map(c => `<div class="biz-client-row" style="opacity:0.5;">
           <div><div style="font-size:12px;font-weight:600;">${escHtml(c.name)}</div><div style="font-size:10px;color:var(--text3);">${c.archive_reason||'Archivé'}</div></div>
           <span style="font-size:12px;color:var(--text3);">${c.price}€/mois</span>
         </div>`).join('')}
@@ -719,16 +725,16 @@ async function bizShowPaymentHistory(clientId) {
 }
 
 function bizClientRow(c) {
-  return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;margin-bottom:3px;border-radius:6px;background:rgba(255,255,255,0.02);border:1px solid var(--border);">
+  return `<div class="biz-client-row">
     <div>
       <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:12px;font-weight:600;">${escHtml(c.name)}</span>
+        <span style="font-size:13px;font-weight:600;">${escHtml(c.name)}</span>
         ${bizStripeStatusBadge(c.id)}
       </div>
-      <div style="font-size:10px;color:var(--text3);">Depuis ${new Date(c.start_date).toLocaleDateString('fr-FR')} · LTV: ${c.price*6}€</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px;">Depuis ${new Date(c.start_date).toLocaleDateString('fr-FR')} · LTV: ${c.price*6}€</div>
     </div>
     <div style="display:flex;align-items:center;gap:6px;">
-      <span style="font-size:13px;font-weight:700;color:var(--success);">${c.price}€</span>
+      <span style="font-size:14px;font-weight:700;color:var(--success);margin-right:4px;">${c.price}€</span>
       <button id="biz-pay-btn-${c.id}" class="btn btn-outline btn-sm" onclick="bizSendPaymentLink('${c.id}')" title="Copier lien de paiement"><i class="fas fa-link"></i></button>
       ${bizStripeData[c.id] ? `<button class="btn btn-outline btn-sm" onclick="bizShowPaymentHistory('${c.id}')" title="Historique paiements"><i class="fas fa-receipt"></i></button>` : ''}
       <button class="btn btn-outline btn-sm" onclick="bizOpenEditClient('${c.id}')"><i class="fas fa-pen"></i></button>

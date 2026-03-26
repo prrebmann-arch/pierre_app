@@ -1,4 +1,51 @@
+// ===== LANDING / AUTH NAVIGATION =====
+function showLanding() {
+  document.getElementById('landing-screen').classList.add('active');
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'none';
+  initLandingAnimations();
+}
+
+function showAuth() {
+  document.getElementById('landing-screen').classList.remove('active');
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+function initLandingAnimations() {
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('#landing-screen .fade-in').forEach(el => obs.observe(el));
+  // Navbar scroll
+  window.addEventListener('scroll', () => {
+    const nb = document.getElementById('navbar');
+    if (nb) { if (window.scrollY > 50) nb.classList.add('scrolled'); else nb.classList.remove('scrolled'); }
+  });
+}
+
+function toggleMobileMenu() {
+  const menu = document.getElementById('mobileMenu');
+  const icon = document.getElementById('menuIcon');
+  if (!menu) return;
+  menu.classList.toggle('open');
+  if (menu.classList.contains('open')) { icon.classList.replace('fa-bars', 'fa-xmark'); document.body.style.overflow = 'hidden'; }
+  else { icon.classList.replace('fa-xmark', 'fa-bars'); document.body.style.overflow = ''; }
+}
+
+function closeMobileMenu() {
+  const menu = document.getElementById('mobileMenu');
+  const icon = document.getElementById('menuIcon');
+  if (!menu) return;
+  menu.classList.remove('open');
+  icon.classList.replace('fa-xmark', 'fa-bars');
+  document.body.style.overflow = '';
+}
+
 // ===== AUTHENTICATION =====
+
+const ADMIN_EMAIL = 'rebmannpierre1@gmail.com';
 
 function switchAuthTab(tab) {
   document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
@@ -18,6 +65,13 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
   try {
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw error;
+
+    // Admin → show admin dashboard (no redirect)
+    if (data.user.email === ADMIN_EMAIL) {
+      currentUser = data.user;
+      showAdminApp();
+      return;
+    }
 
     // Verify this is NOT an athlete account
     const { data: athleteCheck } = await supabaseClient
@@ -44,6 +98,7 @@ document.getElementById('auth-form').addEventListener('submit', async (e) => {
 
 function showApp() {
   document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('landing-screen').classList.remove('active');
   document.getElementById('app-screen').style.display = 'block';
   document.getElementById('user-name').textContent = currentUser.email.split('@')[0];
   document.getElementById('user-avatar').textContent = currentUser.email[0].toUpperCase();
@@ -62,16 +117,22 @@ function showApp() {
 async function handleLogout() {
   await supabaseClient.auth.signOut();
   currentUser = null;
+  adminCache = {};
   document.getElementById('app-screen').style.display = 'none';
-  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('admin-app').style.display = 'none';
+  showLanding();
 }
 
 async function checkSession() {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (session) {
     currentUser = session.user;
-    showApp();
+    if (session.user.email === ADMIN_EMAIL) {
+      showAdminApp();
+    } else {
+      showApp();
+    }
   } else {
-    document.getElementById('auth-screen').style.display = 'flex';
+    showLanding();
   }
 }

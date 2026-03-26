@@ -2,7 +2,7 @@
 
 // ── Canonical redirect URI (must match Meta Developer Dashboard exactly) ──
 function _bizIgRedirectUri() {
-  return window.location.origin + '/';
+  return 'https://pierreapp.vercel.app/';
 }
 
 // ── Instagram OAuth Connect ──
@@ -14,9 +14,8 @@ function bizConnectInstagram() {
   }
 
   const redirectUri = encodeURIComponent(_bizIgRedirectUri());
-  // Facebook Login with old-style permissions that work with facebook.com/dialog/oauth
-  const scope = 'pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_comments,instagram_manage_insights';
-  const authUrl = `https://www.facebook.com/dialog/oauth?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code`;
+  const scope = 'instagram_business_basic,instagram_business_manage_messages,instagram_business_manage_comments,instagram_business_content_publish,instagram_business_manage_insights';
+  const authUrl = `https://www.instagram.com/oauth/authorize?client_id=${appId}&redirect_uri=${redirectUri}&scope=${scope}&response_type=code&enable_fb_login=0`;
 
   devError('[IG OAuth] Redirecting to:', authUrl);
   window.location.href = authUrl;
@@ -25,8 +24,12 @@ function bizConnectInstagram() {
 // Handle OAuth callback (check for ?code= in URL on page load)
 async function _bizCheckIgCallback() {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
+  let code = params.get('code');
   if (!code) return;
+  // Skip if this is a Facebook Page auth callback (handled by business-messages.js)
+  if (params.get('state') === 'fb_page_auth') return;
+  // Instagram appends #_ to the code sometimes — strip it
+  code = code.replace(/#_$/, '').replace(/#$/, '');
 
   devError('[IG Callback] Code received, waiting for auth...');
 
@@ -61,17 +64,19 @@ async function _bizCheckIgCallback() {
       return;
     }
 
-    // Save to Supabase
-    const { error } = await supabaseClient.from('ig_accounts').upsert({
+    // Save to Supabase (delete existing + insert to avoid unique constraint issues)
+    await supabaseClient.from('ig_accounts').delete().eq('user_id', user.id);
+    const insertData = {
       user_id: user.id,
-      ig_user_id: data.ig_user_id,
-      ig_username: data.ig_username,
+      ig_user_id: data.ig_user_id || '',
+      ig_username: data.ig_username || '',
       access_token: data.access_token,
       token_expires_at: new Date(Date.now() + (data.expires_in || 5184000) * 1000).toISOString(),
-      page_id: data.page_id,
-      page_access_token: data.page_access_token,
       is_connected: true,
-    }, { onConflict: 'user_id' });
+    };
+    if (data.page_id) insertData.page_id = data.page_id;
+    if (data.page_access_token) insertData.page_access_token = data.page_access_token;
+    const { error } = await supabaseClient.from('ig_accounts').insert(insertData);
 
     if (error) { handleError(error, 'ig-connect'); return; }
 
@@ -121,14 +126,15 @@ async function bizSyncIgData() {
           const likes = item.like_count || 0;
           const comments = item.comments_count || 0;
 
-          let reach = 0, saved = 0, shares = 0;
+          let reach = 0, saved = 0, shares = 0, totalViews = 0;
 
-          // Fetch insights (reach/saved/shares confirmed working)
+          // Fetch insights
           try {
-            const iRes = await fetch(`https://graph.instagram.com/v25.0/${item.id}/insights?metric=reach,saved,shares&access_token=${acct.access_token}`);
+            const iRes = await fetch(`https://graph.instagram.com/v25.0/${item.id}/insights?metric=views,reach,saved,shares&access_token=${acct.access_token}`);
             const iData = await iRes.json();
             if (iData.data) {
               iData.data.forEach(m => {
+                if (m.name === 'views') totalViews = m.values?.[0]?.value || 0;
                 if (m.name === 'reach') reach = m.values?.[0]?.value || 0;
                 if (m.name === 'saved') saved = m.values?.[0]?.value || 0;
                 if (m.name === 'shares') shares = m.values?.[0]?.value || 0;
@@ -136,7 +142,7 @@ async function bizSyncIgData() {
             }
           } catch {}
 
-          const views = reach;
+          const views = totalViews || reach;
 
           const totalEng = likes + comments + saved + shares;
           const engRate = reach > 0 ? (totalEng / reach * 100) : 0;

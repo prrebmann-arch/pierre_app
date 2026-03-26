@@ -4,15 +4,419 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="push-secret" content="prc-push-2026-secret">
-<meta name="meta-app-id" content="1439848157873500">
+<meta name="meta-app-id" content="1250460660609661">
 <title>Pierre Coaching - App</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js" crossorigin="anonymous"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" crossorigin="anonymous">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/admin.css">
+<script>
+  // Anti-FOUC: apply saved theme before paint
+  (function(){var t=localStorage.getItem('prc-theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');})();
+</script>
 </head>
 <body>
+
+<div id="landing-screen">
+
+    <!-- NAVBAR -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <a href="#" class="navbar-logo">
+                <span class="logo-icon">PC</span>
+                Pierre Coaching
+            </a>
+            <ul class="navbar-links">
+                <li><a href="#fonctionnalites">Fonctionnalites</a></li>
+                <li><a href="#tarifs">Tarifs</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+            <div class="navbar-actions">
+                <a href="#" onclick="showAuth(); return false;" class="btn-login">Se connecter</a>
+                <a href="#" onclick="showAuth(); return false;" class="btn-primary">Commencer <i class="fas fa-arrow-right"></i></a>
+            </div>
+            <button class="mobile-toggle" onclick="toggleMobileMenu()" aria-label="Menu">
+                <i class="fas fa-bars" id="menuIcon"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- MOBILE MENU -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#fonctionnalites" onclick="closeMobileMenu()">Fonctionnalites</a>
+        <a href="#tarifs" onclick="closeMobileMenu()">Tarifs</a>
+        <a href="#contact" onclick="closeMobileMenu()">Contact</a>
+        <a href="#" onclick="showAuth(); return false;" onclick="closeMobileMenu()">Se connecter</a>
+        <a href="#" onclick="showAuth(); return false;" class="btn-primary">Commencer <i class="fas fa-arrow-right"></i></a>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-gradient"></div>
+        <div class="hero-grid"></div>
+        <div class="hero-orb hero-orb-1"></div>
+        <div class="hero-orb hero-orb-2"></div>
+        <div class="hero-content">
+            <div class="hero-badge fade-in">
+                <i class="fas fa-bolt"></i>
+                Plateforme tout-en-un pour coachs sportifs
+            </div>
+            <h1 class="fade-in fade-in-delay-1">
+                Revolutionnez votre<br><span class="highlight">coaching sportif</span>
+            </h1>
+            <p class="hero-subtitle fade-in fade-in-delay-2">
+                Gerez vos athletes, creez des programmes personnalises, suivez leur progression et communiquez en temps reel — le tout depuis une seule plateforme.
+            </p>
+            <div class="hero-buttons fade-in fade-in-delay-3">
+                <a href="#" onclick="showAuth(); return false;" class="btn-primary btn-lg">
+                    Commencer gratuitement <i class="fas fa-arrow-right"></i>
+                </a>
+                <a href="#fonctionnalites" class="btn-secondary btn-lg">
+                    <i class="fas fa-play"></i> Decouvrir
+                </a>
+            </div>
+            <div class="hero-stats fade-in fade-in-delay-4">
+                <div class="hero-stat">
+                    <div class="hero-stat-value">14 jours</div>
+                    <div class="hero-stat-label">Essai gratuit</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">2 min</div>
+                    <div class="hero-stat-label">Pour demarrer</div>
+                </div>
+                <div class="hero-stat">
+                    <div class="hero-stat-value">0 &euro;</div>
+                    <div class="hero-stat-label">Sans engagement</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section" id="fonctionnalites">
+        <div class="section-header">
+            <div class="section-label fade-in"><i class="fas fa-sparkles"></i> Fonctionnalités</div>
+            <h2 class="section-title fade-in fade-in-delay-1">Tout ce dont vous avez besoin</h2>
+            <p class="section-desc fade-in fade-in-delay-2">
+                Une plateforme complète pour gérer, suivre et développer votre activité de coaching.
+            </p>
+        </div>
+
+        <div class="bento fade-in">
+            <!-- ROW 1 : Dashboard (large) + Athletes (medium) -->
+            <div class="bento-card bento-lg bento-glow-red">
+                <div class="bento-content">
+                    <div class="bento-icon"><i class="fas fa-chart-line"></i></div>
+                    <h3>Dashboard complet</h3>
+                    <p>Bilans à traiter, vidéos en attente, progression de vos athlètes — tout en un coup d'œil.</p>
+                </div>
+                <div class="bento-visual bento-visual-dashboard">
+                    <div class="bv-row">
+                        <div class="bv-stat"><span class="bv-num">24</span><span class="bv-label">Athlètes</span></div>
+                        <div class="bv-stat"><span class="bv-num">8</span><span class="bv-label">Bilans</span></div>
+                        <div class="bv-stat"><span class="bv-num">3</span><span class="bv-label">Vidéos</span></div>
+                    </div>
+                    <div class="bv-bars">
+                        <div class="bv-bar" style="--h:40%"></div>
+                        <div class="bv-bar" style="--h:65%"></div>
+                        <div class="bv-bar" style="--h:35%"></div>
+                        <div class="bv-bar" style="--h:85%"></div>
+                        <div class="bv-bar" style="--h:55%"></div>
+                        <div class="bv-bar" style="--h:90%"></div>
+                        <div class="bv-bar" style="--h:70%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card bento-md bento-glow-blue">
+                <div class="bento-content">
+                    <div class="bento-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><i class="fas fa-users"></i></div>
+                    <h3>Gestion athlètes</h3>
+                    <p>Profils, historique, programmes assignés — tout centralisé.</p>
+                </div>
+                <div class="bento-visual bento-visual-athletes">
+                    <div class="bv-athlete"><div class="bv-av" style="background:#B30808">T</div><div><strong>Thomas D.</strong><small>Musculation</small></div><i class="fas fa-check-circle" style="color:#22c55e"></i></div>
+                    <div class="bv-athlete"><div class="bv-av" style="background:#3b82f6">S</div><div><strong>Sarah M.</strong><small>CrossFit</small></div><i class="fas fa-clock" style="color:#f59e0b"></i></div>
+                    <div class="bv-athlete"><div class="bv-av" style="background:#22c55e">L</div><div><strong>Lucas P.</strong><small>Perte de poids</small></div><i class="fas fa-check-circle" style="color:#22c55e"></i></div>
+                </div>
+            </div>
+
+            <!-- ROW 2 : Mobile (medium) + Programmes (small) + Nutrition (small) -->
+            <div class="bento-card bento-md bento-glow-green">
+                <div class="bento-content">
+                    <div class="bento-icon" style="background:rgba(34,197,94,0.15);color:#4ade80;"><i class="fas fa-mobile-screen"></i></div>
+                    <h3>App mobile athlète</h3>
+                    <p>Vos athlètes ont tout dans leur poche.</p>
+                </div>
+                <div class="bento-visual bento-visual-phone">
+                    <div class="bv-phone">
+                        <div class="bv-phone-header">AthleteFlow</div>
+                        <div class="bv-phone-item"><span>Squat</span><span class="bv-sets">4×8 · 80kg</span></div>
+                        <div class="bv-phone-item"><span>Dev. couché</span><span class="bv-sets">4×10 · 60kg</span></div>
+                        <div class="bv-phone-item"><span>Rowing</span><span class="bv-sets">3×12 · 50kg</span></div>
+                        <div class="bv-phone-divider"></div>
+                        <div class="bv-phone-item"><span>Sommeil</span><span>8h</span></div>
+                        <div class="bv-phone-item"><span>Énergie</span><span>9/10</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card bento-sm">
+                <div class="bento-icon"><i class="fas fa-dumbbell"></i></div>
+                <h3>Programmes</h3>
+                <p>Entraînements personnalisés avec exercices, séries et répétitions.</p>
+                <div class="bento-mini-visual">
+                    <div class="bmv-line"></div><div class="bmv-line" style="width:75%"></div><div class="bmv-line" style="width:60%"></div>
+                </div>
+            </div>
+
+            <div class="bento-card bento-sm">
+                <div class="bento-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24;"><i class="fas fa-utensils"></i></div>
+                <h3>Nutrition</h3>
+                <p>Plans alimentaires sur mesure adaptés à chaque objectif.</p>
+                <div class="bento-mini-visual">
+                    <div class="bmv-circle-row">
+                        <div class="bmv-circle" style="--c:#ef4444;--p:35%">P</div>
+                        <div class="bmv-circle" style="--c:#3b82f6;--p:45%">G</div>
+                        <div class="bmv-circle" style="--c:#22c55e;--p:20%">L</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 3 : Business/IG (large) + Bilans+Video+Notif (stacked) -->
+            <div class="bento-card bento-lg bento-glow-purple">
+                <div class="bento-content">
+                    <div class="bento-icon" style="background:linear-gradient(135deg,rgba(131,58,180,0.2),rgba(253,29,29,0.2));color:#c084fc;"><i class="fab fa-instagram"></i></div>
+                    <h3>Business & Instagram</h3>
+                    <p>DM automatisés, pipeline de leads, planification de contenu, analytics — développez votre activité.</p>
+                </div>
+                <div class="bento-visual bento-visual-ig">
+                    <div class="bv-dm"><div class="bv-dm-av"><i class="fab fa-instagram"></i></div><div><strong>@fit_lucas</strong><span>Tu proposes du coaching perso ?</span></div><small>2min</small></div>
+                    <div class="bv-dm"><div class="bv-dm-av"><i class="fab fa-instagram"></i></div><div><strong>@marie.sport</strong><span>C'est quoi tes tarifs ?</span></div><small>15min</small></div>
+                    <div class="bv-pipeline">
+                        <div class="bv-pipe active">Lead <b>12</b></div>
+                        <div class="bv-pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+                        <div class="bv-pipe">Contact <b>8</b></div>
+                        <div class="bv-pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+                        <div class="bv-pipe success">Client <b>5</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bento-card bento-sm bento-stack">
+                <div class="bento-icon" style="background:rgba(34,197,94,0.15);color:#4ade80;"><i class="fas fa-clipboard-check"></i></div>
+                <h3>Bilans quotidiens</h3>
+                <p>Suivi automatisé chaque jour.</p>
+            </div>
+
+            <div class="bento-card bento-sm bento-stack">
+                <div class="bento-icon" style="background:rgba(239,68,68,0.15);color:#f87171;"><i class="fas fa-video"></i></div>
+                <h3>Retours vidéo</h3>
+                <p>Corrections personnalisées.</p>
+            </div>
+
+            <div class="bento-card bento-sm bento-stack">
+                <div class="bento-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><i class="fas fa-bell"></i></div>
+                <h3>Notifications</h3>
+                <p>Push en temps réel.</p>
+            </div>
+
+            <div class="bento-card bento-sm bento-stack">
+                <div class="bento-icon" style="background:rgba(168,85,247,0.15);color:#c084fc;"><i class="fas fa-graduation-cap"></i></div>
+                <h3>Formations</h3>
+                <p>Contenu éducatif en ligne.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="section">
+        <div class="section-header">
+            <div class="section-label fade-in"><i class="fas fa-route"></i> Comment ca marche</div>
+            <h2 class="section-title fade-in fade-in-delay-1">Demarrez en 3 etapes simples</h2>
+            <p class="section-desc fade-in fade-in-delay-2">
+                Pas besoin de competences techniques. Tout est pret en quelques minutes.
+            </p>
+        </div>
+        <div class="steps-container">
+            <div class="step-card fade-in">
+                <div class="step-number">1</div>
+                <h3>Creez votre compte</h3>
+                <p>Inscrivez-vous en quelques secondes et configurez votre profil de coach.</p>
+            </div>
+            <div class="step-card fade-in fade-in-delay-2">
+                <div class="step-number">2</div>
+                <h3>Ajoutez vos athletes</h3>
+                <p>Invitez vos athletes via un lien unique. Ils telechargeront l'app mobile.</p>
+            </div>
+            <div class="step-card fade-in fade-in-delay-4">
+                <div class="step-number">3</div>
+                <h3>Gerez tout depuis un seul endroit</h3>
+                <p>Programmes, nutrition, bilans, videos — tout est centralise dans votre dashboard.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- PRICING -->
+    <section class="section" id="tarifs">
+        <div class="section-header">
+            <div class="section-label fade-in"><i class="fas fa-tag"></i> Tarifs</div>
+            <h2 class="section-title fade-in fade-in-delay-1">Des tarifs simples et transparents</h2>
+            <p class="section-desc fade-in fade-in-delay-2">
+                Choisissez le plan qui correspond à vos besoins. Sans engagement, annulez à tout moment.
+            </p>
+        </div>
+        <div class="pricing-grid">
+
+            <!-- ========== Plan Athlète ========== -->
+            <div class="pricing-card fade-in">
+                <div class="pricing-card-inner">
+                    <div class="pricing-card-left">
+                        <div class="pricing-name">Athlète</div>
+                        <div class="pricing-desc">L'essentiel pour suivre et accompagner vos athlètes au quotidien.</div>
+                        <div class="pricing-price">
+                            <span class="pricing-amount">5</span>
+                            <span class="pricing-currency">&euro;</span>
+                        </div>
+                        <div class="pricing-period">/mois par athlète</div>
+                        <a href="#" onclick="showAuth(); return false;" class="btn-secondary">Commencer l'essai gratuit</a>
+                    </div>
+                    <div class="pricing-card-right">
+                        <ul class="pricing-features">
+                            <li><i class="fas fa-check"></i> App mobile athlète</li>
+                            <li><i class="fas fa-check"></i> Programmes d'entraînement</li>
+                            <li><i class="fas fa-check"></i> Plans nutrition</li>
+                            <li><i class="fas fa-check"></i> Bilans quotidiens</li>
+                            <li><i class="fas fa-check"></i> Retours vidéo</li>
+                            <li><i class="fas fa-check"></i> Notifications temps réel</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Séparateur visuel -->
+            <div class="pricing-vs fade-in">
+                <div class="pricing-vs-line"></div>
+                <div class="pricing-vs-badge"><i class="fas fa-rocket"></i> Passez au niveau supérieur</div>
+                <div class="pricing-vs-line"></div>
+            </div>
+
+            <!-- ========== Plan Business — HERO CARD ========== -->
+            <div class="pricing-card featured fade-in fade-in-delay-1">
+                <div class="business-top">
+                    <div class="business-left">
+                        <div class="pricing-popular"><i class="fas fa-star"></i> Recommandé</div>
+                        <div class="pricing-name">Business</div>
+                        <div class="pricing-desc">Tout ce qu'il faut pour développer votre activité de coaching en ligne. Instagram, analytics, leads, automatisation — le package complet.</div>
+                        <div class="pricing-price">
+                            <span class="pricing-amount">60</span>
+                            <span class="pricing-currency">&euro;</span>
+                        </div>
+                        <div class="pricing-period">/mois + 5&euro;/mois par athlète</div>
+                        <a href="#" onclick="showAuth(); return false;" class="btn-primary">Démarrer maintenant</a>
+                    </div>
+                    <div class="business-right">
+                        <ul class="pricing-features">
+                            <li><i class="fas fa-check"></i> Tout du plan Athlète (illimité)</li>
+                            <li><i class="fas fa-check"></i> Intégration Instagram complète</li>
+                            <li><i class="fas fa-check"></i> Analytics & tableaux de bord avancés</li>
+                            <li><i class="fas fa-check"></i> Gestion & conversion des leads</li>
+                            <li><i class="fas fa-check"></i> Messagerie automatisée</li>
+                            <li><i class="fas fa-check"></i> Planification de contenu</li>
+                            <li><i class="fas fa-check"></i> Support prioritaire 7j/7</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="business-bottom">
+                    <div class="business-highlights">
+                        <div class="business-highlight">
+                            <div class="business-highlight-icon"><i class="fab fa-instagram"></i></div>
+                            <div>
+                                <h4>Instagram intégré</h4>
+                                <p>DM automatiques, sync stories, réponses rapides — gérez tout depuis l'app.</p>
+                            </div>
+                        </div>
+                        <div class="business-highlight">
+                            <div class="business-highlight-icon"><i class="fas fa-funnel-dollar"></i></div>
+                            <div>
+                                <h4>Pipeline de leads</h4>
+                                <p>Suivez chaque prospect du premier contact jusqu'à la conversion en client.</p>
+                            </div>
+                        </div>
+                        <div class="business-highlight">
+                            <div class="business-highlight-icon"><i class="fas fa-chart-line"></i></div>
+                            <div>
+                                <h4>Analytics avancés</h4>
+                                <p>Chiffre d'affaires, rétention, engagement — tout en temps réel sur votre dashboard.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- SOCIAL PROOF -->
+    <div class="social-proof">
+        <div class="social-proof-inner fade-in">
+            <div class="social-proof-label"><i class="fas fa-chart-simple"></i> En chiffres</div>
+            <h2>La confiance de centaines de coachs</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value">500+</div>
+                    <div class="stat-label">Athletes accompagnes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">50+</div>
+                    <div class="stat-label">Coachs actifs</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">98%</div>
+                    <div class="stat-label">Taux de satisfaction</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FINAL CTA -->
+    <section class="final-cta" id="contact">
+        <h2 class="fade-in">Pret a transformer<br>votre coaching ?</h2>
+        <p class="fade-in fade-in-delay-1">
+            Rejoignez les coachs qui ont deja modernise leur accompagnement. Essai gratuit de 14 jours, sans carte bancaire.
+        </p>
+        <div class="final-cta-buttons fade-in fade-in-delay-2">
+            <a href="#" onclick="showAuth(); return false;" class="btn-primary btn-lg">
+                Commencer maintenant <i class="fas fa-arrow-right"></i>
+            </a>
+            <a href="mailto:contact@pierrecoaching.com" class="btn-secondary btn-lg">
+                <i class="fas fa-envelope"></i> Nous contacter
+            </a>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <a href="#" class="footer-brand">
+                <span class="logo-icon">PC</span>
+                Pierre Coaching
+            </a>
+            <ul class="footer-links">
+                <li><a href="#fonctionnalites">Fonctionnalites</a></li>
+                <li><a href="#tarifs">Tarifs</a></li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="privacy.html">Confidentialite</a></li>
+                <li><a href="#" onclick="showAuth(); return false;">Se connecter</a></li>
+            </ul>
+            <div class="footer-copy">
+                &copy; 2026 Pierre Coaching. Tous droits reserves.
+            </div>
+        </div>
+    </footer>
+</div>
 
 <!-- AUTH SCREEN -->
 <div id="auth-screen">
@@ -35,6 +439,7 @@
         <input type="password" id="auth-password" required>
       </div>
       <button type="submit" class="btn-primary" id="auth-submit">Se connecter</button>
+      <a href="#" onclick="showLanding(); return false;" style="display:block;text-align:center;margin-top:16px;color:var(--text2);font-size:0.85rem;text-decoration:none;">← Retour à l'accueil</a>
     </form>
   </div>
 </div>
@@ -45,47 +450,59 @@
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <div class="auth-logo-text">Pierre Coaching</div>
-      </div>
-      <div class="sidebar-user">
-        <div class="user-avatar" id="user-avatar">C</div>
-        <div class="user-info">
-          <div class="user-name" id="user-name">Coach</div>
+        <div class="sidebar-brand">
+          <div class="brand-icon">P</div>
+          <span class="brand-text">Pierre Coaching</span>
         </div>
       </div>
       <nav class="sidebar-nav">
         <button class="nav-item active" onclick="showSection('dashboard')">
-          <i class="fas fa-home"></i> Accueil
+          <i class="fas fa-th-large"></i> <span>Accueil</span>
         </button>
         <button class="nav-item" onclick="showSection('athletes')">
-          <i class="fas fa-users"></i> Athlètes
+          <i class="fas fa-users"></i> <span>Athlètes</span>
         </button>
+
+        <div class="nav-label">Suivi</div>
         <button class="nav-item" onclick="showSection('bilans-overview')">
-          <i class="fas fa-clipboard-check"></i> Bilans
+          <i class="fas fa-clipboard-check"></i> <span>Bilans</span>
         </button>
         <button class="nav-item" onclick="showSection('videos')">
-          <i class="fas fa-video"></i> Vidéos
+          <i class="fas fa-video"></i> <span>Vidéos</span>
         </button>
+
+        <div class="nav-label">Outils</div>
         <button class="nav-item" onclick="showSection('templates')">
-          <i class="fas fa-copy"></i> Templates
+          <i class="fas fa-copy"></i> <span>Templates</span>
         </button>
         <button class="nav-item" onclick="showSection('aliments')">
-          <i class="fas fa-apple-alt"></i> Aliments
+          <i class="fas fa-apple-alt"></i> <span>Aliments</span>
         </button>
         <button class="nav-item" onclick="showSection('exercices')">
-          <i class="fas fa-dumbbell"></i> Exercices
+          <i class="fas fa-dumbbell"></i> <span>Exercices</span>
         </button>
         <button class="nav-item" onclick="showSection('formations')">
-          <i class="fas fa-graduation-cap"></i> Formation
+          <i class="fas fa-graduation-cap"></i> <span>Formations</span>
         </button>
+
+        <div class="nav-label">Business</div>
         <button class="nav-item" onclick="showSection('business')">
-          <i class="fas fa-chart-line"></i> Business
+          <i class="fas fa-chart-line"></i> <span>Business</span>
         </button>
       </nav>
-      <div style="padding: 12px; border-top: 1px solid var(--border);">
-        <button onclick="handleLogout()" style="width:100%;padding:10px;background:transparent;border:1px solid var(--danger);color:var(--danger);border-radius:8px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">
-          <i class="fas fa-sign-out-alt"></i> Se déconnecter
-        </button>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <div class="user-avatar" id="user-avatar">C</div>
+          <div class="user-info">
+            <div class="user-name" id="user-name">Coach</div>
+          </div>
+          <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Mode jour / nuit">
+            <i class="fas fa-sun" id="theme-icon"></i>
+          </button>
+          <button class="btn-icon" onclick="handleLogout()" title="Se déconnecter">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -129,40 +546,21 @@
         </div>
 
         <!-- Tabs -->
-        <div style="display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-          <button class="athlete-tab-btn active" onclick="switchAthleteTab('apercu')">
-            <i class="fas fa-th-large"></i> Aperçu
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('infos')">
-            <i class="fas fa-user"></i> Infos
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('roadmap')">
-            <i class="fas fa-road"></i> Roadmap
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('training')">
-            <i class="fas fa-dumbbell"></i> Training
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('nutrition')">
-            <i class="fas fa-utensils"></i> Nutrition
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('bilans')">
-            <i class="fas fa-chart-line"></i> Bilans
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('videos')">
-            <i class="fas fa-video"></i> Vidéos
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('retours')">
-            <i class="fas fa-comment-dots"></i> Retours
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('posing')">
-            <i class="fas fa-person"></i> Posing
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('questionnaires')">
-            <i class="fas fa-clipboard-list"></i> Questionnaires
-          </button>
-          <button class="athlete-tab-btn" onclick="switchAthleteTab('supplements')">
-            <i class="fas fa-pills"></i> Suppléments
-          </button>
+        <div class="athlete-tabs">
+          <button class="athlete-tab-btn active" onclick="switchAthleteTab('apercu')">Aperçu</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('infos')">Infos</button>
+          <span class="tab-sep"></span>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('roadmap')">Roadmap</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('training')">Training</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('nutrition')">Nutrition</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('supplements')">Suppléments</button>
+          <span class="tab-sep"></span>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('bilans')">Bilans</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('videos')">Vidéos</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('retours')">Retours</button>
+          <span class="tab-sep"></span>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('posing')">Posing</button>
+          <button class="athlete-tab-btn" onclick="switchAthleteTab('questionnaires')">Questionnaires</button>
         </div>
 
         <div id="athlete-tab-content">
@@ -176,19 +574,11 @@
           <h1 class="page-title">Templates</h1>
         </div>
 
-        <div style="display: flex; gap: 8px; margin-bottom: 24px;">
-          <button class="btn btn-outline active" onclick="switchTemplateTab('training')">
-            <i class="fas fa-dumbbell"></i> Training
-          </button>
-          <button class="btn btn-outline" onclick="switchTemplateTab('nutrition')">
-            <i class="fas fa-utensils"></i> Nutrition
-          </button>
-          <button class="btn btn-outline" onclick="switchTemplateTab('workflow')">
-            <i class="fas fa-route"></i> Workflow
-          </button>
-          <button class="btn btn-outline" onclick="switchTemplateTab('questionnaires')">
-            <i class="fas fa-clipboard-list"></i> Questionnaires
-          </button>
+        <div class="athlete-tabs" style="margin-bottom:24px;">
+          <button class="athlete-tab-btn active" onclick="switchTemplateTab('training')">Training</button>
+          <button class="athlete-tab-btn" onclick="switchTemplateTab('nutrition')">Nutrition</button>
+          <button class="athlete-tab-btn" onclick="switchTemplateTab('workflow')">Workflow</button>
+          <button class="athlete-tab-btn" onclick="switchTemplateTab('questionnaires')">Questionnaires</button>
         </div>
 
         <div id="templates-content"></div>
@@ -512,7 +902,7 @@
       <div class="form-group">
         <label>Nom du template</label>
         <input type="text" id="workout-template-name" required>
- ù     </div>
+      </div>
       <div class="form-group">
         <label>Description</label>
         <textarea id="workout-template-description" rows="3"></textarea>
@@ -719,6 +1109,69 @@
 <script src="js/business-messages.js"></script>
 <script src="js/content-planner.js"></script>
 <script src="js/app.js"></script>
+
+<!-- ══════ ADMIN DASHBOARD (hidden by default) ══════ -->
+<div id="admin-app" style="display:none;">
+  <div class="admin-layout">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-header">
+        <div class="admin-sidebar-brand">
+          <div class="admin-brand-icon">PC</div>
+          <div>
+            <div class="admin-brand-text">Pierre Coaching</div>
+            <div class="admin-brand-sub">Admin</div>
+          </div>
+        </div>
+      </div>
+      <nav class="admin-sidebar-nav">
+        <button class="admin-nav-item active" onclick="adminShowSection('overview')" data-section="overview"><i class="fas fa-chart-pie"></i> Vue d'ensemble</button>
+        <button class="admin-nav-item" onclick="adminShowSection('coaches')" data-section="coaches"><i class="fas fa-user-tie"></i> Coachs</button>
+        <button class="admin-nav-item" onclick="adminShowSection('athletes-admin')" data-section="athletes-admin"><i class="fas fa-running"></i> Athlètes</button>
+        <button class="admin-nav-item" onclick="adminShowSection('payments')" data-section="payments"><i class="fas fa-credit-card"></i> Paiements</button>
+        <button class="admin-nav-item" onclick="adminShowSection('metrics')" data-section="metrics"><i class="fas fa-chart-bar"></i> Métriques</button>
+      </nav>
+      <div class="admin-sidebar-footer">
+        <button class="theme-toggle" onclick="toggleTheme()" style="margin-bottom:8px;width:100%;justify-content:center;gap:8px;font-size:12px;">
+          <i class="fas fa-moon"></i>
+        </button>
+        <button class="btn-logout" onclick="handleLogout()"><i class="fas fa-sign-out-alt"></i> Déconnexion</button>
+      </div>
+    </aside>
+    <main class="admin-main">
+      <div class="admin-section active" id="section-overview">
+        <div class="admin-page-header">
+          <div><h1 class="admin-page-title">Vue d'ensemble</h1><p class="admin-page-subtitle">Toutes les données de la plateforme</p></div>
+          <button class="btn btn-outline" onclick="adminRefresh()"><i class="fas fa-sync-alt"></i> Actualiser</button>
+        </div>
+        <div id="overview-content"><div style="text-align:center;padding:80px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--primary);"></i></div></div>
+      </div>
+      <div class="admin-section" id="section-coaches">
+        <div class="admin-page-header">
+          <div><h1 class="admin-page-title">Gestion des Coachs</h1><p class="admin-page-subtitle">Tous les comptes coach</p></div>
+          <div class="admin-search-wrap"><i class="fas fa-search"></i><input type="text" class="admin-search" placeholder="Rechercher..." id="coach-search" oninput="adminFilterCoaches()"></div>
+        </div>
+        <div id="coaches-content"><div style="text-align:center;padding:80px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--primary);"></i></div></div>
+      </div>
+      <div class="admin-section" id="section-athletes-admin">
+        <div class="admin-page-header">
+          <div><h1 class="admin-page-title">Athlètes</h1><p class="admin-page-subtitle">Vue globale</p></div>
+          <div class="admin-search-wrap"><i class="fas fa-search"></i><input type="text" class="admin-search" placeholder="Rechercher..." id="athlete-search" oninput="adminFilterAthletes()"></div>
+        </div>
+        <div id="athletes-content"><div style="text-align:center;padding:80px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--primary);"></i></div></div>
+      </div>
+      <div class="admin-section" id="section-payments">
+        <div class="admin-page-header"><div><h1 class="admin-page-title">Paiements & Revenus</h1><p class="admin-page-subtitle">Suivi financier</p></div></div>
+        <div id="payments-content"><div style="text-align:center;padding:80px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--primary);"></i></div></div>
+      </div>
+      <div class="admin-section" id="section-metrics">
+        <div class="admin-page-header"><div><h1 class="admin-page-title">Métriques Produit</h1><p class="admin-page-subtitle">Usage des fonctionnalités</p></div></div>
+        <div id="metrics-content"><div style="text-align:center;padding:80px;"><i class="fas fa-spinner fa-spin fa-2x" style="color:var(--primary);"></i></div></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/admin-inline.js"></script>
 
 </body>
 </html>

@@ -98,7 +98,7 @@ async function loadAthleteTabApercu() {
     const step = weightRange > 2 ? Math.ceil(weightRange / 3) : 0.5;
     for (let w = Math.floor(weightMin); w <= Math.ceil(weightMax); w += step) {
       const y = yScale(w);
-      yLabels.push(`<line x1="0" y1="${y}" x2="100" y2="${y}" stroke="rgba(255,255,255,0.05)" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`);
+      yLabels.push(`<line x1="0" y1="${y}" x2="100" y2="${y}" stroke="var(--border)" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`);
       yLabels.push(`<text x="-2" y="${y}" fill="var(--text3)" font-size="3.5" text-anchor="end" dominant-baseline="middle">${w}</text>`);
     }
 
@@ -209,7 +209,7 @@ async function loadAthleteTabApercu() {
     }
     if (r.steps) items.push(`<span style="color:var(--text2);"><i class="fas fa-shoe-prints" style="color:var(--text3);margin-right:3px;"></i>${Number(r.steps).toLocaleString('fr-FR')} pas</span>`);
     if (!items.length) return '';
-    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-subtle);">
       <div style="width:6px;height:6px;border-radius:50%;background:var(--primary);margin-top:6px;flex-shrink:0;"></div>
       <div style="flex:1;">
         <div style="display:flex;flex-wrap:wrap;gap:10px;font-size:12px;">${items.join('')}</div>
@@ -267,9 +267,9 @@ async function loadAthleteTabApercu() {
       <div style="font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">${label}</div>
       <div style="font-size:18px;font-weight:700;color:var(--text);">${cal} <span style="font-size:11px;font-weight:400;color:var(--text3);">kcal</span></div>
       <div style="display:flex;gap:8px;margin-top:4px;">
-        <span style="font-size:10px;color:var(--text2);"><span style="color:#22c55e;">P</span> ${p}g</span>
-        <span style="font-size:10px;color:var(--text2);"><span style="color:#3b82f6;">G</span> ${g}g</span>
-        <span style="font-size:10px;color:var(--text2);"><span style="color:#f59e0b;">L</span> ${l}g</span>
+        <span style="font-size:10px;color:var(--text2);"><span style="color:var(--success);">P</span> ${p}g</span>
+        <span style="font-size:10px;color:var(--text2);"><span style="color:var(--info);">G</span> ${g}g</span>
+        <span style="font-size:10px;color:var(--text2);"><span style="color:var(--warning);">L</span> ${l}g</span>
       </div>
     </div>`;
   };
