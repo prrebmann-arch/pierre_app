@@ -857,7 +857,7 @@ async function copyWorkoutTemplate(templateId) {
     const rows = sessions.map((s, i) => ({
       program_id: program.id,
       nom: s.nom || `Séance ${i + 1}`,
-      jour: s.jour || null,
+      jour: s.jour || i + 1,
       exercices: typeof s.exercices === 'string' ? s.exercices : JSON.stringify(s.exercices || []),
       ordre: i
     }));

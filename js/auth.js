@@ -168,11 +168,11 @@ async function showApp() {
   // Handle ?setup=success return from Stripe
   const params = new URLSearchParams(window.location.search);
   if (params.get('setup') === 'success') {
-    // Update profile
     await supabaseClient.from('coach_profiles')
       .update({ has_payment_method: true })
       .eq('user_id', currentUser.id);
-    window.history.replaceState({}, '', window.location.pathname);
+    window.history.replaceState({}, '', window.location.pathname + '#profile');
+    notify('Carte enregistrée avec succès', 'success');
   }
 
   if (needsPayment && params.get('setup') !== 'success') {
@@ -199,21 +199,83 @@ async function showApp() {
   }
 }
 
+let _wallStripe = null;
+let _wallElements = null;
+let _wallClientSecret = null;
+
 async function setupCoachPaymentMethod() {
+  const btn = document.getElementById('payment-wall-btn');
+  const container = document.getElementById('payment-wall-stripe');
+  const errorEl = document.getElementById('payment-wall-error');
   try {
-    const btn = document.getElementById('payment-wall-btn');
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redirection...'; }
+    if (btn) { btn.disabled = true; btn.textContent = 'Chargement...'; }
+    if (errorEl) errorEl.textContent = '';
+
     const resp = await authFetch('/api/stripe?action=coach-setup', {
       method: 'POST',
       body: JSON.stringify({ coachId: currentUser.id, email: currentUser.email })
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    if (data.url) window.location.href = data.url;
+
+    _wallClientSecret = data.clientSecret;
+    _wallStripe = Stripe(data.publishableKey);
+    _wallElements = _wallStripe.elements({
+      clientSecret: data.clientSecret,
+      appearance: {
+        theme: 'night',
+        variables: { colorPrimary: '#B30808', colorBackground: '#18181b', colorText: '#f4f4f5', borderRadius: '8px' },
+      },
+    });
+
+    const paymentElement = _wallElements.create('payment');
+    const mountPoint = document.getElementById('payment-wall-element');
+    mountPoint.replaceChildren();
+    paymentElement.mount(mountPoint);
+
+    if (btn) btn.style.display = 'none';
+    if (container) container.style.display = 'block';
   } catch (err) {
     handleError(err, 'setupCoachPaymentMethod');
-    const btn = document.getElementById('payment-wall-btn');
-    if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-credit-card"></i> Ajouter ma carte'; }
+    if (btn) { btn.disabled = false; btn.textContent = 'Ajouter ma carte'; }
+  }
+}
+
+async function confirmPaymentWallCard() {
+  const confirmBtn = document.getElementById('payment-wall-confirm');
+  const errorEl = document.getElementById('payment-wall-error');
+  if (!_wallStripe || !_wallElements) return;
+
+  try {
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Vérification...'; }
+    if (errorEl) errorEl.textContent = '';
+
+    const { error } = await _wallStripe.confirmSetup({
+      elements: _wallElements,
+      confirmParams: { return_url: window.location.origin + '?setup=success' },
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      if (errorEl) errorEl.textContent = error.message;
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirmer ma carte'; }
+      return;
+    }
+
+    // Update DB
+    await supabaseClient.from('coach_profiles')
+      .update({ has_payment_method: true })
+      .eq('user_id', currentUser.id);
+
+    notify('Carte enregistrée !', 'success');
+    // Hide payment wall, show app
+    document.getElementById('payment-wall').style.display = 'none';
+    document.getElementById('app-screen').style.display = 'block';
+    loadAthletes();
+    showSection('dashboard');
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message;
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirmer ma carte'; }
   }
 }
 

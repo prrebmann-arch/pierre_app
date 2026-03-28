@@ -48,7 +48,7 @@ async function getCoachStripe(supabase, coachId) {
 }
 
 // Actions called by athletes (not coaches)
-const ATHLETE_ACTIONS = ['cancellation-request', 'create-payment-sheet'];
+const ATHLETE_ACTIONS = ['cancellation-request', 'create-payment-sheet', 'confirm-payment'];
 
 module.exports = async function handler(req, res) {
   // CORS
@@ -100,13 +100,14 @@ module.exports = async function handler(req, res) {
       case 'coach-setup': return await coachSetup(req, res, supabase);
       case 'cancellation-request': return await cancellationRequest(req, res, supabase);
       case 'cancellation-respond': return await cancellationRespond(req, res, supabase);
+      case 'confirm-payment': return await confirmPayment(req, res, supabase);
       default: return res.status(400).json({ error: `Unknown action: ${action}` });
     }
   } catch (err) {
     // Auth errors have status, other errors are 500
     if (err.status) return handleAuthError(res, err);
-    console.error('[stripe]', err.message);
-    return res.status(500).json({ error: 'Internal server error' });
+    console.error('[stripe] action:', action, 'error:', err.message, 'stack:', err.stack?.split('\n')[1]?.trim());
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   }
 };
 
@@ -465,118 +466,197 @@ async function createPaymentSheet(req, res, supabase) {
   if (plan.is_free) return res.status(400).json({ error: 'Athlete is on free plan' });
   if (plan.payment_status === 'active') return res.status(400).json({ error: 'Already has active subscription' });
 
-  // Server-side amount validation
   if (!plan.amount || plan.amount <= 0) return res.status(400).json({ error: 'Invalid payment amount' });
   if (plan.amount > 10_000_00) return res.status(400).json({ error: 'Amount exceeds maximum' });
-  const validCurrencies = ['eur', 'usd', 'gbp', 'chf'];
-  if (plan.currency && !validCurrencies.includes(plan.currency.toLowerCase())) {
-    return res.status(400).json({ error: 'Invalid currency' });
-  }
 
-  // Determine Stripe instance (same logic as createCheckout)
+  // Get coach Connect account for destination charges
   const { data: coachProfile } = await supabase.from('coach_profiles')
-    .select('stripe_account_id, stripe_secret_key')
+    .select('stripe_account_id')
     .eq('user_id', coachId).single();
 
-  let stripeInstance = platformStripe;
-  let connectAccountId = null;
-  let publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
-
-  if (coachProfile?.stripe_account_id) {
-    try {
-      const account = await platformStripe.accounts.retrieve(coachProfile.stripe_account_id);
-      if (account.charges_enabled) {
-        connectAccountId = coachProfile.stripe_account_id;
-      }
-    } catch {}
-  }
-  if (!connectAccountId && coachProfile?.stripe_secret_key) {
-    const k = decrypt(coachProfile.stripe_secret_key);
-    stripeInstance = Stripe(k);
+  if (!coachProfile?.stripe_account_id) {
+    return res.status(400).json({ error: 'Coach has no Stripe account connected' });
   }
 
-  // Helper to pass stripeAccount only when using Connect
-  const opts = connectAccountId ? { stripeAccount: connectAccountId } : undefined;
-
-  // Create or get customer
-  const customers = connectAccountId
-    ? await stripeInstance.customers.list({ email: athleteEmail, limit: 1 }, opts)
-    : await stripeInstance.customers.list({ email: athleteEmail, limit: 1 });
-  let customer = customers.data[0];
-  if (!customer) {
-    customer = connectAccountId
-      ? await stripeInstance.customers.create({ email: athleteEmail, name: athleteName || athleteEmail, metadata: { coach_id: coachId, athlete_id: athleteId } }, opts)
-      : await stripeInstance.customers.create({ email: athleteEmail, name: athleteName || athleteEmail, metadata: { coach_id: coachId, athlete_id: athleteId } });
-  }
-
-  // Create ephemeral key
-  const ephemeralKey = connectAccountId
-    ? await stripeInstance.ephemeralKeys.create({ customer: customer.id }, { apiVersion: '2023-10-16', stripeAccount: connectAccountId })
-    : await stripeInstance.ephemeralKeys.create({ customer: customer.id }, { apiVersion: '2023-10-16' });
-
+  const publishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
   const metadata = { coach_id: coachId, athlete_id: athleteId, plan_id: plan.id };
 
-  if (plan.frequency === 'once') {
-    const piParams = { amount: plan.amount, currency: plan.currency || 'eur', customer: customer.id, metadata, automatic_payment_methods: { enabled: true } };
-    const paymentIntent = connectAccountId
-      ? await stripeInstance.paymentIntents.create(piParams, opts)
-      : await stripeInstance.paymentIntents.create(piParams);
-
-    return res.status(200).json({
-      paymentIntent: paymentIntent.client_secret,
-      ephemeralKey: ephemeralKey.secret,
-      customer: customer.id,
-      publishableKey,
-    });
-  } else {
-    // Subscription → create subscription with payment_behavior
-    const interval = { day: 'day', week: 'week', month: 'month' }[plan.frequency] || 'month';
-
-    // Create a price
-    const priceParams = {
-      unit_amount: plan.amount,
-      currency: plan.currency || 'eur',
-      recurring: { interval, interval_count: plan.frequency_interval || 1 },
-      product_data: { name: `Coaching ${athleteName || 'Athlète'}` },
-    };
-    const price = connectAccountId
-      ? await stripeInstance.prices.create(priceParams, opts)
-      : await stripeInstance.prices.create(priceParams);
-
-    const subParams = {
-      customer: customer.id,
-      items: [{ price: price.id }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand: ['latest_invoice.payment_intent'],
-      metadata,
-    };
-
-    if (plan.billing_anchor === 'fixed' && plan.billing_day) {
-      const now = new Date();
-      let anchorDate = new Date(now.getFullYear(), now.getMonth(), plan.billing_day);
-      if (anchorDate <= now) anchorDate.setMonth(anchorDate.getMonth() + 1);
-      subParams.billing_cycle_anchor = Math.floor(anchorDate.getTime() / 1000);
-    }
-
-    const subscription = connectAccountId
-      ? await stripeInstance.subscriptions.create(subParams, opts)
-      : await stripeInstance.subscriptions.create(subParams);
-
-    // Update plan with subscription ID
+  // Cancel any previous pending subscription on platform
+  if (plan.stripe_subscription_id) {
+    try { await platformStripe.subscriptions.cancel(plan.stripe_subscription_id); } catch {}
     await supabase.from('athlete_payment_plans').update({
-      stripe_subscription_id: subscription.id,
-      stripe_customer_id: customer.id,
+      stripe_subscription_id: null, stripe_customer_id: null,
     }).eq('id', plan.id);
-
-    return res.status(200).json({
-      paymentIntent: subscription.latest_invoice.payment_intent.client_secret,
-      ephemeralKey: ephemeralKey.secret,
-      customer: customer.id,
-      publishableKey,
-      subscriptionId: subscription.id,
-    });
   }
+
+  // All objects created on PLATFORM account (not Connect) — destination charges transfer money to coach
+  try {
+    // Customer on platform
+    const customers = await platformStripe.customers.list({ email: athleteEmail, limit: 1 });
+    var customer = customers.data[0];
+    if (!customer) {
+      customer = await platformStripe.customers.create({
+        email: athleteEmail, name: athleteName || athleteEmail, metadata,
+      });
+    }
+  } catch (err) {
+    console.error('[stripe] Customer failed:', err.message);
+    return res.status(500).json({ error: 'Customer creation failed: ' + err.message });
+  }
+
+  // Ephemeral key on platform
+  try {
+    var ephemeralKey = await platformStripe.ephemeralKeys.create(
+      { customer: customer.id }, { apiVersion: '2023-10-16' }
+    );
+  } catch (err) {
+    console.error('[stripe] Ephemeral key failed:', err.message);
+    return res.status(500).json({ error: 'Session creation failed: ' + err.message });
+  }
+
+  if (plan.frequency === 'once') {
+    // One-time payment with destination charge
+    try {
+      const pi = await platformStripe.paymentIntents.create({
+        amount: plan.amount, currency: plan.currency || 'eur',
+        customer: customer.id, metadata,
+        automatic_payment_methods: { enabled: true },
+        transfer_data: { destination: coachProfile.stripe_account_id },
+      });
+      return res.status(200).json({
+        paymentIntent: pi.client_secret,
+        ephemeralKey: ephemeralKey.secret,
+        customer: customer.id, publishableKey,
+      });
+    } catch (err) {
+      console.error('[stripe] PaymentIntent failed:', err.message);
+      return res.status(500).json({ error: 'Payment creation failed: ' + err.message });
+    }
+  } else {
+    // Subscription with destination charges via transfer_data on subscription
+    try {
+      const interval = { day: 'day', week: 'week', month: 'month' }[plan.frequency] || 'month';
+      const price = await platformStripe.prices.create({
+        unit_amount: plan.amount, currency: plan.currency || 'eur',
+        recurring: { interval, interval_count: plan.frequency_interval || 1 },
+        product_data: { name: `Coaching ${athleteName || 'Athlète'}` },
+      });
+
+      const subParams = {
+        customer: customer.id,
+        items: [{ price: price.id }],
+        payment_behavior: 'default_incomplete',
+        payment_settings: { save_default_payment_method: 'on_subscription' },
+        expand: ['latest_invoice.payment_intent'],
+        transfer_data: { destination: coachProfile.stripe_account_id },
+        metadata,
+      };
+
+      // Prorata: if billing_day is set, charge prorata now, then start recurring on billing_day
+      let useProrata = false;
+      if (plan.billing_anchor === 'fixed' && plan.billing_day) {
+        const now = new Date();
+        let anchorDate = new Date(now.getFullYear(), now.getMonth(), plan.billing_day);
+        if (anchorDate <= now) anchorDate.setMonth(anchorDate.getMonth() + 1);
+
+        const msPerDay = 86400000;
+        const daysUntilAnchor = Math.ceil((anchorDate - now) / msPerDay);
+        const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const prorataAmount = Math.round(plan.amount * daysUntilAnchor / daysInMonth);
+
+        if (prorataAmount > 0 && daysUntilAnchor < daysInMonth) {
+          useProrata = true;
+          // Create a one-time PaymentIntent for the prorata amount
+          const prorataPI = await platformStripe.paymentIntents.create({
+            amount: prorataAmount,
+            currency: plan.currency || 'eur',
+            customer: customer.id,
+            automatic_payment_methods: { enabled: true },
+            transfer_data: { destination: coachProfile.stripe_account_id },
+            metadata: { ...metadata, type: 'prorata', days: daysUntilAnchor },
+          });
+
+          // Create subscription with trial until anchor (no immediate charge)
+          const trialSub = await platformStripe.subscriptions.create({
+            customer: customer.id,
+            items: [{ price: price.id }],
+            trial_end: Math.floor(anchorDate.getTime() / 1000),
+            transfer_data: { destination: coachProfile.stripe_account_id },
+            metadata,
+          });
+
+          await supabase.from('athlete_payment_plans').update({
+            stripe_subscription_id: trialSub.id,
+            stripe_customer_id: customer.id,
+          }).eq('id', plan.id);
+
+          // Return the prorata PaymentIntent for the mobile to present
+          return res.status(200).json({
+            paymentIntent: prorataPI.client_secret,
+            ephemeralKey: ephemeralKey.secret,
+            customer: customer.id, publishableKey,
+            subscriptionId: trialSub.id,
+          });
+        }
+      }
+
+      // No prorata — standard subscription with immediate first payment
+      const subscription = await platformStripe.subscriptions.create(subParams);
+
+      let pi = subscription.latest_invoice?.payment_intent;
+      if (!pi?.client_secret) {
+        try { await platformStripe.subscriptions.cancel(subscription.id); } catch {}
+        return res.status(500).json({ error: 'Payment setup failed' });
+      }
+
+      await supabase.from('athlete_payment_plans').update({
+        stripe_subscription_id: subscription.id,
+        stripe_customer_id: customer.id,
+      }).eq('id', plan.id);
+
+      return res.status(200).json({
+        paymentIntent: pi.client_secret,
+        ephemeralKey: ephemeralKey.secret,
+        customer: customer.id, publishableKey,
+        subscriptionId: subscription.id,
+      });
+    } catch (err) {
+      console.error('[stripe] Subscription failed:', err.message);
+      return res.status(500).json({ error: 'Subscription creation failed: ' + err.message });
+    }
+  }
+}
+
+async function confirmPayment(req, res, supabase) {
+  const { athleteId, coachId } = req.body;
+  if (!athleteId || !coachId) return res.status(400).json({ error: 'Missing fields' });
+
+  const { data: plan } = await supabase.from('athlete_payment_plans')
+    .select('id, stripe_subscription_id, frequency, payment_status')
+    .eq('athlete_id', athleteId).eq('coach_id', coachId).single();
+
+  if (!plan) return res.status(400).json({ error: 'No plan found' });
+  if (plan.payment_status === 'active' || plan.payment_status === 'completed') {
+    return res.status(200).json({ status: plan.payment_status });
+  }
+
+  // Verify with Stripe that the subscription/payment is actually paid
+  if (plan.stripe_subscription_id) {
+    try {
+      const sub = await platformStripe.subscriptions.retrieve(plan.stripe_subscription_id);
+      if (sub.status === 'active' || sub.status === 'trialing') {
+        await supabase.from('athlete_payment_plans').update({
+          payment_status: 'active',
+          payments_completed: (plan.payments_completed || 0) + 1,
+        }).eq('id', plan.id);
+        return res.status(200).json({ status: 'active' });
+      }
+    } catch (err) {
+      console.error('[stripe] confirm-payment sub check failed:', err.message);
+    }
+  }
+
+  return res.status(200).json({ status: plan.payment_status });
 }
 
 async function cancelSubscription(req, res, supabase) {
@@ -626,14 +706,17 @@ async function coachSetup(req, res, supabase) {
     await supabase.from('coach_profiles').update({ stripe_customer_id: customerId }).eq('user_id', coachId);
   }
 
-  const origin = req.headers.origin || 'https://pierreapp.vercel.app';
-  const session = await platformStripe.checkout.sessions.create({
-    customer: customerId, mode: 'setup', payment_method_types: ['card'],
-    success_url: `${origin}?setup=success#profile`, cancel_url: `${origin}?setup=cancel#profile`,
+  const setupIntent = await platformStripe.setupIntents.create({
+    customer: customerId,
+    payment_method_types: ['card'],
     metadata: { coach_id: coachId },
   });
 
-  return res.status(200).json({ url: session.url, customer_id: customerId });
+  return res.status(200).json({
+    clientSecret: setupIntent.client_secret,
+    customer_id: customerId,
+    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  });
 }
 
 // ── CANCELLATION REQUEST (from athlete) ──

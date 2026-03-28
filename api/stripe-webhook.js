@@ -25,7 +25,8 @@ module.exports = async function handler(req, res) {
 
   try {
     event = platformStripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET);
-  } catch {
+  } catch (platformErr) {
+    console.error('[webhook] Platform signature failed:', platformErr.message);
     // Not a platform event — try verifying with coach's own webhook secret
     try {
       const body = JSON.parse(rawBody.toString());

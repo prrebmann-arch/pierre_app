@@ -149,10 +149,20 @@ function renderProfile() {
             <div style="font-weight:600;">Carte bancaire</div>
             <div style="color:var(--text3);font-size:13px;">Non requis (plan gratuit)</div>`}
           </div>
-          <button class="btn btn-sm" onclick="profileSetupPaymentMethod()">
+          <button class="btn btn-sm" id="btn-setup-card" onclick="profileSetupPaymentMethod()">
             <i class="fas fa-${p.has_payment_method ? 'pen' : 'plus'}"></i>
             ${p.has_payment_method ? 'Modifier' : 'Ajouter'}
           </button>
+        </div>
+        <div id="stripe-card-container" style="display:none;padding:16px 0;">
+          <div id="stripe-payment-element" style="margin-bottom:12px;"></div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-red" id="btn-confirm-card" onclick="profileConfirmCard()">
+              <i class="fas fa-check"></i> Confirmer
+            </button>
+            <button class="btn btn-outline" onclick="profileCancelCard()">Annuler</button>
+          </div>
+          <div id="stripe-card-error" style="color:#ef4444;font-size:13px;margin-top:8px;"></div>
         </div>
       </div>
     </div>
@@ -478,21 +488,88 @@ async function profileChangePlan() {
   notify(`Plan changé en ${newPlan === 'business' ? 'Business' : 'Athlète'}`, 'success');
 }
 
+let _stripeInstance = null;
+let _stripeElements = null;
+let _stripeClientSecret = null;
+
 async function profileSetupPaymentMethod() {
+  const container = document.getElementById('stripe-card-container');
+  const btn = document.getElementById('btn-setup-card');
+  const errorEl = document.getElementById('stripe-card-error');
+  if (!container) return;
+
   try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Chargement...'; }
+    if (errorEl) errorEl.textContent = '';
+
     const resp = await authFetch('/api/stripe?action=coach-setup', {
       method: 'POST',
       body: JSON.stringify({ coachId: currentUser.id, email: currentUser.email })
     });
     const data = await resp.json();
     if (data.error) throw new Error(data.error);
-    // Redirect to Stripe Checkout for setup
-    if (data.url) {
-      window.open(data.url, '_blank');
-    }
+
+    _stripeClientSecret = data.clientSecret;
+    _stripeInstance = Stripe(data.publishableKey);
+    _stripeElements = _stripeInstance.elements({
+      clientSecret: data.clientSecret,
+      appearance: {
+        theme: 'night',
+        variables: { colorPrimary: '#B30808', colorBackground: '#18181b', colorText: '#f4f4f5', borderRadius: '8px' },
+      },
+    });
+
+    const paymentElement = _stripeElements.create('payment');
+    const mountPoint = document.getElementById('stripe-payment-element');
+    mountPoint.replaceChildren();
+    paymentElement.mount(mountPoint);
+
+    container.style.display = 'block';
+    if (btn) btn.style.display = 'none';
   } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Ajouter'; }
     handleError(err, 'profileSetupPaymentMethod');
   }
+}
+
+async function profileConfirmCard() {
+  const confirmBtn = document.getElementById('btn-confirm-card');
+  const errorEl = document.getElementById('stripe-card-error');
+  if (!_stripeInstance || !_stripeElements || !_stripeClientSecret) return;
+
+  try {
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'Vérification...'; }
+    if (errorEl) errorEl.textContent = '';
+
+    const { error } = await _stripeInstance.confirmSetup({
+      elements: _stripeElements,
+      confirmParams: { return_url: window.location.origin + '?setup=success#profile' },
+      redirect: 'if_required',
+    });
+
+    if (error) {
+      if (errorEl) errorEl.textContent = error.message;
+      if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirmer'; }
+      return;
+    }
+
+    notify('Carte enregistrée avec succès', 'success');
+    profileData.has_payment_method = true;
+    profileCancelCard();
+    renderProfile();
+  } catch (err) {
+    if (errorEl) errorEl.textContent = err.message;
+    if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Confirmer'; }
+  }
+}
+
+function profileCancelCard() {
+  const container = document.getElementById('stripe-card-container');
+  const btn = document.getElementById('btn-setup-card');
+  if (container) container.style.display = 'none';
+  if (btn) { btn.style.display = ''; btn.disabled = false; btn.textContent = profileData?.has_payment_method ? 'Modifier' : 'Ajouter'; }
+  _stripeElements = null;
+  _stripeClientSecret = null;
 }
 
 async function profileToggleProrata(enabled) {
