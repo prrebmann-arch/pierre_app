@@ -191,10 +191,8 @@ small, .text-xs { font-size: 12px; line-height: 1.5; }
   pointer-events: none;
 }
 .auth-box {
-  background: var(--glass-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--glass-border);
+  background: var(--bg2);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 48px 40px;
   width: 100%;
@@ -241,8 +239,8 @@ small, .text-xs { font-size: 12px; line-height: 1.5; }
 .form-group select,
 .form-group textarea {
   width: 100%;
-  background: var(--glass-bg);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg3);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 13px;
   color: var(--text);
@@ -262,8 +260,8 @@ small, .text-xs { font-size: 12px; line-height: 1.5; }
 input.form-control,
 select.form-control,
 textarea.form-control {
-  background: var(--glass-bg);
-  border: 1px solid rgba(255,255,255,0.08);
+  background: var(--bg3);
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   color: var(--text);
