@@ -352,7 +352,9 @@ textarea.form-control {
 /* ===== SIDEBAR ===== */
 .sidebar {
   width: var(--sidebar-width);
-  background: var(--bg);
+  background: rgba(12,12,15,0.8);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
@@ -369,7 +371,7 @@ textarea.form-control {
   gap: 10px;
 }
 .brand-icon {
-  width: 30px; height: 30px;
+  width: 28px; height: 28px;
   background: var(--primary);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
@@ -381,6 +383,13 @@ textarea.form-control {
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.3px;
+}
+.brand-plan {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text4);
+  letter-spacing: 0.3px;
+  margin-top: 1px;
 }
 .sidebar-footer {
   padding: 12px;
@@ -394,21 +403,21 @@ textarea.form-control {
 }
 .user-avatar {
   width: 30px; height: 30px;
-  background: var(--bg3);
+  background: var(--primary-bg);
   border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-weight: 600; font-size: 11px; color: var(--text2);
+  font-weight: 600; font-size: 11px; color: var(--primary);
   flex-shrink: 0;
 }
 .user-info { flex: 1; min-width: 0; }
 .user-name { font-size: 13px; font-weight: 500; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar-nav { flex: 1; padding: 4px 8px; overflow-y: auto; }
 .nav-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text3);
+  color: var(--text4);
   padding: 16px 10px 6px;
 }
 .nav-item {
@@ -418,7 +427,7 @@ textarea.form-control {
   padding: 8px 10px;
   border-radius: var(--radius-sm);
   cursor: pointer;
-  color: var(--text2);
+  color: var(--text3);
   font-size: 13px;
   font-weight: 500;
   transition: all var(--transition-fast);
@@ -437,10 +446,28 @@ textarea.form-control {
 .nav-item:hover { background: var(--hover-bg); color: var(--text); }
 .nav-item:hover i { opacity: 1; }
 .nav-item.active {
-  background: var(--primary-glow);
-  color: var(--primary);
+  background: var(--glass-bg-hover);
+  color: var(--text);
 }
 .nav-item.active i { opacity: 1; color: var(--primary); }
+.nav-badge {
+  margin-left: auto;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+.nav-dot {
+  margin-left: auto;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+}
 
 /* ===== MAIN CONTENT ===== */
 .main-content {
