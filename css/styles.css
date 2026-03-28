@@ -1450,7 +1450,8 @@ textarea.form-control {
 /* ── Business Nav Tabs ── */
 .biz-nav {
   display: flex; align-items: center; gap: 2px;
-  background: var(--bg2); border: var(--card-border);
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 10px; padding: 4px; margin-bottom: 20px;
   overflow-x: auto;
 }
@@ -1475,12 +1476,13 @@ textarea.form-control {
   display: flex; gap: 8px; flex-wrap: wrap;
 }
 .biz-kpi {
-  background: var(--bg2); border: var(--card-border);
+  background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: 10px; padding: 12px 16px;
   min-width: 100px; text-align: center;
-  transition: box-shadow var(--transition-fast);
+  transition: all var(--transition-fast);
 }
-.biz-kpi:hover { box-shadow: var(--shadow-card-hover); }
+.biz-kpi:hover { box-shadow: var(--shadow-card-hover); border-color: var(--hover-border); transform: translateY(-2px); }
 .biz-kpi-label {
   font-size: 10px; font-weight: 600; color: var(--text3);
   text-transform: uppercase; letter-spacing: 0.4px;
@@ -1544,15 +1546,15 @@ textarea.form-control {
 .biz-wk-hdr {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 14px; margin-bottom: 2px; border-radius: var(--radius-sm);
-  background: var(--bg2); cursor: pointer; border: 1px solid var(--border-subtle);
+  background: var(--glass-bg); cursor: pointer; border: 1px solid var(--glass-border);
   transition: all var(--transition-fast);
 }
 .biz-wk-hdr:hover { border-color: var(--primary); background: var(--hover-bg); }
 .biz-wk-body {
   display: none; padding: 12px 14px;
-  background: var(--bg2); border-radius: 0 0 8px 8px;
+  background: var(--glass-bg); border-radius: 0 0 8px 8px;
   margin-bottom: 6px; margin-top: -2px;
-  border: 1px solid var(--border-subtle); border-top: none;
+  border: 1px solid var(--glass-border); border-top: none;
 }
 .biz-wk-body.open { display: block; }
 
@@ -1602,10 +1604,10 @@ textarea.form-control {
 .biz-client-row {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 14px; margin-bottom: 4px; border-radius: var(--radius-sm);
-  background: var(--bg2); border: 1px solid var(--border);
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
   transition: all var(--transition-fast);
 }
-.biz-client-row:hover { border-color: var(--hover-border); box-shadow: var(--shadow-card-hover); }
+.biz-client-row:hover { border-color: var(--hover-border); box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
 
 /* ===== WELCOME BANNER (shared coach + admin) ===== */
 .prc-welcome {
