@@ -488,7 +488,7 @@ async function cpHandleMediaUpload(input) {
   if (progressEl) {
     progressEl.style.display = 'flex';
     progressEl.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--bg3);border-radius:12px;border:1px solid var(--border);width:100%;">
+      <div style="display:flex;align-items:center;gap:12px;padding:16px;background:var(--bg3);border-radius:16px;border:1px solid var(--glass-border);width:100%;">
         <div style="width:50px;height:50px;border-radius:8px;background:var(--bg2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <i class="fas fa-${isVideo ? 'video' : 'image'}" style="font-size:20px;color:var(--primary);"></i>
         </div>
@@ -794,7 +794,7 @@ function cpRenderHashtags() {
   const ct = document.getElementById('cp-tab-content');
 
   const cards = _cpHashtagGroups.map(g => `
-    <div style="padding:14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border);">
+    <div style="padding:14px;background:var(--bg2);border-radius:16px;border:1px solid var(--glass-border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-weight:700;font-size:14px;">${escHtml(g.name)}</span>
         <div style="display:flex;gap:6px;">
@@ -875,7 +875,7 @@ function cpRenderTemplates() {
   const ct = document.getElementById('cp-tab-content');
 
   const cards = _cpCaptionTemplates.map(t => `
-    <div style="padding:14px;background:var(--bg2);border-radius:12px;border:1px solid var(--border);">
+    <div style="padding:14px;background:var(--bg2);border-radius:16px;border:1px solid var(--glass-border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
         <span style="font-weight:700;font-size:14px;">${escHtml(t.title)}</span>
         <div style="display:flex;gap:6px;">

@@ -44,18 +44,18 @@ function renderAthletes() {
     return;
   }
 
-  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;">${athletesList.map(athlete => {
+  container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:20px;">${athletesList.map(athlete => {
     const initials = (athlete.prenom?.charAt(0) || '') + (athlete.nom?.charAt(0) || '');
     const avatar = athlete.avatar_url
-      ? `<img src="${escHtml(athlete.avatar_url)}" style="width:52px;height:52px;border-radius:14px;object-fit:cover;border:2px solid var(--border);">`
-      : `<div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--bg3),var(--bg4));border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--text2);">${initials}</div>`;
+      ? `<img src="${escHtml(athlete.avatar_url)}" style="width:52px;height:52px;border-radius:16px;object-fit:cover;border:2px solid var(--border);">`
+      : `<div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--bg3),var(--bg4));border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--text2);">${initials}</div>`;
     const poids = athlete.poids_actuel ? `${athlete.poids_actuel} kg` : '—';
     const activePhase = athlete._phase;
     const phaseInfo = activePhase?.phase && typeof PROG_PHASES !== 'undefined' ? PROG_PHASES[activePhase.phase] : null;
     const phaseLabel = phaseInfo ? phaseInfo.label : (activePhase?.name || '');
     const phaseColor = phaseInfo ? phaseInfo.color : 'var(--primary)';
 
-    return `<div onclick="openAthleteDetail('${athlete.id}')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;">
+    return `<div onclick="openAthleteDetail('${athlete.id}')" style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;cursor:pointer;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${phaseInfo ? phaseColor : 'var(--border)'};opacity:${phaseInfo ? 0.8 : 0.3};"></div>
       <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
         ${avatar}
@@ -66,15 +66,15 @@ function renderAthletes() {
         ${phaseLabel ? `<span style="font-size:10px;font-weight:700;color:${phaseColor};background:${phaseColor}18;padding:4px 10px;border-radius:8px;white-space:nowrap;letter-spacing:0.3px;">${escHtml(phaseLabel)}</span>` : ''}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
-        <div style="background:var(--tint);border-radius:8px;padding:10px;text-align:center;">
+        <div style="background:var(--glass-bg);border:1px solid var(--border-subtle);border-radius:12px;padding:12px;text-align:center;">
           <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1;">${poids}</div>
           <div style="font-size:10px;color:var(--text2);margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;">Poids</div>
         </div>
-        <div style="background:var(--tint);border-radius:8px;padding:10px;text-align:center;">
+        <div style="background:var(--glass-bg);border:1px solid var(--border-subtle);border-radius:12px;padding:12px;text-align:center;">
           <div style="font-size:16px;font-weight:800;color:var(--text);line-height:1;">${athlete.poids_objectif ? athlete.poids_objectif + ' kg' : '—'}</div>
           <div style="font-size:10px;color:var(--text2);margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;">Objectif</div>
         </div>
-        <div style="background:var(--tint);border-radius:8px;padding:10px;text-align:center;">
+        <div style="background:var(--glass-bg);border:1px solid var(--border-subtle);border-radius:12px;padding:12px;text-align:center;">
           <div style="font-size:16px;font-weight:800;color:${phaseInfo ? phaseColor : 'var(--text)'};line-height:1;">${phaseInfo ? phaseInfo.short : '—'}</div>
           <div style="font-size:10px;color:var(--text2);margin-top:3px;text-transform:uppercase;letter-spacing:0.3px;">Phase</div>
         </div>
@@ -304,7 +304,7 @@ async function loadAthleteTabInfos() {
 
   el.innerHTML = `
     <!-- Avatar + Name header -->
-    <div style="display:flex;align-items:center;gap:20px;margin-bottom:24px;padding:24px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;position:relative;overflow:hidden;">
+    <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px;padding:28px;background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;position:relative;overflow:hidden;">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),#d41a1a);"></div>
       <div style="position:relative;">
         ${avatarHtml}

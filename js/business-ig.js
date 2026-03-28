@@ -869,7 +869,7 @@ function _bizIgEditGoalsModal(quarter) {
   overlay.id = 'ig-goals-modal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;';
   overlay.innerHTML = `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:440px;max-width:90vw;">
+    <div style="background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:32px;width:440px;max-width:90vw;">
       <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 20px;">Objectifs ${quarter.replace('-', ' ')}</h3>
       ${rows}
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
@@ -981,7 +981,7 @@ function _renderIgStoriesView(ct) {
   const daysHtml = days.map(d => {
     const hasSeq = seqDates.has(d.date);
     const isSel = d.date === selDay;
-    return `<button onclick="window._bizIgSelectedDay='${d.date}';_renderIgStoriesView()" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-radius:12px;border:none;background:${isSel ? 'var(--primary)' : 'transparent'};cursor:pointer;transition:all 0.15s;">
+    return `<button onclick="window._bizIgSelectedDay='${d.date}';_renderIgStoriesView()" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:12px 0;border-radius:12px;border:none;background:${isSel ? 'var(--primary)' : 'transparent'};cursor:pointer;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);">
       <span style="font-size:11px;font-weight:600;color:${isSel ? '#fff' : 'var(--text3)'};text-transform:uppercase;letter-spacing:0.5px;">${d.label.replace('.','')}</span>
       <span style="font-size:22px;font-weight:800;color:${isSel ? '#fff' : 'var(--text)'};">${d.num}</span>
       ${hasSeq ? `<span style="width:6px;height:6px;border-radius:50%;background:${isSel ? '#fff' : 'var(--success)'};"></span>` : '<span style="width:6px;height:6px;"></span>'}
@@ -1025,7 +1025,7 @@ function _renderIgStoriesView(ct) {
 
         const card = `
           <div style="display:flex;flex-direction:column;align-items:center;min-width:200px;">
-            <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;width:200px;">
+            <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;overflow:hidden;width:200px;">
               <div style="width:100%;aspect-ratio:9/16;background:var(--bg3);display:flex;align-items:center;justify-content:center;position:relative;">
                 ${story?.thumbnail_url || story?.ig_media_url
                   ? `<img src="${escHtml(story.thumbnail_url || story.ig_media_url)}" style="width:100%;height:100%;object-fit:cover;">`
@@ -1289,7 +1289,7 @@ function _bizIgAddStoriesToSeq(seqId) {
   overlay.id = 'ig-seq-stories-modal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;';
   overlay.innerHTML = `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:460px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;">
+    <div style="background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:32px;width:460px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;">
       <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 16px;">Sélectionner les stories</h3>
       <div id="ig-seq-story-list" style="display:flex;flex-direction:column;gap:6px;overflow-y:auto;flex:1;margin-bottom:16px;">
         ${storyOptions}
@@ -1337,7 +1337,7 @@ function _bizIgCreateSequenceModal() {
   overlay.id = 'ig-seq-modal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;';
   overlay.innerHTML = `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:420px;max-width:90vw;">
+    <div style="background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:32px;width:420px;max-width:90vw;">
       <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 20px;">Nouvelle Séquence</h3>
       <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nom</label>
       <input type="text" id="ig-seq-name" class="bt-input" placeholder="Ex: Séquence confiance semaine 3" style="margin-bottom:12px;">
@@ -1519,7 +1519,7 @@ function _bizIgPlayReel(reelId) {
   overlay.id = 'ig-reel-modal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;';
   overlay.innerHTML = `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;overflow:hidden;max-width:420px;width:90vw;max-height:90vh;display:flex;flex-direction:column;">
+    <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;overflow:hidden;max-width:420px;width:90vw;max-height:90vh;display:flex;flex-direction:column;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);">
         <span style="font-size:13px;font-weight:600;color:var(--text);">${date}</span>
         <button onclick="document.getElementById('ig-reel-modal').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;"><i class="fas fa-times"></i></button>
@@ -1551,7 +1551,7 @@ function _bizIgAddPillarModal() {
   overlay.id = 'ig-pillar-modal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;';
   overlay.innerHTML = `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:360px;max-width:90vw;">
+    <div style="background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:32px;width:360px;max-width:90vw;">
       <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 20px;">Nouveau Pilier</h3>
       <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nom</label>
       <input type="text" id="ig-pillar-name" class="bt-input" placeholder="Ex: Éducation fitness" style="margin-bottom:12px;">
@@ -1593,7 +1593,7 @@ function _bizIgEditPillar(id) {
   overlay.id = 'ig-pillar-modal';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:9999;';
   overlay.innerHTML = `
-    <div style="background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:28px;width:360px;max-width:90vw;">
+    <div style="background:var(--bg2);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:32px;width:360px;max-width:90vw;">
       <h3 style="font-size:18px;font-weight:700;color:var(--text);margin:0 0 20px;">Modifier le Pilier</h3>
       <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:4px;">Nom</label>
       <input type="text" id="ig-pillar-name" class="bt-input" value="${escHtml(pillar.name)}" style="margin-bottom:12px;">

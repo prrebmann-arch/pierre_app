@@ -245,7 +245,7 @@ async function loadAthleteTabApercu() {
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
 
           <!-- Poids -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;">
+          <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;position:relative;overflow:hidden;">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#B30808,#d41a1a);"></div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
               <div style="width:38px;height:38px;border-radius:10px;background:rgba(179,8,8,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-weight" style="color:#B30808;font-size:15px;"></i></div>
@@ -256,7 +256,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Bilans -->
-          <div onclick="switchAthleteTab('bilans')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;position:relative;overflow:hidden;transition:all 0.15s;">
+          <div onclick="switchAthleteTab('bilans')" style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;cursor:pointer;position:relative;overflow:hidden;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#4ade80);"></div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
               <div style="width:38px;height:38px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-check" style="color:#22c55e;font-size:15px;"></i></div>
@@ -267,7 +267,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Sommeil -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;">
+          <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;position:relative;overflow:hidden;">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${sleepColor},${sleepColor}88);"></div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
               <div style="width:38px;height:38px;border-radius:10px;background:${sleepBg};display:flex;align-items:center;justify-content:center;"><i class="fas fa-moon" style="color:${sleepColor};font-size:15px;"></i></div>
@@ -278,7 +278,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Pas -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;">
+          <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;position:relative;overflow:hidden;">
             <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div>
             <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
               <div style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-shoe-prints" style="color:#3b82f6;font-size:15px;"></i></div>
@@ -293,7 +293,7 @@ async function loadAthleteTabApercu() {
         </div>
 
         <!-- ═══ WEIGHT CHART ═══ -->
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;">
+        <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
             <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;"><i class="fas fa-chart-line" style="color:#B30808;opacity:0.7;"></i> Évolution du poids</div>
             <span style="font-size:11px;color:var(--text3);background:var(--bg3);padding:3px 10px;border-radius:8px;">30 jours</span>
@@ -304,7 +304,7 @@ async function loadAthleteTabApercu() {
         <!-- ═══ CHARTS ROW (Steps, Sleep, Water) ═══ -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
           <!-- Steps chart -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;">
+          <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:22px;">
             <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-shoe-prints" style="color:#3b82f6;font-size:11px;"></i> PAS (7J)</div>
             <div class="ap-steps-chart" id="ap-steps-chart" data-points='${JSON.stringify(stepsChartPoints)}'>
               <div style="display:flex;gap:3px;align-items:flex-end;">${stepsBarData.join('')}</div>
@@ -318,7 +318,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Sleep chart -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;">
+          <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:22px;">
             <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-moon" style="color:${sleepColor};font-size:11px;"></i> SOMMEIL (7J)</div>
             <div class="ap-steps-chart" id="ap-sleep-chart" data-points='${JSON.stringify(sleepChartPoints)}'>
               <div style="display:flex;gap:3px;align-items:flex-end;">${sleepBarData.join('')}</div>
@@ -328,7 +328,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Water chart -->
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;">
+          <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:22px;">
             <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-tint" style="color:#3b82f6;font-size:11px;"></i> EAU (7J)</div>
             <div style="display:flex;gap:3px;align-items:flex-end;">${waterBarData.join('')}</div>
             <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:8px;">
@@ -341,7 +341,7 @@ async function loadAthleteTabApercu() {
         <!-- ═══ BOTTOM ROW ═══ -->
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
           <!-- Roadmap -->
-          <div onclick="switchAthleteTab('roadmap')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;">
+          <div onclick="switchAthleteTab('roadmap')" style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;cursor:pointer;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
               <div style="width:32px;height:32px;border-radius:8px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-road" style="color:#8b5cf6;font-size:13px;"></i></div>
               <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Roadmap</div>
@@ -350,7 +350,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Programme -->
-          <div onclick="switchAthleteTab('training')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;">
+          <div onclick="switchAthleteTab('training')" style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;cursor:pointer;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
               <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-dumbbell" style="color:#f59e0b;font-size:13px;"></i></div>
               <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Programme</div>
@@ -359,7 +359,7 @@ async function loadAthleteTabApercu() {
           </div>
 
           <!-- Nutrition -->
-          <div onclick="switchAthleteTab('nutrition')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;">
+          <div onclick="switchAthleteTab('nutrition')" style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;padding:24px;cursor:pointer;transition:all 0.3s cubic-bezier(0.22,1,0.36,1);">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
               <div style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-utensils" style="color:#22c55e;font-size:13px;"></i></div>
               <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Nutrition</div>
@@ -371,7 +371,7 @@ async function loadAthleteTabApercu() {
       </div>
 
       <!-- ═══ ACTIVITY SIDEBAR ═══ -->
-      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+      <div style="background:var(--glass-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border:1px solid var(--glass-border);border-radius:20px;overflow:hidden;">
         <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
           <div style="width:28px;height:28px;border-radius:7px;background:rgba(179,8,8,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-bolt" style="color:#B30808;font-size:11px;"></i></div>
           <span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Activité</span>

@@ -1650,10 +1650,10 @@ textarea.form-control {
   background: var(--glass-bg);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
-  border: var(--primary-border);
-  border-radius: 16px;
-  padding: 24px 28px;
-  margin-bottom: 24px;
+  border: 1px solid var(--primary-border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  margin-bottom: 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1670,10 +1670,13 @@ textarea.form-control {
   pointer-events: none;
 }
 .prc-welcome-title {
-  font-size: 22px;
+  font-size: clamp(1.3rem, 3vw, 1.6rem);
   font-weight: 800;
-  color: var(--text);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, var(--text) 0%, var(--text2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 .prc-welcome-sub {
   font-size: 13px;
@@ -1717,14 +1720,31 @@ textarea.form-control {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  transition: all var(--transition-fast);
+  transition: all var(--transition-base);
+  position: relative;
+}
+.dash-card::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, rgba(179,8,8,0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--transition-base);
 }
 .dash-card:hover {
-  border-color: var(--hover-border);
+  border-color: var(--hover-border-strong);
   box-shadow: var(--shadow-card-hover);
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+}
+.dash-card:hover::before {
+  opacity: 1;
 }
 .dash-card-activity {
   display: flex;
@@ -1734,7 +1754,7 @@ textarea.form-control {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 .dash-card-activity .dash-card-body {
   flex: 1;
@@ -1743,14 +1763,14 @@ textarea.form-control {
 
 .dash-card-header {
   display: flex; justify-content: space-between; align-items: center;
-  padding: 14px 18px; border-bottom: 1px solid var(--border-subtle);
+  padding: 16px 20px; border-bottom: 1px solid var(--border-subtle);
 }
 .dash-card-title {
-  font-size: 9px; font-weight: 700; color: var(--text3);
+  font-size: 10px; font-weight: 700; color: var(--text3);
   display: flex; align-items: center; gap: 8px;
   text-transform: uppercase; letter-spacing: 0.5px;
 }
-.dash-card-title i { color: var(--primary); font-size: 12px; opacity: 0.7; }
+.dash-card-title i { color: var(--primary); font-size: 13px; opacity: 0.8; }
 
 .dash-badge {
   font-size: 11px; font-weight: 700; padding: 3px 10px;
@@ -1759,7 +1779,7 @@ textarea.form-control {
 }
 .dash-badge-warn { background: rgba(245,158,11,0.08); color: var(--warning); }
 
-.dash-card-body { padding: 8px; max-height: 300px; overflow-y: auto; }
+.dash-card-body { padding: 10px; max-height: 300px; overflow-y: auto; }
 .dash-activity-scroll { max-height: 500px; }
 
 .dash-item {
@@ -1770,7 +1790,7 @@ textarea.form-control {
 .dash-item:hover { background: var(--hover-bg); transform: translateX(2px); }
 
 .dash-avatar {
-  width: 36px; height: 36px; border-radius: 10px;
+  width: 38px; height: 38px; border-radius: 12px;
   background: var(--glass-bg-hover); color: var(--text2);
   display: flex; align-items: center; justify-content: center;
   font-size: 12px; font-weight: 700; flex-shrink: 0;
