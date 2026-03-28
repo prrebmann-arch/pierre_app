@@ -11,11 +11,15 @@ module.exports = async function handler(req, res) {
 
   try {
     const { code, redirect_uri } = req.body;
-    const appId = '1305972064754138'; // Main Facebook App ID
+    const appId = process.env.META_APP_ID_FB || process.env.META_APP_ID;
     const appSecret = process.env.META_APP_SECRET_FB || process.env.META_APP_SECRET;
 
     if (!code || !redirect_uri) {
       return res.status(400).json({ error: 'Missing code or redirect_uri' });
+    }
+    if (!appId || !appSecret) {
+      console.error('[fb-page-auth] META_APP_ID_FB/META_APP_ID or META_APP_SECRET_FB/META_APP_SECRET not set');
+      return res.status(500).json({ error: 'Facebook app credentials not configured.' });
     }
 
     console.log('[fb-page-auth] Step 1: Exchange code for user token');

@@ -38,7 +38,8 @@ function encrypt(text) {
  */
 function decrypt(data) {
   if (!data || !data.includes(':')) {
-    // Not encrypted (plaintext fallback for migration period)
+    // Plaintext fallback — log warning for monitoring
+    if (data) console.warn('[crypto] decrypt called on non-encrypted data — migration needed');
     return data;
   }
   const key = getKey();

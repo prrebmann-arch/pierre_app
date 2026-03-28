@@ -210,7 +210,7 @@ function filterAlimentsPage() {
 
         const offContainer = document.getElementById('aliments-off-results');
         if (offContainer) offContainer.innerHTML = offHtml;
-      } catch { /* network error */ }
+      } catch (e) { devError('[nutrition] OFF search failed', e); }
     }, 400);
 
     // Placeholder for OFF results

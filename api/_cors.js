@@ -5,10 +5,12 @@
 
 const ALLOWED_ORIGINS = [
   'https://pierreapp.vercel.app',
-  'http://localhost:3000',
-  'http://localhost:5500',
-  'http://127.0.0.1:5500',
 ];
+
+// Dev origins — only in non-production environments
+if (process.env.VERCEL_ENV !== 'production') {
+  ALLOWED_ORIGINS.push('http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500');
+}
 
 /**
  * Handle CORS headers and preflight requests.
@@ -20,7 +22,7 @@ function cors(req, res) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Push-Secret');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') {

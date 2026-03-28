@@ -36,6 +36,7 @@ function showSection(section) {
   if (section === 'videos') loadVideosSection();
   if (section === 'business') loadBusiness();
   if (section === 'exercices') loadExercicesPage();
+  if (section === 'profile') loadProfile();
 }
 
 function backToAthletesList() {
@@ -59,6 +60,7 @@ function switchAthleteTab(tab) {
     case 'posing': loadAthleteTabPosing(); break;
     case 'questionnaires': loadAthleteTabQuestionnaires(); break;
     case 'supplements': loadAthleteTabSupplements(); break;
+    case 'menstrual': loadAthleteTabMenstrual(); break;
   }
 }
 

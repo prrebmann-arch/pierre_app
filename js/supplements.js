@@ -6,15 +6,23 @@ async function loadAthleteTabSupplements() {
   const el = document.getElementById('athlete-tab-content');
   el.innerHTML = '<div class="text-center" style="padding:40px;"><i class="fas fa-spinner fa-spin"></i></div>';
 
-  const [{ data: supplements }, { data: assignments }, { data: athlete }] = await Promise.all([
+  // Load last 7 days of logs
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const startDate = sevenDaysAgo.toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const [{ data: supplements }, { data: assignments }, { data: athlete }, { data: logs }] = await Promise.all([
     supabaseClient.from('supplements').select('*').eq('coach_id', currentUser.id).eq('is_template', false),
     supabaseClient.from('athlete_supplements').select('*, supplements(*)').eq('athlete_id', currentAthleteId),
     supabaseClient.from('athletes').select('supplementation_unlocked').eq('id', currentAthleteId).single(),
+    supabaseClient.from('supplement_logs').select('*').eq('athlete_id', currentAthleteId).gte('taken_date', startDate).lte('taken_date', today).order('taken_date', { ascending: false }),
   ]);
 
   window._suppAll = supplements || [];
   window._suppAssignments = (assignments || []).filter(a => a.actif !== false);
   window._suppUnlocked = athlete?.supplementation_unlocked || false;
+  window._suppLogs = logs || [];
 
   renderSupplementsTab(el);
 }
@@ -60,12 +68,81 @@ function renderSupplementsTab(el) {
       <button class="btn btn-red btn-sm" onclick="openAddSuppModal('${type}')"><i class="fas fa-plus"></i> Ajouter</button>
     </div>`;
 
+  // Compliance summary (supplementation only)
+  let complianceHtml = '';
+  if (type === 'supplementation' && assigned.length) {
+    const logs = window._suppLogs || [];
+    const today = new Date().toISOString().slice(0, 10);
+    const todayLogs = logs.filter(l => l.taken_date === today);
+    const takenToday = todayLogs.filter(l => l.taken);
+    const suppIds = assigned.map(a => a.id);
+    const takenTodayCount = takenToday.filter(l => suppIds.includes(l.athlete_supplement_id)).length;
+
+    // Last 7 days grid
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate() - i);
+      const ds = d.toISOString().slice(0, 10);
+      const dayLogs = logs.filter(l => l.taken_date === ds && suppIds.includes(l.athlete_supplement_id));
+      const taken = dayLogs.filter(l => l.taken).length;
+      const total = assigned.length;
+      const pct = total > 0 ? taken / total : 0;
+      const color = pct === 0 ? 'var(--bg4)' : pct >= 1 ? 'var(--success)' : 'var(--warning)';
+      const label = d.toLocaleDateString('fr-FR', { weekday: 'short' }).slice(0, 3);
+      days.push(`<div style="text-align:center;flex:1;">
+        <div style="font-size:9px;color:var(--text3);margin-bottom:4px;">${label}</div>
+        <div style="height:24px;border-radius:4px;background:${color};display:flex;align-items:center;justify-content:center;">
+          ${taken > 0 ? `<span style="font-size:9px;color:#fff;font-weight:700;">${taken}/${total}</span>` : ''}
+        </div>
+      </div>`);
+    }
+
+    complianceHtml = `
+      <div style="background:var(--bg2);border:1px solid var(--border-subtle);border-radius:10px;padding:14px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);"><i class="fas fa-chart-bar" style="margin-right:6px;color:var(--text3);"></i>Suivi des prises</div>
+          <div style="font-size:12px;font-weight:600;color:${takenTodayCount === assigned.length ? 'var(--success)' : 'var(--warning)'};">
+            Aujourd'hui : ${takenTodayCount}/${assigned.length} ${takenTodayCount === assigned.length ? '✓' : ''}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;">${days.join('')}</div>
+      </div>`;
+  }
+
   // Cards
   let cardsHtml = '';
   if (assigned.length) {
     cardsHtml = assigned.map(a => {
       const s = a.supplements || {};
       const linkBtn = s.lien_achat ? `<a href="${escHtml(s.lien_achat)}" target="_blank" class="btn btn-outline btn-sm" onclick="event.stopPropagation()" style="font-size:10px;"><i class="fas fa-shopping-cart"></i> Acheter</a>` : '';
+
+      // Weekly dose calculation
+      let weeklyHtml = '';
+      const interval = getIntervalDays(a.frequence, a.intervalle_jours);
+      if (interval > 0 && a.frequence !== 'au besoin') {
+        const injPerWeek = 7 / interval;
+        const dose = parseFloat((a.dosage || '').replace(',', '.')) || 0;
+        if (a.concentration_mg_ml && a.unite === 'ml') {
+          const mgWeek = dose * a.concentration_mg_ml * injPerWeek;
+          weeklyHtml = `<div style="font-size:11px;color:var(--primary);font-weight:600;margin-top:6px;"><i class="fas fa-calculator" style="margin-right:4px;"></i>${mgWeek.toFixed(0)} mg/semaine (${a.concentration_mg_ml} mg/ml)</div>`;
+        } else if (dose) {
+          const perWeek = dose * injPerWeek;
+          weeklyHtml = `<div style="font-size:11px;color:var(--primary);font-weight:600;margin-top:6px;"><i class="fas fa-calculator" style="margin-right:4px;"></i>${perWeek.toFixed(0)} ${escHtml(a.unite)}/semaine</div>`;
+        }
+      }
+
+      // Today's taken status
+      let takenBadge = '';
+      if (type === 'supplementation') {
+        const today = new Date().toISOString().slice(0, 10);
+        const todayLog = (window._suppLogs || []).find(l => l.athlete_supplement_id === a.id && l.taken_date === today);
+        if (todayLog?.taken) {
+          takenBadge = `<div style="font-size:10px;color:var(--success);font-weight:600;display:flex;align-items:center;gap:4px;"><i class="fas fa-check-circle"></i> Pris aujourd'hui</div>`;
+        } else {
+          takenBadge = `<div style="font-size:10px;color:var(--text3);font-weight:500;display:flex;align-items:center;gap:4px;"><i class="far fa-circle"></i> Pas encore pris</div>`;
+        }
+      }
+
       return `
         <div class="supp-card">
           <div class="supp-card-header">
@@ -73,7 +150,10 @@ function renderSupplementsTab(el) {
               <div class="supp-card-name">${escHtml(s.nom)}</div>
               ${s.marque ? `<div class="supp-card-brand">${escHtml(s.marque)}</div>` : ''}
             </div>
-            ${linkBtn}
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+              ${linkBtn}
+              ${takenBadge}
+            </div>
           </div>
           <div class="supp-card-body">
             <div class="supp-card-dosage">
@@ -84,6 +164,7 @@ function renderSupplementsTab(el) {
               <span><i class="fas fa-redo"></i> ${escHtml(a.frequence)}</span>
               ${a.moment_prise ? `<span><i class="fas fa-clock"></i> ${escHtml(a.moment_prise)}</span>` : ''}
             </div>
+            ${weeklyHtml}
             ${a.notes ? `<div style="font-size:11px;color:var(--text3);margin-top:6px;">${escHtml(a.notes)}</div>` : ''}
           </div>
           <div class="supp-card-footer">
@@ -97,7 +178,7 @@ function renderSupplementsTab(el) {
     cardsHtml = `<div style="text-align:center;padding:40px;color:var(--text3);"><i class="fas fa-pills" style="font-size:28px;margin-bottom:8px;display:block;"></i>Aucun ${type === 'complement' ? 'complément' : 'supplément'} assigné</div>`;
   }
 
-  el.innerHTML = `${tabBtns}${unlockHtml}${actionsHtml}<div class="supp-grid">${cardsHtml}</div>`;
+  el.innerHTML = `${tabBtns}${unlockHtml}${complianceHtml}${actionsHtml}<div class="supp-grid">${cardsHtml}</div>`;
 }
 
 // ── Toggle supplementation visibility ──
@@ -126,8 +207,8 @@ function openAddSuppModal(type) {
         <input type="text" id="supp-nom" placeholder="Nom du produit *" class="bt-input">
         <input type="text" id="supp-marque" placeholder="Marque" class="bt-input">
         <div style="display:flex;gap:8px;">
-          <input type="text" id="supp-dosage" placeholder="Dosage *" class="bt-input" style="flex:1;">
-          <select id="supp-unite" class="bt-input" style="width:100px;">
+          <input type="text" id="supp-dosage" placeholder="Dosage *" class="bt-input" style="flex:1;" oninput="calcWeeklyDose()">
+          <select id="supp-unite" class="bt-input" style="width:100px;" onchange="calcWeeklyDose()">
             <option value="mg">mg</option>
             <option value="g">g</option>
             <option value="ml">ml</option>
@@ -137,13 +218,35 @@ function openAddSuppModal(type) {
             <option value="UI">UI</option>
           </select>
         </div>
-        <select id="supp-frequence" class="bt-input">
+        <select id="supp-frequence" class="bt-input" onchange="onSuppFreqChange()">
           <option value="1x/jour">1x/jour</option>
           <option value="2x/jour">2x/jour</option>
           <option value="3x/jour">3x/jour</option>
+          <option value="tous les 2 jours">Tous les 2 jours (EOD)</option>
+          <option value="tous les 3 jours">Tous les 3 jours</option>
+          <option value="2x/semaine">2x/semaine</option>
+          <option value="3x/semaine">3x/semaine</option>
           <option value="1x/semaine">1x/semaine</option>
+          <option value="custom">Intervalle personnalisé...</option>
           <option value="au besoin">Au besoin</option>
         </select>
+        <div id="supp-custom-interval" style="display:none;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:var(--text3);">Tous les</span>
+            <input type="number" id="supp-intervalle" placeholder="X" class="bt-input" style="width:70px;" min="1" oninput="calcWeeklyDose()">
+            <span style="font-size:12px;color:var(--text3);">jours</span>
+          </div>
+        </div>
+        ${type === 'supplementation' ? `
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="number" id="supp-concentration" placeholder="Concentration (mg/ml)" class="bt-input" style="flex:1;" step="any" oninput="calcWeeklyDose()">
+          <span style="font-size:11px;color:var(--text3);white-space:nowrap;">mg/ml</span>
+        </div>
+        <div id="supp-weekly-calc" style="display:none;padding:10px 14px;background:rgba(179,8,8,0.08);border-radius:8px;border:1px solid rgba(179,8,8,0.15);">
+          <div style="font-size:11px;color:var(--text3);">Calcul automatique</div>
+          <div id="supp-weekly-result" style="font-size:14px;font-weight:700;color:var(--primary);margin-top:2px;"></div>
+        </div>
+        ` : ''}
         <input type="text" id="supp-moment" placeholder="Moment de prise (ex: matin, avant entraînement)" class="bt-input">
         <input type="url" id="supp-lien" placeholder="Lien d'achat (optionnel)" class="bt-input">
         <textarea id="supp-notes" placeholder="Notes" class="bt-input" rows="2"></textarea>
@@ -158,6 +261,61 @@ function openAddSuppModal(type) {
 
 function closeSuppModal() {
   document.getElementById('supp-modal')?.remove();
+}
+
+// ── Frequency helpers ──
+function onSuppFreqChange() {
+  const freq = document.getElementById('supp-frequence')?.value;
+  const customDiv = document.getElementById('supp-custom-interval');
+  if (customDiv) customDiv.style.display = freq === 'custom' ? 'block' : 'none';
+  calcWeeklyDose();
+}
+
+function onEditFreqChange() {
+  const freq = document.getElementById('supp-new-freq')?.value;
+  const customDiv = document.getElementById('supp-edit-custom-interval');
+  if (customDiv) customDiv.style.display = freq === 'custom' ? 'block' : 'none';
+  calcEditWeeklyDose();
+}
+
+function getIntervalDays(freq, customInput) {
+  const map = {
+    '1x/jour': 1, '2x/jour': 0.5, '3x/jour': 0.333,
+    'tous les 2 jours': 2, 'tous les 3 jours': 3,
+    '2x/semaine': 3.5, '3x/semaine': 2.333, '1x/semaine': 7,
+  };
+  if (freq === 'custom') return parseFloat(customInput) || 0;
+  return map[freq] || 0;
+}
+
+function calcWeeklyDose() {
+  const calcDiv = document.getElementById('supp-weekly-calc');
+  const resultDiv = document.getElementById('supp-weekly-result');
+  if (!calcDiv || !resultDiv) return;
+
+  const dosage = parseFloat((document.getElementById('supp-dosage')?.value || '').replace(',', '.')) || 0;
+  const unite = document.getElementById('supp-unite')?.value || '';
+  const freq = document.getElementById('supp-frequence')?.value || '';
+  const concentration = parseFloat((document.getElementById('supp-concentration')?.value || '').replace(',', '.')) || 0;
+  const customInterval = document.getElementById('supp-intervalle')?.value || '';
+  const interval = getIntervalDays(freq, customInterval);
+
+  if (!dosage || !interval || freq === 'au besoin') { calcDiv.style.display = 'none'; return; }
+
+  const injectionsPerWeek = 7 / interval;
+  let lines = [];
+
+  if (concentration > 0 && (unite === 'ml')) {
+    const mgPerInjection = dosage * concentration;
+    const mgPerWeek = mgPerInjection * injectionsPerWeek;
+    lines.push(`${mgPerInjection.toFixed(0)} mg/injection × ${injectionsPerWeek.toFixed(1)}/sem = <strong>${mgPerWeek.toFixed(0)} mg/semaine</strong>`);
+  } else {
+    const perWeek = dosage * injectionsPerWeek;
+    lines.push(`${dosage} ${unite} × ${injectionsPerWeek.toFixed(1)}/sem = <strong>${perWeek.toFixed(0)} ${unite}/semaine</strong>`);
+  }
+
+  calcDiv.style.display = 'block';
+  resultDiv.innerHTML = lines.join('<br>');
 }
 
 async function saveNewSupplement(type) {
@@ -176,13 +334,27 @@ async function saveNewSupplement(type) {
   }).select().single();
   if (e1) { handleError(e1, 'supplements'); return; }
 
+  // Build frequency / interval
+  let frequence = document.getElementById('supp-frequence')?.value || '1x/jour';
+  let intervalle_jours = 1;
+  if (frequence === 'custom') {
+    intervalle_jours = parseInt(document.getElementById('supp-intervalle')?.value) || 1;
+    frequence = `tous les ${intervalle_jours} jours`;
+  } else {
+    const intervalMap = { '1x/jour': 1, '2x/jour': 1, '3x/jour': 1, 'tous les 2 jours': 2, 'tous les 3 jours': 3, '2x/semaine': 3.5, '3x/semaine': 2.333, '1x/semaine': 7, 'au besoin': 0 };
+    intervalle_jours = intervalMap[frequence] || 1;
+  }
+  const concentration = parseFloat(document.getElementById('supp-concentration')?.value) || null;
+
   // Assign to athlete
   const { error: e2 } = await supabaseClient.from('athlete_supplements').insert({
     athlete_id: currentAthleteId,
     supplement_id: supp.id,
     dosage,
     unite: document.getElementById('supp-unite')?.value || 'mg',
-    frequence: document.getElementById('supp-frequence')?.value || '1x/jour',
+    frequence,
+    intervalle_jours: Math.round(intervalle_jours),
+    concentration_mg_ml: concentration,
     moment_prise: document.getElementById('supp-moment')?.value?.trim() || null,
     notes: document.getElementById('supp-notes')?.value?.trim() || null,
   });
@@ -220,13 +392,25 @@ function openEditDosageModal(assignId, currentDosage, currentUnite, currentFreq)
             <option value="UI" ${currentUnite==='UI'?'selected':''}>UI</option>
           </select>
         </div>
-        <select id="supp-new-freq" class="bt-input">
+        <select id="supp-new-freq" class="bt-input" onchange="onEditFreqChange()">
           <option value="1x/jour" ${currentFreq==='1x/jour'?'selected':''}>1x/jour</option>
           <option value="2x/jour" ${currentFreq==='2x/jour'?'selected':''}>2x/jour</option>
           <option value="3x/jour" ${currentFreq==='3x/jour'?'selected':''}>3x/jour</option>
+          <option value="tous les 2 jours" ${currentFreq==='tous les 2 jours'?'selected':''}>Tous les 2 jours (EOD)</option>
+          <option value="tous les 3 jours" ${currentFreq==='tous les 3 jours'?'selected':''}>Tous les 3 jours</option>
+          <option value="2x/semaine" ${currentFreq==='2x/semaine'?'selected':''}>2x/semaine</option>
+          <option value="3x/semaine" ${currentFreq==='3x/semaine'?'selected':''}>3x/semaine</option>
           <option value="1x/semaine" ${currentFreq==='1x/semaine'?'selected':''}>1x/semaine</option>
+          <option value="custom" ${currentFreq.startsWith('tous les ')&&!['tous les 2 jours','tous les 3 jours'].includes(currentFreq)?'selected':''}>Intervalle personnalisé...</option>
           <option value="au besoin" ${currentFreq==='au besoin'?'selected':''}>Au besoin</option>
         </select>
+        <div id="supp-edit-custom-interval" style="display:${currentFreq.startsWith('tous les ')&&!['tous les 2 jours','tous les 3 jours'].includes(currentFreq)?'block':'none'};">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span style="font-size:12px;color:var(--text3);">Tous les</span>
+            <input type="number" id="supp-edit-intervalle" placeholder="X" class="bt-input" style="width:70px;" min="1">
+            <span style="font-size:12px;color:var(--text3);">jours</span>
+          </div>
+        </div>
         <input type="text" id="supp-raison" placeholder="Raison du changement" class="bt-input">
       </div>
       <div class="bt-popup-footer">
@@ -256,9 +440,16 @@ async function saveDosageChange(assignId, oldDosage, oldUnite, oldFreq) {
     raison,
   });
 
+  // Build final frequency
+  let finalFreq = newFreq;
+  if (newFreq === 'custom') {
+    const customDays = parseInt(document.getElementById('supp-edit-intervalle')?.value) || 1;
+    finalFreq = `tous les ${customDays} jours`;
+  }
+
   // Update
   const { error } = await supabaseClient.from('athlete_supplements').update({
-    dosage: newDosage, unite: newUnite, frequence: newFreq
+    dosage: newDosage, unite: newUnite, frequence: finalFreq,
   }).eq('id', assignId);
   if (error) { handleError(error, 'supplements'); return; }
 

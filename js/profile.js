@@ -337,7 +337,7 @@ async function profileCheckConnectReturn() {
       } else if (data.details_submitted === false) {
         notify('Onboarding Stripe incomplet. Cliquez sur "Connecter" pour finaliser.', 'error');
       }
-    } catch {}
+    } catch (e) { devError('[profile] connect-complete check failed', e); }
   }
 }
 

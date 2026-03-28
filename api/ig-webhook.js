@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   // Receive events (POST) — process THEN respond
   if (req.method === 'POST') {
     const body = req.body;
-    console.log('[ig-webhook] Event received:', JSON.stringify(body).substring(0, 500));
+    console.log('[ig-webhook] Event received, entries:', (body.entry || []).length);
 
     try {
       const supabase = createClient(
@@ -39,7 +39,7 @@ module.exports = async function handler(req, res) {
             }
 
             const isEcho = message.is_echo === true;
-            console.log('[ig-webhook] Message from:', senderId, 'to:', recipientId, 'echo:', isEcho, 'text:', message.text.substring(0, 50));
+            console.log('[ig-webhook] Message from:', senderId, 'to:', recipientId, 'echo:', isEcho);
 
             // Find the coach who owns this IG account
             let igAccount = null;
@@ -98,7 +98,6 @@ module.exports = async function handler(req, res) {
                 const profileData = await profileRes.json();
                 if (profileData.username) participantName = profileData.username;
                 else if (profileData.name) participantName = profileData.name;
-                console.log('[ig-webhook] Participant name:', participantName);
               }
             } catch (nameErr) {
               console.log('[ig-webhook] Name fetch failed:', nameErr.message);
@@ -159,7 +158,7 @@ module.exports = async function handler(req, res) {
               if (msgErr) {
                 console.error('[ig-webhook] Message insert error:', msgErr.message);
               } else {
-                console.log('[ig-webhook] Message saved:', msgId.substring(0, 30) + '...');
+                console.log('[ig-webhook] Message saved');
               }
             } else {
               console.log('[ig-webhook] Duplicate message, skipped');

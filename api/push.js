@@ -1,21 +1,17 @@
 // Vercel Serverless Function — proxy to Expo Push API (avoids CORS)
 const https = require('https');
+const { verifyAuth, handleAuthError } = require('./_auth');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Verify shared secret to prevent unauthorized calls (timing-safe)
-  const crypto = require('crypto');
-  const secret = req.headers['x-push-secret'];
-  if (!process.env.PUSH_SECRET || !secret) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  const expected = Buffer.from(process.env.PUSH_SECRET);
-  const provided = Buffer.from(secret);
-  if (expected.length !== provided.length || !crypto.timingSafeEqual(expected, provided)) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  // Verify JWT authentication
+  try {
+    await verifyAuth(req);
+  } catch (e) {
+    return handleAuthError(res, e);
   }
 
   const payload = JSON.stringify(req.body);

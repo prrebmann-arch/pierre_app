@@ -241,12 +241,24 @@ async function loadCoaches() {
     const coaches = adminCache.coaches || [];
     if (!coaches.length) { el.innerHTML = '<div class="admin-empty"><i class="fas fa-user-slash"></i>Aucun coach inscrit</div>'; return; }
 
+    // Load coach profiles to get plan info
+    const { data: profiles } = await supabaseClient.from('coach_profiles').select('user_id, plan, is_blocked');
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+
     let html = '<div class="admin-coach-grid" id="coaches-grid">';
     coaches.forEach(c => {
       const initials = (c.email || '').substring(0, 2).toUpperCase();
       const athletes = c.athletes || [];
       const lastSeen = timeAgo(c.last_sign_in_at);
       const banned = c.banned_until && new Date(c.banned_until) > new Date();
+      const profile = profileMap[c.id] || {};
+      const plan = profile.plan || 'athlete';
+      const planBadge = plan === 'free'
+        ? '<span class="admin-badge" style="background:#22c55e22;color:#22c55e;">Gratuit</span>'
+        : plan === 'business'
+          ? '<span class="admin-badge" style="background:#6366f122;color:#6366f1;">Business</span>'
+          : '<span class="admin-badge" style="background:#f59e0b22;color:#f59e0b;">Athlète</span>';
 
       html += `
         <div class="admin-coach-card" data-email="${esc(c.email).toLowerCase()}">
@@ -256,7 +268,10 @@ async function loadCoaches() {
               <div class="admin-coach-card-name">${esc(c.email)}</div>
               <div class="admin-coach-card-sub">Inscrit ${adminFormatDate(c.created_at)} · Vu ${lastSeen}</div>
             </div>
-            ${banned ? '<span class="admin-badge canceled">Bloqué</span>' : '<span class="admin-badge active">Actif</span>'}
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
+              ${planBadge}
+              ${banned || profile.is_blocked ? '<span class="admin-badge canceled">Bloqué</span>' : '<span class="admin-badge active">Actif</span>'}
+            </div>
           </div>
           <div class="admin-coach-card-stats">
             <div class="admin-coach-card-stat">
@@ -276,6 +291,14 @@ async function loadCoaches() {
             <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-weight:500;">ATHLÈTES</div>
             <div style="display:flex;flex-wrap:wrap;gap:4px;">${athletes.map(a => `<span style="font-size:11px;background:var(--tint);border:1px solid var(--border-subtle);padding:2px 8px;border-radius:6px;color:var(--text2);">${esc(a.prenom)} ${esc(a.nom)}</span>`).join('')}</div>
           </div>` : ''}
+          <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border-subtle);display:flex;gap:8px;">
+            <button onclick="adminToggleFreeCoach('${c.id}')" style="flex:1;padding:6px 12px;border-radius:8px;border:1px solid ${plan === 'free' ? '#f59e0b' : '#22c55e'};background:${plan === 'free' ? '#f59e0b11' : '#22c55e11'};color:${plan === 'free' ? '#f59e0b' : '#22c55e'};font-size:12px;font-weight:600;cursor:pointer;">
+              <i class="fas fa-${plan === 'free' ? 'money-bill' : 'gift'}"></i> ${plan === 'free' ? 'Remettre payant' : 'Passer gratuit'}
+            </button>
+            <button onclick="adminBlockCoach('${c.id}')" style="padding:6px 12px;border-radius:8px;border:1px solid #ef4444;background:transparent;color:#ef4444;font-size:12px;font-weight:600;cursor:pointer;">
+              <i class="fas fa-ban"></i>
+            </button>
+          </div>
         </div>`;
     });
     html += '</div>';
@@ -288,6 +311,59 @@ function adminFilterCoaches() {
   document.querySelectorAll('#coaches-grid .admin-coach-card').forEach(card => {
     card.style.display = card.dataset.email.includes(q) ? '' : 'none';
   });
+}
+
+async function adminToggleFreeCoach(coachUserId) {
+  // Check current plan
+  const { data: profile } = await supabaseClient
+    .from('coach_profiles')
+    .select('plan')
+    .eq('user_id', coachUserId)
+    .maybeSingle();
+
+  const isFree = profile?.plan === 'free';
+  const label = isFree ? 'Remettre ce coach en payant ?' : 'Passer ce coach en gratuit ?';
+  if (!confirm(label)) return;
+
+  const newPlan = isFree ? 'athlete' : 'free';
+
+  // Upsert — create profile if it doesn't exist
+  const { error } = await supabaseClient
+    .from('coach_profiles')
+    .upsert({
+      user_id: coachUserId,
+      plan: newPlan,
+    }, { onConflict: 'user_id' });
+
+  if (error) {
+    notify('Erreur : ' + error.message, 'error');
+    return;
+  }
+  notify(isFree ? 'Coach repassé en payant' : 'Coach passé en gratuit', 'success');
+  // Refresh page
+  adminCache = {};
+  adminShowSection('coaches');
+}
+
+async function adminBlockCoach(coachUserId) {
+  if (!confirm('Bloquer ce coach ?')) return;
+
+  const { error } = await supabaseClient
+    .from('coach_profiles')
+    .upsert({
+      user_id: coachUserId,
+      is_blocked: true,
+      blocked_at: new Date().toISOString(),
+      blocked_reason: 'Bloqué par admin',
+    }, { onConflict: 'user_id' });
+
+  if (error) {
+    notify('Erreur : ' + error.message, 'error');
+    return;
+  }
+  notify('Coach bloqué', 'success');
+  adminCache = {};
+  adminShowSection('coaches');
 }
 
 // ══════════════════════════════════
@@ -379,70 +455,79 @@ async function loadPayments() {
   const el = document.getElementById('payments-content');
   if (!el) return;
   try {
-    if (!adminCache.payments) adminCache.payments = await adminRPC('admin_payments');
-    const { payments, stripe_customers } = adminCache.payments;
-    const activeSubs = stripe_customers.filter(s => s.subscription_status === 'active');
-    const totalMRR = activeSubs.reduce((s, c) => s + (c.monthly_amount || 0), 0);
-    const paidPayments = payments.filter(p => p.status === 'paid');
-    const failedPayments = payments.filter(p => p.status !== 'paid');
-    const totalRev = paidPayments.reduce((s, p) => s + (p.amount || 0), 0);
+    if (!adminCache.payments) adminCache.payments = await adminRPC('admin_stripe_overview');
+    const d = adminCache.payments;
+
+    const paidInvoices = (d.recent_invoices || []).filter(i => i.status === 'paid');
+    const failedInvoices = (d.recent_invoices || []).filter(i => i.status !== 'paid');
 
     let html = `
       <div class="admin-stats">
         <div class="admin-stat-card">
           <div class="admin-stat-header"><div class="admin-stat-icon red"><i class="fas fa-sync-alt"></i></div></div>
-          <div class="admin-stat-value">${formatEur(totalMRR)}</div>
-          <div class="admin-stat-label">MRR Actif</div>
+          <div class="admin-stat-value">${formatEur(d.platform_mrr || 0)}</div>
+          <div class="admin-stat-label">MRR Plateforme</div>
         </div>
         <div class="admin-stat-card">
           <div class="admin-stat-header"><div class="admin-stat-icon green"><i class="fas fa-coins"></i></div></div>
-          <div class="admin-stat-value">${formatEur(totalRev)}</div>
+          <div class="admin-stat-value">${formatEur(d.platform_total_revenue || 0)}</div>
           <div class="admin-stat-label">Revenus totaux</div>
-          <div class="admin-stat-sub">${paidPayments.length} paiement${paidPayments.length > 1 ? 's' : ''} reçu${paidPayments.length > 1 ? 's' : ''}</div>
+          <div class="admin-stat-sub">${paidInvoices.length} facture${paidInvoices.length > 1 ? 's' : ''} payée${paidInvoices.length > 1 ? 's' : ''}</div>
         </div>
         <div class="admin-stat-card">
-          <div class="admin-stat-header"><div class="admin-stat-icon blue"><i class="fas fa-file-invoice"></i></div></div>
-          <div class="admin-stat-value">${stripe_customers.length}</div>
-          <div class="admin-stat-label">Abonnements</div>
+          <div class="admin-stat-header"><div class="admin-stat-icon blue"><i class="fas fa-users"></i></div></div>
+          <div class="admin-stat-value">${d.total_coaches || 0}</div>
+          <div class="admin-stat-label">Coachs</div>
+          <div class="admin-stat-sub">${d.coaches_with_payment || 0} avec CB</div>
         </div>
         <div class="admin-stat-card">
-          <div class="admin-stat-header"><div class="admin-stat-icon ${failedPayments.length > 0 ? 'orange' : 'green'}"><i class="fas fa-exclamation-triangle"></i></div></div>
-          <div class="admin-stat-value">${failedPayments.length}</div>
-          <div class="admin-stat-label">Échecs</div>
+          <div class="admin-stat-header"><div class="admin-stat-icon ${(d.pending_invoices || 0) > 0 ? 'orange' : 'green'}"><i class="fas fa-exclamation-triangle"></i></div></div>
+          <div class="admin-stat-value">${d.pending_invoices || 0}</div>
+          <div class="admin-stat-label">Impayés</div>
         </div>
       </div>
 
       <div class="admin-grid-2">
         <div class="admin-card">
           <div class="admin-card-header">
-            <div class="admin-card-title"><i class="fas fa-credit-card"></i> Abonnements Stripe</div>
-            <span class="admin-card-badge">${stripe_customers.length}</span>
+            <div class="admin-card-title"><i class="fas fa-user-tie"></i> Coachs</div>
+            <span class="admin-card-badge">${(d.coaches || []).length}</span>
           </div>
           <div class="admin-card-body no-pad" style="max-height:500px;overflow-y:auto;">
-            <table class="admin-table"><thead><tr><th>Client</th><th>Montant</th><th>Statut</th></tr></thead><tbody>`;
+            <table class="admin-table"><thead><tr><th>Coach</th><th>Plan</th><th>Athlètes</th><th>Payé</th></tr></thead><tbody>`;
 
-    stripe_customers.sort((a, b) => (b.monthly_amount || 0) - (a.monthly_amount || 0)).forEach(s => {
+    (d.coaches || []).forEach(c => {
+      const planLabel = c.plan === 'business' ? '<span class="admin-badge active">Business</span>'
+        : c.plan === 'free' ? '<span class="admin-badge" style="color:#22c55e;">Gratuit</span>'
+        : '<span class="admin-badge">Athlète</span>';
       html += `<tr>
-        <td style="font-size:12px;font-family:monospace;color:var(--text2);">${esc(s.stripe_customer_id?.slice(-12) || '—')}</td>
-        <td style="font-weight:600;">${formatEur(s.monthly_amount || 0)}<span style="color:var(--text3);font-weight:400;">/mois</span></td>
-        <td>${statusBadge(s.subscription_status)}</td>
+        <td><div style="font-weight:500;">${esc(c.display_name || c.email)}</div><div style="font-size:11px;color:var(--text3);">${esc(c.email)}</div></td>
+        <td>${planLabel}</td>
+        <td style="text-align:center;font-weight:600;">${c.athlete_count || 0}</td>
+        <td style="font-weight:600;">${formatEur(c.total_paid || 0)}</td>
       </tr>`;
     });
 
     html += `</tbody></table></div></div>
         <div class="admin-card">
           <div class="admin-card-header">
-            <div class="admin-card-title"><i class="fas fa-receipt"></i> Historique des paiements</div>
-            <span class="admin-card-badge">${payments.length}</span>
+            <div class="admin-card-title"><i class="fas fa-file-invoice"></i> Factures récentes</div>
+            <span class="admin-card-badge">${(d.recent_invoices || []).length}</span>
           </div>
           <div class="admin-card-body no-pad" style="max-height:500px;overflow-y:auto;">
-            <table class="admin-table"><thead><tr><th>Date</th><th>Montant</th><th>Statut</th></tr></thead><tbody>`;
+            <table class="admin-table"><thead><tr><th>Coach</th><th>Période</th><th>Montant</th><th>Statut</th></tr></thead><tbody>`;
 
-    payments.slice(0, 100).forEach(p => {
+    (d.recent_invoices || []).forEach(inv => {
+      const invStatus = inv.status === 'paid'
+        ? '<span class="admin-badge active">Payé</span>'
+        : inv.status === 'blocked'
+          ? '<span class="admin-badge canceled">Bloqué</span>'
+          : `<span class="admin-badge" style="color:#f59e0b;">${esc(inv.status)}</span>`;
       html += `<tr>
-        <td class="admin-coach-date">${adminFormatDate(p.created_at)}</td>
-        <td style="font-weight:600;">${formatEur(p.amount || 0)}</td>
-        <td>${p.status === 'paid' ? '<span class="admin-badge active">Payé</span>' : '<span class="admin-badge canceled">Échoué</span>'}</td>
+        <td style="font-size:13px;">${esc(inv.coach_name || inv.coach_email || '—')}</td>
+        <td>${inv.month}/${inv.year}</td>
+        <td style="font-weight:600;">${formatEur(inv.total_amount || 0)}</td>
+        <td>${invStatus}</td>
       </tr>`;
     });
 

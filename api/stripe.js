@@ -40,7 +40,10 @@ async function getCoachStripe(supabase, coachId) {
     .eq('user_id', coachId)
     .single();
   if (!data?.stripe_secret_key) return null;
-  const key = process.env.STRIPE_ENCRYPTION_KEY ? decrypt(data.stripe_secret_key) : data.stripe_secret_key;
+  if (!process.env.STRIPE_ENCRYPTION_KEY) {
+    console.warn('[stripe] STRIPE_ENCRYPTION_KEY missing — keys may be stored in plaintext');
+  }
+  const key = decrypt(data.stripe_secret_key);
   return Stripe(key);
 }
 
@@ -300,7 +303,7 @@ async function importSubscriptions(req, res, supabase) {
   }
   // Fallback to direct key
   if (!stripeInstance && profile?.stripe_secret_key) {
-    const k = process.env.STRIPE_ENCRYPTION_KEY ? decrypt(profile.stripe_secret_key) : profile.stripe_secret_key;
+    const k = decrypt(profile.stripe_secret_key);
     stripeInstance = Stripe(k);
   }
   if (!stripeInstance) {
@@ -390,7 +393,7 @@ async function createCheckout(req, res, supabase) {
 
   // Fallback: use coach's own key if Connect not ready
   if (!stripeInstance && coachProfile?.stripe_secret_key) {
-    const k = process.env.STRIPE_ENCRYPTION_KEY ? decrypt(coachProfile.stripe_secret_key) : coachProfile.stripe_secret_key;
+    const k = decrypt(coachProfile.stripe_secret_key);
     stripeInstance = Stripe(k);
   }
 
@@ -488,7 +491,7 @@ async function createPaymentSheet(req, res, supabase) {
     } catch {}
   }
   if (!connectAccountId && coachProfile?.stripe_secret_key) {
-    const k = process.env.STRIPE_ENCRYPTION_KEY ? decrypt(coachProfile.stripe_secret_key) : coachProfile.stripe_secret_key;
+    const k = decrypt(coachProfile.stripe_secret_key);
     stripeInstance = Stripe(k);
   }
 
@@ -592,7 +595,7 @@ async function cancelSubscription(req, res, supabase) {
   }
   if (!sub && profile?.stripe_secret_key) {
     try {
-      const k = process.env.STRIPE_ENCRYPTION_KEY ? decrypt(profile.stripe_secret_key) : profile.stripe_secret_key;
+      const k = decrypt(profile.stripe_secret_key);
       sub = await Stripe(k).subscriptions.cancel(subscriptionId);
     } catch {}
   }
@@ -679,6 +682,9 @@ async function cancellationRespond(req, res, supabase) {
 
   const { data: request } = await supabase.from('cancellation_requests').select('*, athlete_payment_plans(*)').eq('id', requestId).single();
   if (!request || request.status !== 'pending') return res.status(400).json({ error: 'Request not found or already processed' });
+
+  // Verify the coach owns this cancellation request
+  if (request.coach_id !== req.body.coachId) return res.status(403).json({ error: 'Forbidden' });
 
   await supabase.from('cancellation_requests').update({ status: decision, coach_response_at: new Date().toISOString(), coach_note: note || null }).eq('id', requestId);
 

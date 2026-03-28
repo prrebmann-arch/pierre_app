@@ -12,10 +12,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 // ===== DEV FLAG =====
 const IS_DEV = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-// ===== PUSH SECRET (injected at build or fetched from env) =====
-// Loaded from meta tag if available, otherwise empty (proxy works without it in dev)
-const PUSH_SECRET = document.querySelector('meta[name="push-secret"]')?.content || '';
-
 // ===== AUTHENTICATED FETCH HELPER =====
 async function authFetch(url, options = {}) {
   const { data: { session } } = await supabaseClient.auth.getSession();

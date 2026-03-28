@@ -56,84 +56,21 @@ async function loadAthleteTabApercu() {
   const weightMax = validWeights.length ? Math.max(...validWeights.map(w => w.weight)) : 0;
   const weightRange = weightMax - weightMin || 1;
 
-  // Build weight chart data as JSON for the interactive chart
-  const weightChartData = JSON.stringify(weightData);
-
-  // SVG viewBox constants — used by chart AND crosshair
-  const VB_X = -12, VB_W = 116;
-
-  let weightSvg;
+  // Weight chart — use Chart.js
+  let weightChartHtml;
   if (validWeights.length > 1) {
-    // Padding: 5% top/bottom so the line doesn't touch edges
-    const pad = 0.05;
-    const yScale = (w) => 100 - ((w - weightMin) / weightRange) * (100 * (1 - 2 * pad)) - 100 * pad;
-
-    // Build polyline segments — break line at gaps (null days)
-    const segments = [];
-    let currentSeg = [];
-    weightData.forEach((d, i) => {
-      if (d.weight == null) {
-        if (currentSeg.length) { segments.push(currentSeg); currentSeg = []; }
-        return;
-      }
-      const x = (i / 29) * 100;
-      const y = yScale(d.weight);
-      currentSeg.push({ x, y, xf: x.toFixed(2), yf: y.toFixed(2) });
-    });
-    if (currentSeg.length) segments.push(currentSeg);
-
-    // Build SVG polylines (one per segment, so gaps don't connect)
-    const polylines = segments.map(seg => {
-      const pts = seg.map(p => `${p.xf},${p.yf}`).join(' ');
-      const fillPts = pts + ` ${seg[seg.length - 1].xf},104 ${seg[0].xf},104`;
-      return `<polygon points="${fillPts}" fill="url(#wgrad)"/>
-              <polyline points="${pts}" fill="none" stroke="#B30808" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
-    }).join('');
-
-    // All points for tooltip
-    const allPts = segments.flat();
-
-    // Y axis labels
-    const yLabels = [];
-    const step = weightRange > 2 ? Math.ceil(weightRange / 3) : 0.5;
-    for (let w = Math.floor(weightMin); w <= Math.ceil(weightMax); w += step) {
-      const y = yScale(w);
-      yLabels.push(`<line x1="0" y1="${y}" x2="100" y2="${y}" stroke="var(--border)" stroke-width="0.5" vector-effect="non-scaling-stroke"/>`);
-      yLabels.push(`<text x="-2" y="${y}" fill="var(--text3)" font-size="3.5" text-anchor="end" dominant-baseline="middle">${w}</text>`);
-    }
-
-    // Data-points JSON for interactive crosshair
-    const chartPoints = [];
-    weightData.forEach((d, i) => {
-      if (d.weight == null) return;
-      chartPoints.push({ idx: i, weight: d.weight, label: d.label });
-    });
-    weightSvg = `
-      <div class="ap-weight-chart" id="ap-weight-chart" data-points='${JSON.stringify(chartPoints)}' data-vbx="${VB_X}" data-vbw="${VB_W}">
-        <svg viewBox="${VB_X} -4 ${VB_W} 108" style="width:100%;height:140px;" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="wgrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#B30808" stop-opacity="0.25"/>
-              <stop offset="100%" stop-color="#B30808" stop-opacity="0"/>
-            </linearGradient>
-          </defs>
-          ${yLabels.join('')}
-          ${polylines}
-        </svg>
-        <div class="ap-weight-crosshair" id="ap-crosshair"></div>
-        <div class="ap-weight-tooltip" id="ap-weight-tooltip"></div>
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:2px;">
-        <span>${last30[0].label}</span>
-        <span>${last30[14].label}</span>
-        <span>${last30[29].label}</span>
-      </div>`;
+    // Store data globally for Chart.js init after render
+    window._apWeightChartData = {
+      labels: weightData.map(d => d.label),
+      data: weightData.map(d => d.weight),
+    };
+    weightChartHtml = '<div style="position:relative;height:160px;"><canvas id="ap-weight-canvas"></canvas></div>';
   } else {
-    weightSvg = '<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">Pas assez de données</div>';
+    weightChartHtml = '<div style="height:120px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px;">Pas assez de données</div>';
   }
 
   const weightDiff = validWeights.length >= 2 ? (validWeights[validWeights.length-1].weight - validWeights[0].weight).toFixed(1) : null;
-  const weightDiffHtml = weightDiff ? `<span style="font-size:12px;margin-left:8px;color:${parseFloat(weightDiff) > 0 ? 'var(--danger)' : parseFloat(weightDiff) < 0 ? 'var(--success)' : 'var(--text3)'};">${parseFloat(weightDiff) > 0 ? '+' : ''}${weightDiff} kg</span>` : '';
+  const weightDiffHtml = weightDiff ? `<span style="font-size:12px;margin-left:8px;color:${parseFloat(weightDiff) !== 0 ? 'var(--text2)' : 'var(--text3)'};">${parseFloat(weightDiff) > 0 ? '+' : ''}${weightDiff} kg</span>` : '';
 
   // --- Tracking map (shared by steps + water) ---
   const trackingMap = {};
@@ -296,115 +233,155 @@ async function loadAthleteTabApercu() {
        ${lastBilan ? `<div style="font-size:11px;color:var(--text3);margin-top:4px;">Dernier : ${new Date(lastBilan.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div>` : ''}`;
 
   // ===== RENDER =====
+  // Sleep color helper
+  const sleepColor = avgSleep >= 7 ? '#22c55e' : avgSleep >= 5 ? '#f59e0b' : '#ef4444';
+  const sleepBg = avgSleep >= 7 ? 'rgba(34,197,94,0.1)' : avgSleep >= 5 ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)';
+
   el.innerHTML = `
     <div class="ap-layout">
       <div class="ap-main">
-        <!-- Row 1: Weight (full width) -->
-        <div class="ap-card ap-card-weight">
-          <div class="ap-card-header">
-            <i class="fas fa-weight"></i> Poids (30 derniers jours)
-          </div>
-          <div class="ap-card-body">
-            <div style="display:flex;align-items:baseline;">
-              <span style="font-size:28px;font-weight:700;color:var(--text);">${lastWeight ? lastWeight + ' <span style="font-size:14px;font-weight:400;color:var(--text3);">kg</span>' : '<span style="color:var(--text3);font-size:16px;">—</span>'}</span>
-              ${weightDiffHtml}
+
+        <!-- ═══ TOP STATS ROW ═══ -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+
+          <!-- Poids -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#B30808,#d41a1a);"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:38px;height:38px;border-radius:10px;background:rgba(179,8,8,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-weight" style="color:#B30808;font-size:15px;"></i></div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Poids</div>
             </div>
-            <div style="margin-top:8px;">${weightSvg}</div>
-          </div>
-        </div>
-
-        <!-- Row 2: Bilan, Steps, Sleep, Water -->
-        <div class="ap-row" style="grid-template-columns:repeat(4,1fr);">
-          <div class="ap-card ap-card-sm" onclick="switchAthleteTab('bilans')" style="cursor:pointer;">
-            <div class="ap-card-header"><i class="fas fa-clipboard-check"></i> Bilan</div>
-            <div class="ap-card-body">${bilanHtml}</div>
+            <div style="font-size:32px;font-weight:800;color:var(--text);letter-spacing:-0.03em;line-height:1;">${lastWeight || '—'}<span style="font-size:14px;font-weight:500;color:var(--text2);margin-left:4px;">kg</span></div>
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;">${weightDiff ? (parseFloat(weightDiff) > 0 ? '+' : '') + weightDiff + ' kg sur 30j' : '—'}</div>
           </div>
 
-          <div class="ap-card ap-card-sm">
-            <div class="ap-card-header"><i class="fas fa-shoe-prints"></i> Pas</div>
-            <div class="ap-card-body">
-              <div style="display:flex;align-items:baseline;gap:6px;">
-                <span style="font-size:22px;font-weight:700;color:var(--text);">${todaySteps ? todaySteps.toLocaleString('fr-FR') : '—'}</span>
-                <span style="font-size:11px;color:var(--text3);">auj.</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-                <div style="flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;"><div style="width:${stepsPct}%;height:100%;background:${stepsPct >= 100 ? 'var(--success)' : 'var(--primary)'};border-radius:2px;"></div></div>
-                <span style="font-size:10px;color:var(--text3);">${stepsPct}%</span>
-              </div>
-              <div class="ap-steps-chart" id="ap-steps-chart" data-points='${JSON.stringify(stepsChartPoints)}'>
-                <div style="display:flex;gap:2px;align-items:flex-end;">${stepsBarData.join('')}</div>
-                <div class="ap-weight-crosshair" id="ap-steps-crosshair"></div>
-                <div class="ap-weight-tooltip" id="ap-steps-tooltip"></div>
-              </div>
-              <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:4px;">
-                <span>${daysReached}/7 obj.</span>
-                <span>Moy: ${avgSteps.toLocaleString('fr-FR')}/j</span>
-              </div>
+          <!-- Bilans -->
+          <div onclick="switchAthleteTab('bilans')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;position:relative;overflow:hidden;transition:all 0.15s;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#4ade80);"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:38px;height:38px;border-radius:10px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-check" style="color:#22c55e;font-size:15px;"></i></div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Bilans</div>
             </div>
+            <div style="font-size:32px;font-weight:800;color:var(--text);letter-spacing:-0.03em;line-height:1;">${bilanCount}</div>
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;">cette semaine${lastBilan ? ' · dernier ' + new Date(lastBilan.date + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : ''}</div>
           </div>
 
-          <div class="ap-card ap-card-sm">
-            <div class="ap-card-header"><i class="fas fa-moon"></i> Sommeil</div>
-            <div class="ap-card-body">
-              <div style="font-size:22px;font-weight:700;color:var(--text);">${avgSleep ? avgSleep + '<span style="font-size:12px;font-weight:400;color:var(--text3);">/10</span>' : '<span style="color:var(--text3);font-size:14px;">—</span>'}</div>
-              <div class="ap-steps-chart" id="ap-sleep-chart" data-points='${JSON.stringify(sleepChartPoints)}'>
-                <div style="display:flex;gap:2px;align-items:flex-end;">${sleepBarData.join('')}</div>
-                <div class="ap-weight-crosshair" id="ap-sleep-crosshair"></div>
-                <div class="ap-weight-tooltip" id="ap-sleep-tooltip"></div>
-              </div>
+          <!-- Sommeil -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,${sleepColor},${sleepColor}88);"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:38px;height:38px;border-radius:10px;background:${sleepBg};display:flex;align-items:center;justify-content:center;"><i class="fas fa-moon" style="color:${sleepColor};font-size:15px;"></i></div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Sommeil</div>
             </div>
+            <div style="font-size:32px;font-weight:800;color:var(--text);letter-spacing:-0.03em;line-height:1;">${avgSleep || '—'}<span style="font-size:14px;font-weight:500;color:var(--text2);margin-left:2px;">/10</span></div>
+            <div style="font-size:12px;color:var(--text2);margin-top:6px;">moyenne 7 derniers jours</div>
           </div>
 
-          <div class="ap-card ap-card-sm">
-            <div class="ap-card-header"><i class="fas fa-tint"></i> Eau</div>
-            <div class="ap-card-body">
-              <div style="display:flex;align-items:baseline;gap:6px;">
-                <span style="font-size:22px;font-weight:700;color:var(--text);">${todayWater ? (todayWater / 1000).toFixed(1) : '—'}</span>
-                <span style="font-size:11px;color:var(--text3);">L auj.</span>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-                <div style="flex:1;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden;"><div style="width:${waterPct}%;height:100%;background:${waterPct >= 100 ? 'var(--success)' : 'var(--info, #3b82f6)'};border-radius:2px;"></div></div>
-                <span style="font-size:10px;color:var(--text3);">${waterPct}%</span>
-              </div>
-              <div style="display:flex;gap:2px;align-items:flex-end;margin-top:8px;">${waterBarData.join('')}</div>
-              <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--text3);margin-top:4px;">
-                <span>${daysWaterReached}/7 obj.</span>
-                <span>Obj: ${(waterGoal / 1000).toFixed(1)}L</span>
-              </div>
+          <!-- Pas -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+              <div style="width:38px;height:38px;border-radius:10px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-shoe-prints" style="color:#3b82f6;font-size:15px;"></i></div>
+              <div style="font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px;">Pas</div>
+            </div>
+            <div style="font-size:32px;font-weight:800;color:var(--text);letter-spacing:-0.03em;line-height:1;">${todaySteps ? todaySteps.toLocaleString('fr-FR') : '—'}</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px;">
+              <div style="flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;"><div style="width:${stepsPct}%;height:100%;background:${stepsPct >= 100 ? '#22c55e' : '#3b82f6'};border-radius:3px;transition:width 0.5s;"></div></div>
+              <span style="font-size:11px;font-weight:600;color:${stepsPct >= 100 ? '#22c55e' : 'var(--text2)'};">${stepsPct}%</span>
             </div>
           </div>
         </div>
 
-        <!-- Row 3: Roadmap, Program, Nutrition -->
-        <div class="ap-row">
-          <div class="ap-card ap-card-sm" onclick="switchAthleteTab('roadmap')" style="cursor:pointer;">
-            <div class="ap-card-header"><i class="fas fa-road"></i> Roadmap</div>
-            <div class="ap-card-body">${phaseHtml}</div>
+        <!-- ═══ WEIGHT CHART ═══ -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <div style="font-size:13px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px;"><i class="fas fa-chart-line" style="color:#B30808;opacity:0.7;"></i> Évolution du poids</div>
+            <span style="font-size:11px;color:var(--text3);background:var(--bg3);padding:3px 10px;border-radius:8px;">30 jours</span>
+          </div>
+          ${weightChartHtml}
+        </div>
+
+        <!-- ═══ CHARTS ROW (Steps, Sleep, Water) ═══ -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <!-- Steps chart -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-shoe-prints" style="color:#3b82f6;font-size:11px;"></i> PAS (7J)</div>
+            <div class="ap-steps-chart" id="ap-steps-chart" data-points='${JSON.stringify(stepsChartPoints)}'>
+              <div style="display:flex;gap:3px;align-items:flex-end;">${stepsBarData.join('')}</div>
+              <div class="ap-weight-crosshair" id="ap-steps-crosshair"></div>
+              <div class="ap-weight-tooltip" id="ap-steps-tooltip"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:8px;">
+              <span>${daysReached}/7 objectifs</span>
+              <span>Moy: ${avgSteps.toLocaleString('fr-FR')}</span>
+            </div>
           </div>
 
-          <div class="ap-card ap-card-sm" onclick="switchAthleteTab('training')" style="cursor:pointer;">
-            <div class="ap-card-header"><i class="fas fa-dumbbell"></i> Programme actif</div>
-            <div class="ap-card-body">${progHtml}</div>
+          <!-- Sleep chart -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-moon" style="color:${sleepColor};font-size:11px;"></i> SOMMEIL (7J)</div>
+            <div class="ap-steps-chart" id="ap-sleep-chart" data-points='${JSON.stringify(sleepChartPoints)}'>
+              <div style="display:flex;gap:3px;align-items:flex-end;">${sleepBarData.join('')}</div>
+              <div class="ap-weight-crosshair" id="ap-sleep-crosshair"></div>
+              <div class="ap-weight-tooltip" id="ap-sleep-tooltip"></div>
+            </div>
           </div>
 
-          <div class="ap-card ap-card-sm" onclick="switchAthleteTab('nutrition')" style="cursor:pointer;">
-            <div class="ap-card-header"><i class="fas fa-utensils"></i> Nutrition</div>
-            <div class="ap-card-body">${nutriHtml}</div>
+          <!-- Water chart -->
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;">
+            <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;display:flex;align-items:center;gap:6px;"><i class="fas fa-tint" style="color:#3b82f6;font-size:11px;"></i> EAU (7J)</div>
+            <div style="display:flex;gap:3px;align-items:flex-end;">${waterBarData.join('')}</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text2);margin-top:8px;">
+              <span>${daysWaterReached}/7 objectifs</span>
+              <span>Obj: ${(waterGoal / 1000).toFixed(1)}L</span>
+            </div>
           </div>
         </div>
+
+        <!-- ═══ BOTTOM ROW ═══ -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+          <!-- Roadmap -->
+          <div onclick="switchAthleteTab('roadmap')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(139,92,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-road" style="color:#8b5cf6;font-size:13px;"></i></div>
+              <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Roadmap</div>
+            </div>
+            ${phaseHtml}
+          </div>
+
+          <!-- Programme -->
+          <div onclick="switchAthleteTab('training')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-dumbbell" style="color:#f59e0b;font-size:13px;"></i></div>
+              <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Programme</div>
+            </div>
+            ${progHtml}
+          </div>
+
+          <!-- Nutrition -->
+          <div onclick="switchAthleteTab('nutrition')" style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:all 0.15s;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+              <div style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-utensils" style="color:#22c55e;font-size:13px;"></i></div>
+              <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Nutrition</div>
+            </div>
+            ${nutriHtml}
+          </div>
+        </div>
+
       </div>
 
-      <!-- Activity (full height right column) -->
-      <div class="ap-card ap-card-activity">
-        <div class="ap-card-header">
-          <i class="fas fa-bolt"></i> Activité récente
+      <!-- ═══ ACTIVITY SIDEBAR ═══ -->
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;">
+        <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;">
+          <div style="width:28px;height:28px;border-radius:7px;background:rgba(179,8,8,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-bolt" style="color:#B30808;font-size:11px;"></i></div>
+          <span style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;">Activité</span>
         </div>
-        <div class="ap-card-body ap-activity-scroll">${activityHtml}</div>
+        <div class="ap-activity-scroll" style="padding:8px;max-height:600px;overflow-y:auto;">${activityHtml}</div>
       </div>
     </div>`;
 
   // Interactive chart tooltips
-  initWeightTooltip();
+  initWeightChart();
   initStepsTooltip();
   initSleepTooltip();
 
@@ -432,52 +409,84 @@ function clampTooltip(tooltip, leftPx, containerWidth) {
   }
 }
 
-function initWeightTooltip() {
-  const chart = document.getElementById('ap-weight-chart');
-  const crosshair = document.getElementById('ap-crosshair');
-  const tooltip = document.getElementById('ap-weight-tooltip');
-  if (!chart || !crosshair || !tooltip) return;
+let _apWeightChart = null;
 
-  let points;
-  try { points = JSON.parse(chart.getAttribute('data-points')); } catch (e) { return; }
-  if (!points.length) return;
+function initWeightChart() {
+  const ctx = document.getElementById('ap-weight-canvas');
+  if (!ctx || !window._apWeightChartData) return;
+  if (_apWeightChart) _apWeightChart.destroy();
 
-  // ViewBox offset: SVG data x=0..100 is mapped inside viewBox starting at VB_X with width VB_W
-  const vbx = parseFloat(chart.getAttribute('data-vbx')) || -12;
-  const vbw = parseFloat(chart.getAttribute('data-vbw')) || 116;
+  const { labels, data } = window._apWeightChartData;
+  const grd = ctx.getContext('2d').createLinearGradient(0, 0, 0, 160);
+  grd.addColorStop(0, 'rgba(179,8,8,0.2)');
+  grd.addColorStop(1, 'rgba(179,8,8,0)');
 
-  // Convert SVG data-x (0-100) to pixel position in container
-  const dataXtoPx = (dataX, width) => ((dataX - vbx) / vbw) * width;
-  // Convert pixel position to SVG data-x
-  const pxToDataX = (px, width) => (px / width) * vbw + vbx;
-
-  chart.addEventListener('mousemove', (e) => {
-    const rect = chart.getBoundingClientRect();
-    const mouseDataX = pxToDataX(e.clientX - rect.left, rect.width);
-
-    // Find nearest data point by SVG x position
-    let nearest = points[0];
-    let minDist = Infinity;
-    for (const pt of points) {
-      const ptX = (pt.idx / 29) * 100;
-      const dist = Math.abs(ptX - mouseDataX);
-      if (dist < minDist) { minDist = dist; nearest = pt; }
-    }
-
-    // Position crosshair at nearest point — properly mapped
-    const snapDataX = (nearest.idx / 29) * 100;
-    const leftPx = dataXtoPx(snapDataX, rect.width);
-    crosshair.style.left = leftPx + 'px';
-    crosshair.style.display = 'block';
-
-    // Position tooltip (clamped to container edges)
-    tooltip.textContent = `${nearest.weight} kg — ${nearest.label}`;
-    clampTooltip(tooltip, leftPx, rect.width);
-  });
-
-  chart.addEventListener('mouseleave', () => {
-    crosshair.style.display = 'none';
-    tooltip.style.display = 'none';
+  _apWeightChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        borderColor: '#B30808',
+        backgroundColor: grd,
+        borderWidth: 2,
+        fill: true,
+        tension: 0.35,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointBackgroundColor: '#B30808',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2,
+        spanGaps: true,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          titleColor: '#fff',
+          bodyColor: '#fff',
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          cornerRadius: 8,
+          padding: 10,
+          displayColors: false,
+          callbacks: {
+            title: (items) => items[0]?.label || '',
+            label: (item) => item.parsed.y != null ? item.parsed.y + ' kg' : 'Pas de données',
+          },
+        },
+      },
+      scales: {
+        x: {
+          display: true,
+          grid: { display: false },
+          ticks: {
+            color: '#55555e',
+            font: { size: 10 },
+            maxTicksLimit: 5,
+            maxRotation: 0,
+          },
+        },
+        y: {
+          display: true,
+          grid: { color: 'rgba(255,255,255,0.04)', drawBorder: false },
+          ticks: {
+            color: '#55555e',
+            font: { size: 10 },
+            callback: (v) => v + ' kg',
+            maxTicksLimit: 4,
+          },
+        },
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+    },
   });
 }
 

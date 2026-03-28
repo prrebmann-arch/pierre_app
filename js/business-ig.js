@@ -139,7 +139,7 @@ async function bizSyncIgData() {
                 if (m.name === 'shares') shares = m.values?.[0]?.value || 0;
               });
             }
-          } catch {}
+          } catch (e) { devError('[biz-ig] reel insights fetch failed', e); }
 
           const views = totalViews || reach;
 
@@ -184,7 +184,7 @@ async function bizSyncIgData() {
               insightsOk = true;
               iData.data.forEach(m => { ins[m.name] = m.values?.[0]?.value || 0; });
             }
-          } catch {}
+          } catch (e) { devError('[biz-ig] story insights fetch failed', e); }
 
           if (existing) {
             // Story exists — only update if we have insights
@@ -221,7 +221,7 @@ async function bizSyncIgData() {
           }
         }
       }
-    } catch {}
+    } catch (e) { devError('[biz-ig] stories sync failed', e); }
 
     // Auto-snapshot after sync — re-read fresh reels from DB
     try {
@@ -299,7 +299,7 @@ async function _bizIgAutoSync() {
           const iRes = await fetch(`https://graph.instagram.com/v25.0/${story.id}/insights?metric=impressions,reach,replies,exits,taps_forward,taps_back&access_token=${acct.access_token}`);
           const iData = await iRes.json();
           (iData.data || []).forEach(m => { ins[m.name] = m.values?.[0]?.value || 0; });
-        } catch {}
+        } catch (e) { devError('[biz-ig] detailed insights failed', e); }
 
         await supabaseClient.from('ig_stories').upsert({
           user_id: currentUser.id,
@@ -343,7 +343,7 @@ async function bizRenderInstagram() {
     try {
       const { data } = await supabaseClient.from('ig_accounts').select('*').eq('user_id', currentUser.id).single();
       window._bizIgAccount = data || null;
-    } catch { window._bizIgAccount = null; }
+    } catch (e) { window._bizIgAccount = null; devError('[biz-ig] ig_account load failed', e); }
   }
 
   // If not connected → show connect screen immediately (no sub-tabs)

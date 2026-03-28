@@ -339,6 +339,6 @@ async function getCoachStripeInstance(supabase, coachId) {
     .select('stripe_secret_key').eq('user_id', coachId).single();
   if (!data?.stripe_secret_key) return null;
   const { decrypt } = require('./_crypto');
-  const key = process.env.STRIPE_ENCRYPTION_KEY ? decrypt(data.stripe_secret_key) : data.stripe_secret_key;
+  const key = decrypt(data.stripe_secret_key);
   return Stripe(key);
 }

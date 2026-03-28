@@ -656,7 +656,6 @@ function toggleComparative(on) {
 async function loadVideoTraining(video) {
   const container = document.getElementById('vid-training-section');
   if (!container) return;
-  if (!video.session_name && !video.session_id) { container.innerHTML = ''; return; }
 
   container.innerHTML = '<div class="text-center" style="padding:30px;"><i class="fas fa-spinner fa-spin"></i></div>';
 
@@ -694,7 +693,22 @@ async function loadVideoTraining(video) {
     if (!matchSession) matchSession = allSessions.find(s => s.nom === video.session_name);
   }
 
-  // Try 3: first session of active program
+  // Try 3: find session containing the exercise (when session_name and session_id are null)
+  if (!matchSession && video.exercise_name) {
+    const exNameLower = video.exercise_name.toLowerCase();
+    // Prefer active program sessions
+    for (const s of allSessions) {
+      let exs = [];
+      try { exs = typeof s.exercices === 'string' ? JSON.parse(s.exercices) : (s.exercices || []); } catch(e) {}
+      if (exs.some(e => (e.nom || '').toLowerCase() === exNameLower)) {
+        if (!matchSession || (s._prog.actif && !matchSession._prog.actif)) {
+          matchSession = s;
+        }
+      }
+    }
+  }
+
+  // Try 4: first session of active program (fallback)
   if (!matchSession) {
     matchSession = allSessions.find(s => s._prog.actif);
   }
@@ -722,12 +736,12 @@ async function loadVideoTraining(video) {
     .limit(30);
 
   // Fallback: session_id changes when coach re-saves program → search by athlete + session name
-  if (!logs?.length) {
+  if (!logs?.length && (video.session_name || matchSession.nom)) {
     ({ data: logs } = await supabaseClient
       .from('workout_logs')
       .select('*')
       .eq('athlete_id', video.athlete_id)
-      .eq('session_name', video.session_name)
+      .eq('session_name', video.session_name || matchSession.nom)
       .order('date', { ascending: false })
       .limit(30));
   }
@@ -736,10 +750,10 @@ async function loadVideoTraining(video) {
   const allLogs = logs || [];
   const currentLog = allLogs.find(l => l.date === video.date);
   const currentIdx = currentLog ? allLogs.indexOf(currentLog) : -1;
-  // Find first log with a DIFFERENT date for comparison
+  // Find first log with a DIFFERENT date for comparison (skip same date entirely)
   let defaultPrevIdx = -1;
   for (let i = 0; i < allLogs.length; i++) {
-    if (i !== currentIdx && allLogs[i].date !== video.date) {
+    if (allLogs[i].date !== video.date) {
       defaultPrevIdx = i;
       break;
     }
@@ -772,7 +786,10 @@ async function loadVideoTraining(video) {
   window._vtCurrentLog = currentLog;
   window._vtPrevLogIdx = defaultPrevIdx;
 
-  renderVideoTraining(defaultPrevIdx >= 0 ? allLogs[defaultPrevIdx] : null, currentLog, matchSession, sessionExs);
+  const prevLog = defaultPrevIdx >= 0 ? allLogs[defaultPrevIdx] : null;
+  // Safety: if prevLog has the same date as the video, discard it (no real comparison)
+  const safePrevLog = (prevLog && prevLog.date === video.date) ? null : prevLog;
+  renderVideoTraining(safePrevLog, currentLog, matchSession, sessionExs);
 }
 
 // Navigate through previous logs
@@ -904,7 +921,8 @@ function renderVideoTraining(prevLog, currentLog, session, sessionExs) {
       prevHighlightDone = true;
     }
 
-    return `<div class="vt-comp-row">
+    const rowHighlight = highlightCurEx || highlightPrevEx;
+    return `<div class="vt-comp-row${rowHighlight ? ' vt-comp-row-active' : ''}">
       <div class="vt-comp-cell">
         <div class="vt-ex-header">
           <span class="vt-ex-name">${escHtml(name)}</span>
@@ -916,6 +934,7 @@ function renderVideoTraining(prevLog, currentLog, session, sessionExs) {
         <div class="vt-ex-header">
           <span class="vt-ex-name${missed ? ' vt-ex-missed' : ''}">${escHtml(name)}</span>
           <span class="vt-ex-count">${curSets} série${curSets > 1 ? 's' : ''}</span>
+          ${highlightCurEx ? `<span style="font-size:10px;color:var(--primary);font-weight:700;"><i class="fas fa-video" style="margin-right:3px;"></i>Série ${videoSerie}</span>` : ''}
         </div>
         ${renderSets(curEx, prevEx, true, highlightCurEx)}
       </div>
@@ -1022,14 +1041,17 @@ function renderVtEditCol(session, exs) {
   exs.forEach(ex => { if (!ex.sets) ex.sets = _vtNormalizeExSets(ex); });
   const totalSeries = exs.reduce((a, e) => a + (e.sets?.length || 0), 0);
 
+  const videoExName = (window._vidCurrentVideo?.exercise_name || '').toLowerCase();
+
   const exsHtml = exs.map((ex, idx) => {
     const sets = ex.sets || [];
     const setsHtml = sets.map((set, si) => _vtBuildSetRow(idx, si, set)).join('');
     const superBadge = ex.superset_id ? `<span class="tp-superset-badge">SS ${escHtml(ex.superset_id)}</span>` : '';
     const muscle = ex.muscle_principal || '';
+    const isVideoEx = (ex.nom || '').toLowerCase() === videoExName;
 
     return `
-    <div class="tr-exercise-card" data-superset="${escHtml(ex.superset_id||'')}">
+    <div class="tr-exercise-card${isVideoEx ? ' vt-edit-highlight' : ''}" data-superset="${escHtml(ex.superset_id||'')}">
       <div class="tr-exercise-header">
         <span class="tr-exercise-num">${idx+1}.</span>
         <input type="text" class="tp-ed-name vt-input-name" id="vt-nom-${idx}" value="${escHtml(ex.nom||'')}" placeholder="Nom" list="vt-datalist" style="flex:1;background:transparent;border:none;color:var(--text);font-size:13px;font-weight:600;font-family:inherit;outline:none;">
