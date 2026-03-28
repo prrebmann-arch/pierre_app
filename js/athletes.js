@@ -774,10 +774,8 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
   const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
   if (!emailRegex.test(email)) { notify('Email invalide', 'error'); return; }
 
-  const poids = parseFloat(document.getElementById('athlete-poids').value) || null;
-  const poidsObj = parseFloat(document.getElementById('athlete-poids-obj').value) || null;
-  if (poids !== null && (poids <= 0 || poids > 500)) { notify('Poids invalide (1-500 kg)', 'error'); return; }
-  if (poidsObj !== null && (poidsObj <= 0 || poidsObj > 500)) { notify('Poids objectif invalide (1-500 kg)', 'error'); return; }
+  const poids = null;
+  const poidsObj = null;
 
   // Check if coach has Stripe connected when adding a paid athlete
   const payType = document.querySelector('input[name="athlete-payment-type"]:checked')?.value || 'paid';
@@ -858,7 +856,7 @@ document.getElementById('athlete-form').addEventListener('submit', async (e) => 
       prenom, nom, email,
       poids_actuel: poids,
       poids_objectif: poidsObj,
-      objectif: document.getElementById('athlete-objectif').value,
+      objectif: 'maintenance',
       onboarding_workflow_id: workflowId,
       coach_id: coachId,
       user_id: existingUserId,
