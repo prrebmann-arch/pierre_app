@@ -1,3 +1,19 @@
+/* ── Carbon: animated counter ── */
+function animateCounter(el, target, duration) {
+  duration = duration || 800;
+  if (!el || isNaN(target)) return;
+  var start = 0;
+  var startTime = performance.now();
+  function tick(now) {
+    var elapsed = now - startTime;
+    var progress = Math.min(elapsed / duration, 1);
+    var eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(start + (target - start) * eased);
+    if (progress < 1) requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
 // ===== DASHBOARD =====
 
 async function loadDashboard() {
@@ -131,15 +147,70 @@ async function loadDashboard() {
   }).filter(Boolean).slice(0, 20);
 
   // ── Render ──
+
+  // Stats row
+  const totalAthletes = athletesList.length;
+  const activePrograms = programs.filter(p => p.actif).length;
+
+  const coachName = currentUser?.email?.split('@')[0] || 'Coach';
+  const todayFull = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
   let html = `
-    <div class="dash-header">
+    <div class="prc-welcome">
       <div>
-        <h1 class="dash-title">Tableau de bord</h1>
-        <p class="dash-subtitle">Vue d'ensemble de vos athlètes</p>
+        <div class="prc-welcome-title">Bonjour, ${escHtml(coachName)}</div>
+        <div class="prc-welcome-sub">Voici un aperçu de vos athlètes</div>
       </div>
-      <button class="btn btn-red" onclick="showSection('athletes');setTimeout(()=>openModal('modal-athlete'),100)">
-        <i class="fas fa-plus"></i> Ajouter un athlète
-      </button>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div class="prc-welcome-date"><i class="fas fa-calendar-alt"></i> ${todayFull}</div>
+        <button class="btn btn-red" onclick="showSection('athletes');setTimeout(()=>openModal('modal-athlete'),100)">
+          <i class="fas fa-plus"></i> Ajouter un athlète
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(59,130,246,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-users" style="color:#3b82f6;font-size:14px;"></i></div>
+          <div>
+            <div id="dash-stat-athletes" style="font-size:24px;font-weight:800;color:var(--text);line-height:1;">${totalAthletes}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:500;">Athlètes</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#22c55e,#4ade80);"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(34,197,94,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-check" style="color:#22c55e;font-size:14px;"></i></div>
+          <div>
+            <div id="dash-stat-bilans" style="font-size:24px;font-weight:800;color:var(--text);line-height:1;">${bilansToReview.length}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:500;">Bilans à traiter</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24);"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(245,158,11,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-video" style="color:#f59e0b;font-size:14px;"></i></div>
+          <div>
+            <div id="dash-stat-videos" style="font-size:24px;font-weight:800;color:var(--text);line-height:1;">${pendingVids.length}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:500;">Vidéos à corriger</div>
+          </div>
+        </div>
+      </div>
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#B30808,#d41a1a);"></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:36px;height:36px;border-radius:9px;background:rgba(179,8,8,0.1);display:flex;align-items:center;justify-content:center;"><i class="fas fa-exclamation-triangle" style="color:#B30808;font-size:14px;"></i></div>
+          <div>
+            <div id="dash-stat-late" style="font-size:24px;font-weight:800;color:var(--text);line-height:1;">${lateAthletes.length}</div>
+            <div style="font-size:11px;color:var(--text2);font-weight:500;">Bilans en retard</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="dash-layout">
@@ -314,6 +385,12 @@ async function loadDashboard() {
 
   html += '</div>'; // close dash-layout
   el.innerHTML = html;
+
+  // Animate stat counters
+  animateCounter(document.getElementById('dash-stat-athletes'), totalAthletes);
+  animateCounter(document.getElementById('dash-stat-bilans'), bilansToReview.length);
+  animateCounter(document.getElementById('dash-stat-videos'), pendingVids.length);
+  animateCounter(document.getElementById('dash-stat-late'), lateAthletes.length);
 
   // Sync activity column height with main column
   const mainCol = el.querySelector('.dash-main');
