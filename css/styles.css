@@ -90,24 +90,29 @@
   --scrollbar-thumb: rgba(0,0,0,0.12);
   --scrollbar-thumb-hover: rgba(0,0,0,0.2);
   --muted-icon: rgba(0,0,0,0.35);
-  --glass-bg: rgba(0,0,0,0.02);
-  --glass-bg-hover: rgba(0,0,0,0.04);
+  --glass-bg: #ffffff;
+  --glass-bg-hover: #f5f5f8;
   --glass-blur: blur(12px);
-  --glass-border: rgba(0,0,0,0.06);
+  --glass-border: rgba(0,0,0,0.1);
   --grid-pattern: none;
   --red-glow: 0 0 20px rgba(179,8,8,0.15);
   /* Landing page aliases — light theme */
   --text-muted: #52525b;
   --text-dim: #7e7e8a;
-  --bg-card: rgba(0,0,0,0.02);
-  --bg-card-hover: rgba(0,0,0,0.04);
+  --bg-card: #ffffff;
+  --bg-card-hover: #f5f5f8;
   --border-light: rgba(0,0,0,0.12);
   --shadow-lg: 0 8px 32px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06);
 }
 [data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); }
 [data-theme="light"] ::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 [data-theme="light"] ::selection { background: rgba(179,8,8,0.15); }
-[data-theme="light"] .sidebar { box-shadow: 1px 0 0 var(--border); }
+[data-theme="light"] .sidebar { box-shadow: 1px 0 0 var(--border); background: #ffffff; }
+[data-theme="light"] .admin-sidebar { background: #ffffff; }
+[data-theme="light"] .modal { background: #ffffff; border-color: rgba(0,0,0,0.1); }
+[data-theme="light"] .notification { background: #ffffff; }
+[data-theme="light"] .auth-box { background: #ffffff; }
+[data-theme="light"] .main-content::after { background: radial-gradient(circle, rgba(179,8,8,0.04) 0%, transparent 70%); }
 
 /* Theme toggle button */
 .theme-toggle {
@@ -1179,10 +1184,8 @@ textarea.form-control {
 }
 .modal-overlay.open { display: flex; animation: fadeIn 0.15s ease; }
 .modal {
-  background: rgba(15,15,18,0.9);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: var(--glass-border);
+  background: var(--bg2);
+  border: 1px solid var(--border);
   box-shadow: var(--shadow-elevated);
   border-radius: var(--radius-lg);
   padding: 28px;
@@ -1220,10 +1223,8 @@ textarea.form-control {
 /* ===== NOTIFICATION ===== */
 .notification {
   position: fixed; bottom: 24px; right: 24px;
-  background: rgba(15,15,18,0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: var(--glass-border);
+  background: var(--bg2);
+  border: 1px solid var(--border);
   border-left: 3px solid var(--primary);
   border-radius: var(--radius);
   padding: 12px 16px;
