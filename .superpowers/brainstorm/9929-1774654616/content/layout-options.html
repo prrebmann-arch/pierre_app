@@ -1,0 +1,228 @@
+<h2>Layout du dashboard coach</h2>
+<p class="subtitle">3 approches de navigation — clique sur celle qui te parle</p>
+
+<div class="cards" style="grid-template-columns: repeat(3, 1fr);">
+
+  <!-- Option A: Sidebar compacte -->
+  <div class="card" data-choice="layout-compact" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:280px;background:#08080a;display:flex;position:relative;font-family:'Inter',sans-serif;">
+        <!-- Compact sidebar -->
+        <div style="width:56px;background:#0d0d10;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0;">
+          <!-- Logo -->
+          <div style="width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,#B30808,#8a0606);display:flex;align-items:center;justify-content:center;margin-bottom:12px;">
+            <span style="color:#fff;font-weight:800;font-size:11px;">M</span>
+          </div>
+          <!-- Nav icons -->
+          <div style="width:36px;height:36px;border-radius:8px;background:rgba(179,8,8,0.12);display:flex;align-items:center;justify-content:center;color:#B30808;font-size:13px;">⊞</div>
+          <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:13px;">♟</div>
+          <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:13px;">☑</div>
+          <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:13px;">▶</div>
+          <div style="width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.4);font-size:13px;">⚙</div>
+          <!-- Bottom avatar -->
+          <div style="margin-top:auto;">
+            <div style="width:30px;height:30px;border-radius:50%;background:rgba(179,8,8,0.2);display:flex;align-items:center;justify-content:center;color:#B30808;font-size:11px;font-weight:700;">P</div>
+          </div>
+        </div>
+        <!-- Main content area -->
+        <div style="flex:1;padding:16px 20px;overflow:hidden;">
+          <div style="font-size:16px;font-weight:700;color:#f5f5f7;margin-bottom:4px;">Accueil</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:16px;">Bienvenue, Pierre</div>
+          <!-- Stats row -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Athlètes</div>
+              <div style="font-size:16px;font-weight:700;color:#f5f5f7;">24</div>
+            </div>
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Bilans</div>
+              <div style="font-size:16px;font-weight:700;color:#B30808;">8</div>
+            </div>
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Vidéos</div>
+              <div style="font-size:16px;font-weight:700;color:#f5f5f7;">3</div>
+            </div>
+          </div>
+          <!-- Content blocks -->
+          <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+            <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:8px;">BILANS À TRAITER</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:8px;color:#60a5fa;font-weight:700;">T</div>
+              <div style="flex:1;font-size:9px;color:#ccc;">Thomas D.</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.3);">2h</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;font-size:8px;color:#4ade80;font-weight:700;">S</div>
+              <div style="flex:1;font-size:9px;color:#ccc;">Sarah M.</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.3);">5h</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Sidebar compacte</h3>
+      <p>64px d'icônes, expand au hover. Maximum d'espace pour le contenu. Style Figma / Arc.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Sidebar classique premium -->
+  <div class="card" data-choice="layout-classic" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:280px;background:#08080a;display:flex;position:relative;font-family:'Inter',sans-serif;">
+        <!-- Classic sidebar -->
+        <div style="width:180px;background:#0a0a0d;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;padding:14px 10px;flex-shrink:0;">
+          <!-- Brand -->
+          <div style="display:flex;align-items:center;gap:8px;padding:0 6px;margin-bottom:16px;">
+            <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#B30808,#8a0606);display:flex;align-items:center;justify-content:center;">
+              <span style="color:#fff;font-weight:800;font-size:10px;">M</span>
+            </div>
+            <span style="color:#f5f5f7;font-weight:700;font-size:12px;">Momentum</span>
+          </div>
+          <!-- Nav items -->
+          <div style="display:flex;flex-direction:column;gap:2px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;background:rgba(179,8,8,0.1);color:#B30808;font-size:10px;font-weight:600;">
+              <span style="width:14px;text-align:center;">⊞</span> Accueil
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:10px;">
+              <span style="width:14px;text-align:center;">♟</span> Athlètes
+              <span style="margin-left:auto;background:rgba(179,8,8,0.15);color:#B30808;font-size:8px;padding:1px 5px;border-radius:4px;font-weight:700;">24</span>
+            </div>
+            <div style="font-size:8px;color:rgba(255,255,255,0.2);font-weight:600;letter-spacing:0.5px;padding:10px 10px 4px;text-transform:uppercase;">Suivi</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:10px;">
+              <span style="width:14px;text-align:center;">☑</span> Bilans
+              <span style="margin-left:auto;width:6px;height:6px;border-radius:50%;background:#B30808;"></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:10px;">
+              <span style="width:14px;text-align:center;">▶</span> Vidéos
+            </div>
+            <div style="font-size:8px;color:rgba(255,255,255,0.2);font-weight:600;letter-spacing:0.5px;padding:10px 10px 4px;text-transform:uppercase;">Outils</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:10px;">
+              <span style="width:14px;text-align:center;">📋</span> Templates
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.45);font-size:10px;">
+              <span style="width:14px;text-align:center;">🏋</span> Exercices
+            </div>
+          </div>
+          <!-- Bottom user -->
+          <div style="margin-top:auto;display:flex;align-items:center;gap:8px;padding:8px;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">
+            <div style="width:26px;height:26px;border-radius:50%;background:rgba(179,8,8,0.15);display:flex;align-items:center;justify-content:center;color:#B30808;font-size:9px;font-weight:700;">P</div>
+            <div>
+              <div style="font-size:9px;color:#ddd;font-weight:600;">Pierre R.</div>
+              <div style="font-size:7px;color:rgba(255,255,255,0.3);">Plan Business</div>
+            </div>
+          </div>
+        </div>
+        <!-- Main content -->
+        <div style="flex:1;padding:16px 18px;overflow:hidden;">
+          <div style="font-size:16px;font-weight:700;color:#f5f5f7;margin-bottom:4px;">Accueil</div>
+          <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:16px;">Bienvenue, Pierre</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Athlètes</div>
+              <div style="font-size:16px;font-weight:700;color:#f5f5f7;">24</div>
+            </div>
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Bilans</div>
+              <div style="font-size:16px;font-weight:700;color:#B30808;">8</div>
+            </div>
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Vidéos</div>
+              <div style="font-size:16px;font-weight:700;color:#f5f5f7;">3</div>
+            </div>
+          </div>
+          <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+            <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:8px;">BILANS À TRAITER</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:8px;color:#60a5fa;font-weight:700;">T</div>
+              <div style="flex:1;font-size:9px;color:#ccc;">Thomas D.</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.3);">2h</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:24px;height:24px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;font-size:8px;color:#4ade80;font-weight:700;">S</div>
+              <div style="flex:1;font-size:9px;color:#ccc;">Sarah M.</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.3);">5h</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Sidebar classique premium</h3>
+      <p>Sidebar ~200px avec labels, badges de notif, groupes de section, profil en bas. Style Linear / Notion.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Top nav + contextual sidebar -->
+  <div class="card" data-choice="layout-topnav" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:280px;background:#08080a;display:flex;flex-direction:column;position:relative;font-family:'Inter',sans-serif;">
+        <!-- Top nav -->
+        <div style="height:44px;background:#0a0a0d;border-bottom:1px solid rgba(255,255,255,0.06);display:flex;align-items:center;padding:0 16px;gap:20px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <div style="width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,#B30808,#8a0606);display:flex;align-items:center;justify-content:center;">
+              <span style="color:#fff;font-weight:800;font-size:8px;">M</span>
+            </div>
+            <span style="color:#f5f5f7;font-weight:700;font-size:11px;">Momentum</span>
+          </div>
+          <div style="display:flex;gap:2px;margin-left:12px;">
+            <span style="padding:5px 10px;border-radius:5px;font-size:9px;color:#B30808;background:rgba(179,8,8,0.1);font-weight:600;">Accueil</span>
+            <span style="padding:5px 10px;border-radius:5px;font-size:9px;color:rgba(255,255,255,0.45);">Athlètes</span>
+            <span style="padding:5px 10px;border-radius:5px;font-size:9px;color:rgba(255,255,255,0.45);">Bilans</span>
+            <span style="padding:5px 10px;border-radius:5px;font-size:9px;color:rgba(255,255,255,0.45);">Outils</span>
+            <span style="padding:5px 10px;border-radius:5px;font-size:9px;color:rgba(255,255,255,0.45);">Business</span>
+          </div>
+          <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+            <div style="width:24px;height:24px;border-radius:50%;background:rgba(179,8,8,0.15);display:flex;align-items:center;justify-content:center;color:#B30808;font-size:8px;font-weight:700;">P</div>
+          </div>
+        </div>
+        <!-- Body with contextual sidebar -->
+        <div style="flex:1;display:flex;">
+          <!-- Contextual sidebar (athletes list) -->
+          <div style="width:160px;background:#0c0c0f;border-right:1px solid rgba(255,255,255,0.06);padding:12px 8px;flex-shrink:0;">
+            <div style="font-size:8px;color:rgba(255,255,255,0.3);font-weight:600;letter-spacing:0.5px;padding:0 6px;margin-bottom:8px;text-transform:uppercase;">Vue d'ensemble</div>
+            <div style="display:flex;flex-direction:column;gap:2px;">
+              <div style="padding:6px 8px;border-radius:5px;background:rgba(179,8,8,0.08);font-size:9px;color:#B30808;font-weight:600;">Dashboard</div>
+              <div style="padding:6px 8px;border-radius:5px;font-size:9px;color:rgba(255,255,255,0.4);">Statistiques</div>
+              <div style="padding:6px 8px;border-radius:5px;font-size:9px;color:rgba(255,255,255,0.4);">Activité récente</div>
+            </div>
+          </div>
+          <!-- Main content -->
+          <div style="flex:1;padding:14px 16px;overflow:hidden;">
+            <div style="font-size:14px;font-weight:700;color:#f5f5f7;margin-bottom:14px;">Dashboard</div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;">
+              <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Athlètes</div>
+                <div style="font-size:14px;font-weight:700;color:#f5f5f7;">24</div>
+              </div>
+              <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Bilans</div>
+                <div style="font-size:14px;font-weight:700;color:#B30808;">8</div>
+              </div>
+              <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);margin-bottom:4px;">Vidéos</div>
+                <div style="font-size:14px;font-weight:700;color:#f5f5f7;">3</div>
+              </div>
+            </div>
+            <div style="background:#111114;border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:10px;">
+              <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);margin-bottom:6px;">BILANS À TRAITER</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+                <div style="width:20px;height:20px;border-radius:50%;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;font-size:7px;color:#60a5fa;font-weight:700;">T</div>
+                <div style="flex:1;font-size:8px;color:#ccc;">Thomas D.</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:20px;height:20px;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;font-size:7px;color:#4ade80;font-weight:700;">S</div>
+                <div style="flex:1;font-size:8px;color:#ccc;">Sarah M.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Top nav + sidebar contextuelle</h3>
+      <p>Navigation principale en haut, sous-navigation contextuelle à gauche qui s'adapte à la section active. Plus aéré.</p>
+    </div>
+  </div>
+
+</div>

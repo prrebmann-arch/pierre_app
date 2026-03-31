@@ -1,0 +1,122 @@
+<h2>Tonalité du rouge & Typographie</h2>
+<p class="subtitle">Le rouge est ton identité — mais quel rouge ? Et quelle typo pour porter le tout ?</p>
+
+<h3 style="margin-top:32px;">1. Tonalité du rouge</h3>
+<p class="subtitle">Clique sur celle qui te parle le plus</p>
+
+<div class="cards" style="grid-template-columns: repeat(3, 1fr);">
+
+  <!-- Option A: Rouge actuel raffiné -->
+  <div class="card" data-choice="red-deep" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:140px;background:linear-gradient(135deg, #0a0a0c 0%, #111114 100%);display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#B30808,#8a0606);display:flex;align-items:center;justify-content:center;">
+          <span style="color:#fff;font-weight:800;font-size:24px;">M</span>
+        </div>
+        <div style="text-align:left;">
+          <div style="color:#f5f5f7;font-weight:700;font-size:18px;">Momentum</div>
+          <div style="color:#B30808;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">COACHING</div>
+        </div>
+      </div>
+      <div style="padding:16px;background:#0d0d0f;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:8px;border-radius:4px;background:#B30808;"></div>
+          <div style="flex:2;height:8px;border-radius:4px;background:rgba(179,8,8,0.2);"></div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span style="padding:4px 10px;border-radius:6px;background:rgba(179,8,8,0.12);color:#B30808;font-size:11px;font-weight:600;">Actif</span>
+          <span style="padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.05);color:#888;font-size:11px;">Inactif</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Rouge profond (actuel)</h3>
+      <p><code>#B30808</code> — Sérieux, pro, autoritaire. Le rouge sang classique du coaching intense.</p>
+    </div>
+  </div>
+
+  <!-- Option B: Rouge vif / énergie -->
+  <div class="card" data-choice="red-vibrant" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:140px;background:linear-gradient(135deg, #0a0a0c 0%, #111114 100%);display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#EF4444,#DC2626);box-shadow:0 0 30px rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;">
+          <span style="color:#fff;font-weight:800;font-size:24px;">M</span>
+        </div>
+        <div style="text-align:left;">
+          <div style="color:#f5f5f7;font-weight:700;font-size:18px;">Momentum</div>
+          <div style="color:#EF4444;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">COACHING</div>
+        </div>
+      </div>
+      <div style="padding:16px;background:#0d0d0f;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:8px;border-radius:4px;background:#EF4444;"></div>
+          <div style="flex:2;height:8px;border-radius:4px;background:rgba(239,68,68,0.2);"></div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span style="padding:4px 10px;border-radius:6px;background:rgba(239,68,68,0.12);color:#EF4444;font-size:11px;font-weight:600;">Actif</span>
+          <span style="padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.05);color:#888;font-size:11px;">Inactif</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Rouge vif / énergie</h3>
+      <p><code>#EF4444</code> — Plus lumineux, plus dynamique. Énergie sportive, impact visuel fort sur fond noir.</p>
+    </div>
+  </div>
+
+  <!-- Option C: Rouge-corail / moderne -->
+  <div class="card" data-choice="red-ember" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:140px;background:linear-gradient(135deg, #0a0a0c 0%, #111114 100%);display:flex;align-items:center;justify-content:center;gap:16px;padding:20px;">
+        <div style="width:64px;height:64px;border-radius:16px;background:linear-gradient(135deg,#F03B3B,#C92A2A);box-shadow:0 0 30px rgba(240,59,59,0.25);display:flex;align-items:center;justify-content:center;">
+          <span style="color:#fff;font-weight:800;font-size:24px;">M</span>
+        </div>
+        <div style="text-align:left;">
+          <div style="color:#f5f5f7;font-weight:700;font-size:18px;">Momentum</div>
+          <div style="color:#F03B3B;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">COACHING</div>
+        </div>
+      </div>
+      <div style="padding:16px;background:#0d0d0f;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,#F03B3B,#FF6B4A);"></div>
+          <div style="flex:2;height:8px;border-radius:4px;background:rgba(240,59,59,0.15);"></div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <span style="padding:4px 10px;border-radius:6px;background:rgba(240,59,59,0.12);color:#F03B3B;font-size:11px;font-weight:600;">Actif</span>
+          <span style="padding:4px 10px;border-radius:6px;background:rgba(255,255,255,0.05);color:#888;font-size:11px;">Inactif</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Rouge ember / moderne</h3>
+      <p><code>#F03B3B</code> → <code>#FF6B4A</code> — Entre rouge et orange braise. Gradient subtil, sensation de chaleur et de mouvement.</p>
+    </div>
+  </div>
+</div>
+
+<h3 style="margin-top:40px;">2. Typographie</h3>
+<p class="subtitle">La typo donne le ton. Clique sur ta préférée.</p>
+
+<div class="options">
+  <div class="option" data-choice="font-inter" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3 style="font-family:'Inter',sans-serif;font-weight:700;">Inter (actuelle)</h3>
+      <p style="font-family:'Inter',sans-serif;">Neutre, lisible, polyvalente. Utilisée par Linear, Vercel. Sobre mais peut manquer de personnalité.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="font-geist" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3 style="font-family:system-ui,-apple-system,sans-serif;font-weight:700;letter-spacing:-0.03em;">Geist Sans (Vercel)</h3>
+      <p style="font-family:system-ui,-apple-system,sans-serif;">Très moderne, légèrement condensée, excellente lisibilité. Le choix "tech-forward" par excellence.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="font-satoshi" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3 style="font-family:'Helvetica Neue',Arial,sans-serif;font-weight:700;letter-spacing:-0.02em;">Satoshi / DM Sans</h3>
+      <p style="font-family:'Helvetica Neue',Arial,sans-serif;">Géométrique, moderne, distinctive. Plus de personnalité qu'Inter, très populaire dans le design premium actuel.</p>
+    </div>
+  </div>
+</div>

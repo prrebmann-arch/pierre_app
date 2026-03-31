@@ -1,0 +1,245 @@
+<h2>3 directions de design</h2>
+<p class="subtitle">Mêmes ingrédients (noir + rouge + Inter), 3 ambiances différentes. Clique sur ta préférée.</p>
+
+<div class="cards" style="grid-template-columns: repeat(3, 1fr);">
+
+  <!-- Direction A: Obsidian -->
+  <div class="card" data-choice="direction-obsidian" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:320px;background:#08080a;display:flex;font-family:'Inter',sans-serif;position:relative;">
+        <!-- Sidebar -->
+        <div style="width:170px;background:linear-gradient(180deg,#0b0b0e 0%,#08080a 100%);border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;padding:14px 10px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 6px;margin-bottom:20px;">
+            <div style="width:28px;height:28px;border-radius:8px;background:#B30808;display:flex;align-items:center;justify-content:center;">
+              <span style="color:#fff;font-weight:800;font-size:10px;">M</span>
+            </div>
+            <span style="color:#f5f5f7;font-weight:700;font-size:12px;letter-spacing:-0.3px;">Momentum</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;background:rgba(179,8,8,0.08);color:#e04040;font-size:10px;font-weight:600;border-left:2px solid #B30808;">
+              ⊞ Accueil
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.35);font-size:10px;">♟ Athlètes</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:rgba(255,255,255,0.35);font-size:10px;">☑ Bilans</div>
+          </div>
+        </div>
+        <!-- Main -->
+        <div style="flex:1;padding:18px 20px;overflow:hidden;background:#09090b;">
+          <!-- Header with glow -->
+          <div style="margin-bottom:20px;">
+            <div style="font-size:18px;font-weight:800;color:#f5f5f7;letter-spacing:-0.5px;">Dashboard</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:2px;">28 mars 2026</div>
+          </div>
+          <!-- Cards with sharp borders -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+            <div style="background:#0d0d10;border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:12px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(179,8,8,0.4),transparent);"></div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Athlètes</div>
+              <div style="font-size:20px;font-weight:800;color:#f5f5f7;letter-spacing:-1px;">24</div>
+              <div style="font-size:8px;color:#22c55e;margin-top:4px;">↑ 3 ce mois</div>
+            </div>
+            <div style="background:#0d0d10;border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:12px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(179,8,8,0.4),transparent);"></div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Bilans</div>
+              <div style="font-size:20px;font-weight:800;color:#B30808;letter-spacing:-1px;">8</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.3);margin-top:4px;">à traiter</div>
+            </div>
+            <div style="background:#0d0d10;border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:12px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(179,8,8,0.4),transparent);"></div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:500;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">Vidéos</div>
+              <div style="font-size:20px;font-weight:800;color:#f5f5f7;letter-spacing:-1px;">3</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.3);margin-top:4px;">en attente</div>
+            </div>
+          </div>
+          <!-- Activity list -->
+          <div style="background:#0d0d10;border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:12px;">
+            <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.4);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px;">Activité récente</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+              <div style="width:6px;height:6px;border-radius:50%;background:#B30808;flex-shrink:0;"></div>
+              <div style="font-size:9px;color:#ccc;flex:1;">Thomas D. — bilan envoyé</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.2);">2h</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+              <div style="width:6px;height:6px;border-radius:50%;background:#22c55e;flex-shrink:0;"></div>
+              <div style="font-size:9px;color:#ccc;flex:1;">Sarah M. — programme complété</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.2);">5h</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A — Obsidian</h3>
+      <p><strong>Mots-clés :</strong> Élégant, tranchant, premium.<br>
+      Lignes de lumière rouge subtiles sur les cards (top glow), espace généreux, hiérarchie typographique forte (poids 800 pour les chiffres). Le rouge est un accent chirurgical — jamais en à-plat. Sensation d'outil haut de gamme.</p>
+    </div>
+  </div>
+
+  <!-- Direction B: Forge -->
+  <div class="card" data-choice="direction-forge" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:320px;background:#08080a;display:flex;font-family:'Inter',sans-serif;position:relative;">
+        <!-- Sidebar -->
+        <div style="width:170px;background:#0c0c0f;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;padding:14px 10px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 6px;margin-bottom:20px;">
+            <div style="width:28px;height:28px;border-radius:10px;background:linear-gradient(135deg,#B30808,#d42020);box-shadow:0 0 16px rgba(179,8,8,0.35);display:flex;align-items:center;justify-content:center;">
+              <span style="color:#fff;font-weight:800;font-size:10px;">M</span>
+            </div>
+            <span style="color:#f5f5f7;font-weight:700;font-size:12px;">Momentum</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:rgba(179,8,8,0.12);color:#f5f5f7;font-size:10px;font-weight:600;">
+              ⊞ Accueil
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:rgba(255,255,255,0.35);font-size:10px;">
+              ♟ Athlètes
+              <span style="margin-left:auto;background:#B30808;color:#fff;font-size:7px;padding:2px 6px;border-radius:10px;font-weight:700;">24</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;color:rgba(255,255,255,0.35);font-size:10px;">
+              ☑ Bilans
+              <span style="margin-left:auto;width:7px;height:7px;border-radius:50%;background:#B30808;box-shadow:0 0 6px rgba(179,8,8,0.5);"></span>
+            </div>
+          </div>
+        </div>
+        <!-- Main -->
+        <div style="flex:1;padding:18px 20px;overflow:hidden;background:linear-gradient(180deg,#0b0b0e 0%,#09090b 50%);">
+          <!-- Welcome banner -->
+          <div style="background:linear-gradient(135deg,rgba(179,8,8,0.1) 0%,rgba(179,8,8,0.02) 100%);border:1px solid rgba(179,8,8,0.12);border-radius:12px;padding:14px 16px;margin-bottom:16px;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:-30px;right:-20px;width:100px;height:100px;border-radius:50%;background:radial-gradient(circle,rgba(179,8,8,0.12),transparent 70%);"></div>
+            <div style="font-size:14px;font-weight:700;color:#f5f5f7;">Salut Pierre 🔥</div>
+            <div style="font-size:9px;color:rgba(255,255,255,0.4);margin-top:2px;">8 bilans en attente · 3 vidéos à traiter</div>
+          </div>
+          <!-- Cards with colored top -->
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+            <div style="background:#0f0f12;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:2px;background:#B30808;"></div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <div style="width:22px;height:22px;border-radius:6px;background:rgba(179,8,8,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;color:#B30808;">♟</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);font-weight:500;">Athlètes</div>
+              </div>
+              <div style="font-size:20px;font-weight:800;color:#f5f5f7;">24</div>
+            </div>
+            <div style="background:#0f0f12;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:2px;background:#f59e0b;"></div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <div style="width:22px;height:22px;border-radius:6px;background:rgba(245,158,11,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;color:#f59e0b;">☑</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);font-weight:500;">Bilans</div>
+              </div>
+              <div style="font-size:20px;font-weight:800;color:#f59e0b;">8</div>
+            </div>
+            <div style="background:#0f0f12;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;position:relative;overflow:hidden;">
+              <div style="position:absolute;top:0;left:0;right:0;height:2px;background:#3b82f6;"></div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                <div style="width:22px;height:22px;border-radius:6px;background:rgba(59,130,246,0.12);display:flex;align-items:center;justify-content:center;font-size:9px;color:#3b82f6;">▶</div>
+                <div style="font-size:8px;color:rgba(255,255,255,0.4);font-weight:500;">Vidéos</div>
+              </div>
+              <div style="font-size:20px;font-weight:800;color:#f5f5f7;">3</div>
+            </div>
+          </div>
+          <!-- Progress section -->
+          <div style="background:#0f0f12;border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.5);">PROGRESSION ATHLÈTES</div>
+              <div style="font-size:8px;color:rgba(255,255,255,0.25);">Cette semaine</div>
+            </div>
+            <div style="display:flex;gap:3px;height:32px;align-items:flex-end;">
+              <div style="flex:1;background:rgba(179,8,8,0.25);border-radius:3px 3px 0 0;height:40%;"></div>
+              <div style="flex:1;background:rgba(179,8,8,0.35);border-radius:3px 3px 0 0;height:65%;"></div>
+              <div style="flex:1;background:rgba(179,8,8,0.25);border-radius:3px 3px 0 0;height:35%;"></div>
+              <div style="flex:1;background:rgba(179,8,8,0.45);border-radius:3px 3px 0 0;height:85%;"></div>
+              <div style="flex:1;background:#B30808;border-radius:3px 3px 0 0;height:55%;"></div>
+              <div style="flex:1;background:#B30808;border-radius:3px 3px 0 0;height:90%;box-shadow:0 0 8px rgba(179,8,8,0.3);"></div>
+              <div style="flex:1;background:rgba(179,8,8,0.15);border-radius:3px 3px 0 0;height:70%;border:1px dashed rgba(179,8,8,0.3);background:transparent;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B — Forge</h3>
+      <p><strong>Mots-clés :</strong> Chaleureux, vivant, sportif.<br>
+      Banner de bienvenue avec glow, couleurs sémantiques par type de card (rouge/orange/bleu), badges lumineux, barres de progression avec shadow glow. Le rouge rayonne. Énergie de salle de sport premium.</p>
+    </div>
+  </div>
+
+  <!-- Direction C: Carbon -->
+  <div class="card" data-choice="direction-carbon" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:0;overflow:hidden;">
+      <div style="height:320px;background:#09090b;display:flex;font-family:'Inter',sans-serif;position:relative;">
+        <!-- Sidebar with glassmorphism -->
+        <div style="width:170px;background:rgba(12,12,15,0.8);backdrop-filter:blur(12px);border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;padding:14px 10px;flex-shrink:0;">
+          <div style="display:flex;align-items:center;gap:8px;padding:0 6px;margin-bottom:20px;">
+            <div style="width:28px;height:28px;border-radius:8px;background:#B30808;display:flex;align-items:center;justify-content:center;position:relative;">
+              <span style="color:#fff;font-weight:800;font-size:10px;">M</span>
+            </div>
+            <div>
+              <div style="color:#f5f5f7;font-weight:700;font-size:11px;letter-spacing:-0.3px;">Momentum</div>
+              <div style="font-size:7px;color:rgba(255,255,255,0.25);font-weight:500;">PRO</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px;">
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,0.05);color:#f5f5f7;font-size:10px;font-weight:500;">
+              <span style="color:#B30808;">⊞</span> Accueil
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;color:rgba(255,255,255,0.3);font-size:10px;">♟ Athlètes</div>
+            <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;color:rgba(255,255,255,0.3);font-size:10px;">☑ Bilans</div>
+          </div>
+        </div>
+        <!-- Main with grid texture -->
+        <div style="flex:1;padding:18px 20px;overflow:hidden;position:relative;">
+          <!-- Subtle grid pattern -->
+          <div style="position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.015) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.015) 1px,transparent 1px);background-size:32px 32px;pointer-events:none;"></div>
+          <!-- Red orb glow -->
+          <div style="position:absolute;top:-60px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(179,8,8,0.06),transparent 70%);pointer-events:none;"></div>
+          <div style="position:relative;">
+            <div style="font-size:11px;font-weight:500;color:rgba(255,255,255,0.3);margin-bottom:4px;">Vendredi 28 mars</div>
+            <div style="font-size:18px;font-weight:700;color:#f5f5f7;letter-spacing:-0.5px;margin-bottom:18px;">Bonjour, Pierre</div>
+            <!-- Cards with glass effect -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;">
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;backdrop-filter:blur(8px);">
+                <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:500;margin-bottom:8px;">ATHLÈTES</div>
+                <div style="display:flex;align-items:baseline;gap:4px;">
+                  <div style="font-size:22px;font-weight:800;color:#f5f5f7;letter-spacing:-1px;">24</div>
+                  <div style="font-size:8px;color:#22c55e;font-weight:600;">+3</div>
+                </div>
+              </div>
+              <div style="background:rgba(179,8,8,0.06);border:1px solid rgba(179,8,8,0.12);border-radius:12px;padding:14px;backdrop-filter:blur(8px);">
+                <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:500;margin-bottom:8px;">BILANS</div>
+                <div style="display:flex;align-items:baseline;gap:4px;">
+                  <div style="font-size:22px;font-weight:800;color:#B30808;letter-spacing:-1px;">8</div>
+                  <div style="font-size:8px;color:rgba(255,255,255,0.3);">en attente</div>
+                </div>
+              </div>
+              <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;backdrop-filter:blur(8px);">
+                <div style="font-size:8px;color:rgba(255,255,255,0.35);font-weight:500;margin-bottom:8px;">VIDÉOS</div>
+                <div style="display:flex;align-items:baseline;gap:4px;">
+                  <div style="font-size:22px;font-weight:800;color:#f5f5f7;letter-spacing:-1px;">3</div>
+                  <div style="font-size:8px;color:rgba(255,255,255,0.3);">à revoir</div>
+                </div>
+              </div>
+            </div>
+            <!-- Clean list -->
+            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:14px;">
+              <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);margin-bottom:10px;letter-spacing:0.3px;">À FAIRE AUJOURD'HUI</div>
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,0.03);">
+                <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(179,8,8,0.4);flex-shrink:0;"></div>
+                <div style="font-size:10px;color:#ddd;">Traiter le bilan de Thomas D.</div>
+                <div style="margin-left:auto;font-size:8px;padding:2px 6px;border-radius:4px;background:rgba(179,8,8,0.1);color:#B30808;font-weight:500;">Urgent</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;">
+                <div style="width:16px;height:16px;border-radius:4px;border:1.5px solid rgba(255,255,255,0.1);flex-shrink:0;"></div>
+                <div style="font-size:10px;color:#ddd;">Revoir la vidéo de Sarah M.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C — Carbon</h3>
+      <p><strong>Mots-clés :</strong> Aéré, futuriste, raffiné.<br>
+      Glassmorphism subtil, grille de fond en filigrane, orbes lumineux, cards semi-transparentes, todo-list intégrée au dashboard. Mélange de minimalisme et d'effets atmosphériques. Sensation de cockpit high-tech.</p>
+    </div>
+  </div>
+
+</div>

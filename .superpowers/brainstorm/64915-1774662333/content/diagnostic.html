@@ -1,0 +1,75 @@
+<h2>Diagnostic visuel — Pourquoi l'app fait 5/10</h2>
+<p class="subtitle">3 problèmes racines identifiés. Lequel te gêne le plus ?</p>
+
+<div class="options">
+  <div class="option" data-choice="spacing" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Tout est serré / étouffé</h3>
+      <p>Les cards ont 24px de padding (vs 32px sur la landing), la sidebar est cramée avec des items à 8px, les inputs sont petits... L'app manque d'air.</p>
+      <div style="margin-top:12px;display:flex;gap:16px;">
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:24px;flex:1;text-align:center;">
+          <div style="font-size:11px;color:#888;margin-bottom:4px;">APP ACTUELLE</div>
+          <div style="font-size:13px;">padding: 24px</div>
+          <div style="font-size:13px;">nav items: 8px</div>
+          <div style="font-size:13px;">inputs: 10px</div>
+        </div>
+        <div style="background:rgba(179,8,8,0.08);border:1px solid rgba(179,8,8,0.3);border-radius:20px;padding:32px;flex:1;text-align:center;">
+          <div style="font-size:11px;color:#f87171;margin-bottom:4px;">LANDING PAGE</div>
+          <div style="font-size:13px;">padding: 32px</div>
+          <div style="font-size:13px;">nav items: 12px</div>
+          <div style="font-size:13px;">inputs: 14px</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="flat" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Tout est plat / sans relief</h3>
+      <p>Aucun glow effect, pas de gradient text, pas de profondeur. La landing a des lueurs rouges, des ombres subtiles, des animations staggered. L'app = rectangles gris empilés.</p>
+      <div style="margin-top:12px;display:flex;gap:16px;">
+        <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:20px;flex:1;text-align:center;">
+          <div style="font-size:24px;font-weight:700;color:#999;">Titre plat</div>
+          <div style="font-size:11px;color:#666;margin-top:4px;">Pas de gradient, pas de glow</div>
+        </div>
+        <div style="background:rgba(179,8,8,0.05);border:1px solid rgba(179,8,8,0.2);border-radius:20px;padding:20px;flex:1;text-align:center;position:relative;overflow:hidden;">
+          <div style="position:absolute;top:-20px;right:-20px;width:80px;height:80px;background:radial-gradient(circle,rgba(179,8,8,0.3),transparent);border-radius:50%;"></div>
+          <div style="font-size:24px;font-weight:700;background:linear-gradient(135deg,#B30808,#f87171);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Titre premium</div>
+          <div style="font-size:11px;color:#f87171;margin-top:4px;">Gradient + glow orb</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="heavy" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>La sidebar est lourde / le layout déséquilibré</h3>
+      <p>Sidebar à 0.8 d'opacité = bloc noir opaque. Les modals sont basiques (border-radius 12px au lieu de 20px, pas de backdrop blur). Le tout manque de cohérence avec le design premium de la landing.</p>
+      <div style="margin-top:12px;display:flex;gap:16px;">
+        <div style="display:flex;flex:1;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);">
+          <div style="width:60px;background:rgba(12,12,15,0.8);padding:12px 8px;text-align:center;">
+            <div style="font-size:9px;color:#666;">SIDEBAR</div>
+            <div style="font-size:9px;color:#888;margin-top:4px;">opacité 0.8</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.02);padding:12px;">
+            <div style="font-size:10px;color:#888;">Contenu</div>
+          </div>
+        </div>
+        <div style="display:flex;flex:1;border-radius:20px;overflow:hidden;border:1px solid rgba(179,8,8,0.2);">
+          <div style="width:60px;background:rgba(12,12,15,0.4);backdrop-filter:blur(20px);padding:12px 8px;text-align:center;">
+            <div style="font-size:9px;color:#f87171;">SIDEBAR</div>
+            <div style="font-size:9px;color:#f87171;margin-top:4px;">opacité 0.4</div>
+          </div>
+          <div style="flex:1;background:rgba(255,255,255,0.02);padding:12px;">
+            <div style="font-size:10px;color:#888;">Contenu</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:24px;color:#888;font-size:13px;">Tu peux en sélectionner un ou me dire dans le terminal — c'est quoi le truc qui te dérange le plus quand tu ouvres l'app ?</p>
