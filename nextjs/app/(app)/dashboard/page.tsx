@@ -1,8 +1,5 @@
-export default function DashboardPage() {
-  return (
-    <div>
-      <h1 className="page-title">Dashboard</h1>
-      <p>Coming soon...</p>
-    </div>
-  )
+import DashboardPage from '@/components/dashboard/DashboardPage'
+
+export default function Dashboard() {
+  return <DashboardPage />
 }

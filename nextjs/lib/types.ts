@@ -16,15 +16,16 @@ export interface Athlete {
   id: string
   user_id: string | null
   coach_id: string
-  first_name: string
-  last_name: string
+  prenom: string
+  nom: string
   email: string
   avatar_url?: string
-  bilan_frequency: string
-  bilan_interval?: number
-  bilan_day?: number | number[]
-  bilan_anchor_date?: string
-  bilan_month_day?: number
+  date_naissance?: string | null
+  complete_bilan_frequency?: string
+  complete_bilan_interval?: number
+  complete_bilan_day?: number | number[]
+  complete_bilan_anchor_date?: string
+  complete_bilan_month_day?: number
   created_at: string
 }
 

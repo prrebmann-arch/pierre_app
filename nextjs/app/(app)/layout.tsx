@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/contexts/AuthContext'
+import { AthleteProvider } from '@/contexts/AthleteContext'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
@@ -20,11 +21,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!user) return null
 
   return (
-    <div className={styles.appLayout}>
-      <Sidebar />
-      <main className={styles.mainContent}>
-        {children}
-      </main>
-    </div>
+    <AthleteProvider>
+      <div className={styles.appLayout}>
+        <Sidebar />
+        <main className={styles.mainContent}>
+          {children}
+        </main>
+      </div>
+    </AthleteProvider>
   )
 }
