@@ -1,8 +1,327 @@
+'use client'
+
+import { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
+import { useAthleteContext } from '@/contexts/AthleteContext'
+import { toDateStr } from '@/lib/utils'
+import { PROG_PHASES, type ProgPhaseKey } from '@/lib/constants'
+import RoadmapTimeline from '@/components/roadmap/RoadmapTimeline'
+import type { RoadmapPhase } from '@/components/roadmap/RoadmapTimeline'
+import RoadmapCalendar from '@/components/roadmap/RoadmapCalendar'
+import PhaseModal, { type PhaseFormData } from '@/components/roadmap/PhaseModal'
+import styles from '@/styles/roadmap.module.css'
+
+interface ProgramRef {
+  id: string
+  nom: string
+}
+
+interface NutritionRef {
+  id: string
+  nom: string
+}
+
+interface DailyReport {
+  date: string
+  weight: number | null
+}
+
+function getNextMonday(from: Date): Date {
+  const d = new Date(from)
+  const day = d.getDay()
+  const diff = day === 0 ? 1 : day === 1 ? 0 : 8 - day
+  d.setDate(d.getDate() + diff)
+  return d
+}
+
 export default function RoadmapPage() {
+  const params = useParams<{ id: string }>()
+  const athleteId = params.id
+  const supabase = createClient()
+  const { user } = useAuth()
+  const { toast } = useToast()
+  const { selectedAthlete } = useAthleteContext()
+
+  const [phases, setPhases] = useState<RoadmapPhase[]>([])
+  const [programs, setPrograms] = useState<ProgramRef[]>([])
+  const [nutritions, setNutritions] = useState<NutritionRef[]>([])
+  const [reports, setReports] = useState<DailyReport[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalData, setModalData] = useState<PhaseFormData | null>(null)
+
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    const userId = selectedAthlete?.user_id
+
+    const [phasesRes, progsRes, nutritionsRes, reportsRes] = await Promise.all([
+      supabase
+        .from('roadmap_phases')
+        .select('*')
+        .eq('athlete_id', athleteId)
+        .order('position')
+        .order('start_date'),
+      supabase.from('workout_programs').select('id,nom').eq('athlete_id', athleteId),
+      supabase.from('nutrition_plans').select('id,nom').eq('athlete_id', athleteId),
+      userId
+        ? supabase.from('daily_reports').select('date,weight').eq('user_id', userId)
+        : Promise.resolve({ data: [] }),
+    ])
+
+    setPhases((phasesRes.data || []) as RoadmapPhase[])
+    setPrograms((progsRes.data || []) as ProgramRef[])
+    setNutritions((nutritionsRes.data || []) as NutritionRef[])
+    setReports((reportsRes.data || []) as DailyReport[])
+    setLoading(false)
+  }, [athleteId, selectedAthlete, supabase])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
+
+  const syncProgrammingWeeks = useCallback(async () => {
+    if (!user) return
+    const { data: currentPhases } = await supabase
+      .from('roadmap_phases')
+      .select('*')
+      .eq('athlete_id', athleteId)
+      .order('position')
+      .order('start_date')
+
+    if (!currentPhases?.length) {
+      await supabase.from('programming_weeks').delete().eq('athlete_id', athleteId)
+      return
+    }
+
+    const expectedWeeks: { week_date: string; phase: string }[] = []
+    currentPhases.forEach((p) => {
+      const weekStart = new Date(p.start_date + 'T00:00:00')
+      const dow = weekStart.getDay()
+      const mondayDiff = dow === 0 ? -6 : 1 - dow
+      weekStart.setDate(weekStart.getDate() + mondayDiff)
+
+      const endDate = new Date(p.end_date + 'T00:00:00')
+      while (weekStart <= endDate) {
+        expectedWeeks.push({ week_date: toDateStr(weekStart), phase: p.phase })
+        weekStart.setDate(weekStart.getDate() + 7)
+      }
+    })
+
+    const weekMap: Record<string, string> = {}
+    expectedWeeks.forEach((w) => {
+      weekMap[w.week_date] = w.phase
+    })
+
+    await supabase.from('programming_weeks').delete().eq('athlete_id', athleteId)
+    const rows = Object.entries(weekMap).map(([week_date, phase]) => ({
+      athlete_id: athleteId,
+      coach_id: user.id,
+      week_date,
+      phase,
+    }))
+    if (rows.length) {
+      await supabase.from('programming_weeks').insert(rows)
+    }
+  }, [athleteId, user, supabase])
+
+  const handleAdd = () => {
+    let defaultStart: Date
+    if (phases.length) {
+      const last = phases[phases.length - 1]
+      defaultStart = new Date(last.end_date + 'T00:00:00')
+      defaultStart.setDate(defaultStart.getDate() + 1)
+    } else {
+      defaultStart = getNextMonday(new Date())
+    }
+    const defaultEnd = new Date(defaultStart)
+    defaultEnd.setDate(defaultEnd.getDate() + 8 * 7 - 1)
+
+    setModalData({
+      id: null,
+      name: '',
+      phase: 'seche',
+      description: '',
+      start_date: toDateStr(defaultStart),
+      end_date: toDateStr(defaultEnd),
+      status: 'planifiee',
+      programme_id: null,
+      nutrition_id: null,
+    })
+    setModalOpen(true)
+  }
+
+  const handleEdit = (id: string) => {
+    const phase = phases.find((p) => p.id === id)
+    if (!phase) return
+    setModalData({
+      id: phase.id,
+      name: phase.name,
+      phase: phase.phase,
+      description: phase.description || '',
+      start_date: phase.start_date,
+      end_date: phase.end_date,
+      status: phase.status,
+      programme_id: phase.programme_id || null,
+      nutrition_id: phase.nutrition_id || null,
+    })
+    setModalOpen(true)
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer cette phase ?')) return
+    const { error } = await supabase.from('roadmap_phases').delete().eq('id', id)
+    if (error) {
+      toast('Erreur lors de la suppression', 'error')
+      return
+    }
+    toast('Phase supprimee', 'success')
+    await syncProgrammingWeeks()
+    await loadData()
+  }
+
+  const handleStart = async (id: string) => {
+    const today = toDateStr(new Date())
+    const targetPhase = phases.find((p) => p.id === id)
+    if (!targetPhase) return
+
+    // End current active phase
+    const activePhase = phases.find((p) => p.status === 'en_cours' && p.id !== id)
+    if (activePhase) {
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const { error } = await supabase
+        .from('roadmap_phases')
+        .update({ status: 'terminee', end_date: toDateStr(yesterday) })
+        .eq('id', activePhase.id)
+      if (error) {
+        toast('Erreur', 'error')
+        return
+      }
+    }
+
+    const updates: Record<string, string> = { status: 'en_cours' }
+    if (today !== targetPhase.start_date) {
+      updates.start_date = today
+    }
+
+    const { error } = await supabase.from('roadmap_phases').update(updates).eq('id', id)
+    if (error) {
+      toast('Erreur', 'error')
+      return
+    }
+    toast('Phase demarree !', 'success')
+    await syncProgrammingWeeks()
+    await loadData()
+  }
+
+  const handleComplete = async (id: string) => {
+    const today = toDateStr(new Date())
+    const { error } = await supabase
+      .from('roadmap_phases')
+      .update({ status: 'terminee', end_date: today })
+      .eq('id', id)
+    if (error) {
+      toast('Erreur', 'error')
+      return
+    }
+    toast('Phase terminee !', 'success')
+    await syncProgrammingWeeks()
+    await loadData()
+  }
+
+  const handleSave = async (formData: PhaseFormData) => {
+    if (!user) return
+    const position = formData.id
+      ? (phases.find((p) => p.id === formData.id)?.position || 0)
+      : phases.length
+
+    const row = {
+      athlete_id: athleteId,
+      coach_id: user.id,
+      name: formData.name,
+      phase: formData.phase,
+      status: formData.status,
+      description: formData.description,
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      programme_id: formData.programme_id,
+      nutrition_id: formData.nutrition_id,
+      position,
+    }
+
+    let error
+    if (formData.id) {
+      ;({ error } = await supabase.from('roadmap_phases').update(row).eq('id', formData.id))
+    } else {
+      ;({ error } = await supabase.from('roadmap_phases').insert(row))
+    }
+
+    if (error) {
+      toast('Erreur lors de la sauvegarde', 'error')
+      return
+    }
+
+    setModalOpen(false)
+    toast(formData.id ? 'Phase mise a jour !' : 'Phase creee !', 'success')
+    await syncProgrammingWeeks()
+    await loadData()
+  }
+
+  if (loading) {
+    return (
+      <div style={{ textAlign: 'center', padding: 40 }}>
+        <i className="fa-solid fa-spinner fa-spin" />
+      </div>
+    )
+  }
+
   return (
-    <div className="empty-state">
-      <i className="fa-solid fa-route" style={{ fontSize: 32, marginBottom: 12, opacity: 0.5 }} />
-      <p>Roadmap - Coming soon</p>
+    <div>
+      <div className={styles.rmHeader}>
+        <div>
+          <h2 className={styles.rmTitle}>Roadmap</h2>
+          <p className={styles.rmSubtitle}>Planifiez et suivez les phases de progression</p>
+        </div>
+        <div className="flex gap-8">
+          <button className="btn btn-red" onClick={handleAdd}>
+            <i className="fa-solid fa-plus" /> Phase
+          </button>
+        </div>
+      </div>
+
+      <RoadmapTimeline
+        phases={phases}
+        programs={programs}
+        nutritions={nutritions}
+        reports={reports}
+        onAdd={handleAdd}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onStart={handleStart}
+        onComplete={handleComplete}
+      />
+
+      <RoadmapCalendar
+        phases={phases}
+        programs={programs}
+        nutritions={nutritions}
+        reports={reports}
+      />
+
+      {modalData && (
+        <PhaseModal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          data={modalData}
+          programs={programs}
+          nutritions={nutritions}
+          onSave={handleSave}
+        />
+      )}
     </div>
   )
 }
