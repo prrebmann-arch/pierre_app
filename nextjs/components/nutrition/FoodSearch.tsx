@@ -140,10 +140,10 @@ export default function FoodSearch({ onSelect, refreshKey }: FoodSearchProps) {
   }
 
   return (
-    <div className="tr-library">
-      <div className="tr-library-header">
+    <div className={styles.foodLibrary}>
+      <div className={styles.foodLibraryHeader}>
         <i className="fa-solid fa-apple-whole" style={{ color: 'var(--text3)' }} />
-        <span className="tr-library-title">Bibliotheque d&apos;aliments</span>
+        <span className={styles.foodLibraryTitle}>Bibliotheque d&apos;aliments</span>
         <button
           className="btn btn-outline btn-sm"
           onClick={() => setShowQuickAdd(!showQuickAdd)}
@@ -190,7 +190,7 @@ export default function FoodSearch({ onSelect, refreshKey }: FoodSearchProps) {
       )}
 
       {/* Search input */}
-      <div className="tr-library-search">
+      <div className={styles.foodLibrarySearch}>
         <i className="fa-solid fa-magnifying-glass" />
         <input
           type="text"
@@ -201,12 +201,12 @@ export default function FoodSearch({ onSelect, refreshKey }: FoodSearchProps) {
       </div>
 
       {/* Results */}
-      <div className="tr-library-results" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+      <div className={styles.foodLibraryResults}>
         {/* Local */}
         {(source === 'local' || source === 'both') && (
           <>
             {source === 'both' && filteredLocal.length > 0 && (
-              <div className="tr-library-results-title">Ma base ({filteredLocal.length})</div>
+              <div className={styles.foodLibraryResultsTitle}>Ma base ({filteredLocal.length})</div>
             )}
             {filteredLocal.map((a, i) => (
               <div key={a.id || `local-${i}`} className={styles.libItem} onClick={() => onSelect(a)}>

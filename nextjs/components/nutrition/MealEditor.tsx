@@ -368,7 +368,7 @@ export default function MealEditor({
       </div>
 
       {/* Body: sidebar + meals */}
-      <div className="tr-body">
+      <div className={styles.editorBody}>
         {/* Food library (hidden in macro-only mode) */}
         {!isMacroOnly && (
           <FoodSearch

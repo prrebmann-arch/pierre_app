@@ -3,7 +3,7 @@
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
-type ToastType = 'success' | 'error'
+type ToastType = 'success' | 'error' | 'warning'
 
 interface Toast {
   id: number
