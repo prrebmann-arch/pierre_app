@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { notifyAthlete } from '@/lib/push'
 import ExerciseLibrary from './ExerciseLibrary'
 import SessionTab from './SessionTab'
 import type { ExerciseData } from './ExerciseRow'
@@ -352,16 +353,12 @@ export default function ProgramEditor({
 
       toast('Programme sauvegarde !')
 
-      // Notify athlete when new program
+      // Notify athlete when new program (DB + push)
       if (!programId && athleteUserId) {
-        const _title = 'Nouveau programme active'
-        const _body = `Votre coach a active le programme "${name.trim()}"`
-        await supabase.from('notifications').insert({
-          user_id: athleteUserId,
-          type: 'training',
-          title: _title,
-          body: _body,
-        })
+        await notifyAthlete(
+          athleteUserId, 'training', 'Nouveau programme active',
+          `Votre coach a active le programme "${name.trim()}"`,
+        )
       }
 
       onSaved()

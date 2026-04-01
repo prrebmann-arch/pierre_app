@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
+import { notifyAthlete } from '@/lib/push'
 import BilanAccordion from '@/components/bilans/BilanAccordion'
 import PhotoCompare from '@/components/bilans/PhotoCompare'
 import EmptyState from '@/components/ui/EmptyState'
@@ -53,13 +54,7 @@ function BilanTraitePopupInline({
       type: 'message',
     })
 
-    await supabase.from('notifications').insert({
-      user_id: userId,
-      type: 'bilan',
-      title: 'Bilan traite',
-      body,
-      meta: {},
-    })
+    await notifyAthlete(userId, 'bilan', 'Bilan traite', body)
 
     onClose()
     toast('Notification envoyee !', 'success')

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { notifyAthlete } from '@/lib/push'
 import Modal from '@/components/ui/Modal'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -54,16 +55,14 @@ export default function RetoursPage() {
     setSaving(false)
     if (error) { toast('Erreur lors de l\'envoi', 'error'); return }
 
-    // Notify athlete
+    // Notify athlete (DB + push)
     const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', params.id).single()
     if (ath?.user_id) {
-      await supabase.from('notifications').insert({
-        user_id: ath.user_id,
-        type: 'retour',
-        title: 'Nouveau retour video',
-        body: `Votre coach vous a envoye un retour : ${formTitre.trim() || 'Retour bilan'}`,
-        metadata: { loom_url: formLoom.trim(), titre: formTitre.trim() || 'Retour bilan' },
-      })
+      await notifyAthlete(
+        ath.user_id, 'retour', 'Nouveau retour video',
+        `Votre coach vous a envoye un retour : ${formTitre.trim() || 'Retour bilan'}`,
+        { loom_url: formLoom.trim(), titre: formTitre.trim() || 'Retour bilan' },
+      )
     }
 
     toast('Retour video envoye !', 'success')

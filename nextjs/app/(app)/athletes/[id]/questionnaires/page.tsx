@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { notifyAthlete } from '@/lib/push'
 import Badge from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -114,15 +115,14 @@ export default function QuestionnairesPage() {
     setSending(false)
     if (error) { toast('Erreur lors de l\'envoi', 'error'); return }
 
-    // Notify
+    // Notify (DB + push)
     const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', params.id).single()
     if (ath?.user_id) {
-      await supabase.from('notifications').insert({
-        user_id: ath.user_id, type: 'questionnaire',
-        title: 'Nouveau questionnaire',
-        body: `Votre coach vous a envoye un questionnaire : ${tpl.titre}`,
-        metadata: { template_id: selectedTemplate },
-      })
+      await notifyAthlete(
+        ath.user_id, 'questionnaire', 'Nouveau questionnaire',
+        `Votre coach vous a envoye un questionnaire : ${tpl.titre}`,
+        { template_id: selectedTemplate },
+      )
     }
 
     toast('Questionnaire envoye', 'success')
@@ -154,14 +154,12 @@ export default function QuestionnairesPage() {
     setSending(false)
     if (error) { toast('Erreur', 'error'); return }
 
-    const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', params.id).single()
-    if (ath?.user_id) {
-      await supabase.from('notifications').insert({
-        user_id: ath.user_id, type: 'questionnaire',
-        title: 'Nouveau questionnaire',
-        body: `Votre coach vous a envoye un questionnaire : ${quickTitre.trim()}`,
-        metadata: {},
-      })
+    const { data: ath2 } = await supabase.from('athletes').select('user_id').eq('id', params.id).single()
+    if (ath2?.user_id) {
+      await notifyAthlete(
+        ath2.user_id, 'questionnaire', 'Nouveau questionnaire',
+        `Votre coach vous a envoye un questionnaire : ${quickTitre.trim()}`,
+      )
     }
 
     toast('Questionnaire envoye', 'success')
@@ -178,12 +176,10 @@ export default function QuestionnairesPage() {
     if (!a) return
     const userId = a.athletes?.user_id
     if (!userId) { toast('Pas de user_id', 'error'); return }
-    await supabase.from('notifications').insert({
-      user_id: userId, type: 'rappel',
-      title: 'Rappel questionnaire',
-      body: `N'oubliez pas de remplir : ${a.questionnaire_templates?.titre || 'Questionnaire'}`,
-      metadata: {},
-    })
+    await notifyAthlete(
+      userId, 'rappel', 'Rappel questionnaire',
+      `N'oubliez pas de remplir : ${a.questionnaire_templates?.titre || 'Questionnaire'}`,
+    )
     toast('Rappel envoye', 'success')
   }
 

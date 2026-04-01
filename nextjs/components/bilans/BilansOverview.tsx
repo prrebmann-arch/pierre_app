@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { toDateStr, isBilanDate, getLastExpectedBilanDate, getNextBilanDate } from '@/lib/utils'
+import { notifyAthlete } from '@/lib/push'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
@@ -104,18 +105,12 @@ function BilanTraitePopup({
       })
     }
 
-    // Notify athlete
+    // Notify athlete (DB + push)
     const meta: Record<string, string> = {}
     if (hasAudio && recorder.audioUrl) meta.audio_url = recorder.audioUrl
     if (hasLoom) meta.loom_url = loomUrl.trim()
 
-    await supabase.from('notifications').insert({
-      user_id: userId,
-      type: 'bilan',
-      title: 'Bilan traite',
-      body,
-      meta,
-    })
+    await notifyAthlete(userId, 'bilan', 'Bilan traite', body, meta)
 
     onClose()
     onSent()
@@ -260,21 +255,26 @@ export default function BilansOverview() {
 
   const supabase = createClient()
 
-  // Fetch reports
+  // Fetch reports — scoped to coach's athletes only
   const fetchReports = useCallback(async () => {
     if (!user) return
+    const athleteUserIds = athletes.map(a => a.user_id).filter(Boolean) as string[]
+    if (!athleteUserIds.length) { setReports([]); setLoading(false); return }
     setLoading(true)
     const { data } = await supabase
       .from('daily_reports')
       .select('id, user_id, date, weight, energy, sleep_quality, stress, adherence, sessions_executed, session_performance, steps')
+      .in('user_id', athleteUserIds)
       .order('date', { ascending: false })
       .limit(1000)
     setReports((data as DailyReport[]) || [])
     setLoading(false)
-  }, [user, supabase])
+  }, [user, athletes, supabase])
 
-  // Initial load
-  useState(() => { fetchReports() })
+  // Reload reports when athletes list changes
+  useEffect(() => {
+    if (!athletesLoading && athletes.length) fetchReports()
+  }, [athletesLoading, athletes, fetchReports])
 
   const today = toDateStr(new Date())
 

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/contexts/ToastContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
+import { notifyAthlete } from '@/lib/push'
 import ProgramEditor from '@/components/training/ProgramEditor'
 import CardioSection from '@/components/training/CardioSection'
 import EmptyState from '@/components/ui/EmptyState'
@@ -236,12 +237,10 @@ export default function TrainingPage() {
         if (error) throw error
         toast('Programme active !')
         if (athlete?.user_id) {
-          await supabase.from('notifications').insert({
-            user_id: athlete.user_id,
-            type: 'training',
-            title: 'Nouveau programme active',
-            body: `Votre coach a active le programme "${prog?.nom || ''}"`,
-          })
+          await notifyAthlete(
+            athlete.user_id, 'training', 'Nouveau programme active',
+            `Votre coach a active le programme "${prog?.nom || ''}"`,
+          )
         }
       } else {
         const { error } = await supabase.from('workout_programs').update({ actif: false }).eq('id', id)

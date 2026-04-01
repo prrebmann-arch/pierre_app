@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { notifyAthlete } from '@/lib/push'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import VideoCompare from './VideoCompare'
 import styles from '@/styles/videos.module.css'
@@ -168,18 +169,12 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
       return
     }
 
-    // Send notification to athlete
+    // Send notification to athlete (DB + push)
     if (athlete?.user_id && (feedbackUrl || feedbackNotes || audioUrl)) {
       const title = 'Retour sur votre video'
       const body =
         feedbackNotes || `Votre coach a fait un retour sur ${video.exercise_name || 'votre exercice'}`
-      await supabase.from('notifications').insert({
-        user_id: athlete.user_id,
-        type: 'retour',
-        title,
-        body,
-        metadata: { video_id: video.id },
-      })
+      await notifyAthlete(athlete.user_id, 'retour', title, body, { video_id: video.id })
     }
 
     setVideo((prev) => (prev ? { ...prev, ...updateData, status: markTreated ? 'traite' : 'a_traiter' } as VideoRow : null))

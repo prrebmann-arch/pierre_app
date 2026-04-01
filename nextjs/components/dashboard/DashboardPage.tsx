@@ -7,6 +7,7 @@ import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { createClient } from '@/lib/supabase/client'
 import { toDateStr, getLastExpectedBilanDate } from '@/lib/utils'
+import { notifyAthlete } from '@/lib/push'
 import StatsCards, { type StatCardData } from './StatsCards'
 import ActivityFeed, { type ActivityItem } from './ActivityFeed'
 import Skeleton from '@/components/ui/Skeleton'
@@ -286,23 +287,19 @@ export default function DashboardPage() {
     const title = 'Rappel bilan'
     const body = 'Ton bilan est en retard, pense a le remplir !'
 
-    const { error } = await supabase.from('notifications').insert({
-      user_id: athlete.user_id,
-      type: 'rappel',
-      title,
-      body,
-    })
+    try {
+      await notifyAthlete(athlete.user_id!, 'rappel', title, body)
+    } catch {
+      setSendingRappel(prev => { const next = new Set(prev); next.delete(athlete.id); return next })
+      toast('Erreur lors de l\'envoi du rappel', 'error')
+      return
+    }
 
     setSendingRappel(prev => {
       const next = new Set(prev)
       next.delete(athlete.id)
       return next
     })
-
-    if (error) {
-      toast('Erreur lors de l\'envoi du rappel', 'error')
-      return
-    }
 
     setSentRappels(prev => new Set(prev).add(athlete.id))
     toast(`Rappel envoye a ${athlete.prenom}`, 'success')

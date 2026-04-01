@@ -31,13 +31,29 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
       return
     }
     setLoading(true)
-    const { data, error } = await supabase
-      .from('athletes')
-      .select('*')
-      .eq('coach_id', user.id)
-      .order('prenom')
+
+    const [{ data, error }, { data: phases }] = await Promise.all([
+      supabase
+        .from('athletes')
+        .select('*')
+        .eq('coach_id', user.id)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('roadmap_phases')
+        .select('athlete_id, phase, name')
+        .eq('coach_id', user.id)
+        .eq('status', 'en_cours'),
+    ])
+
     if (!error && data) {
-      setAthletes(data as Athlete[])
+      // Attach active phase to each athlete
+      const phaseMap: Record<string, { athlete_id: string; phase: string; name: string }> = {}
+      ;(phases || []).forEach((p: { athlete_id: string; phase: string; name: string }) => {
+        if (!phaseMap[p.athlete_id]) phaseMap[p.athlete_id] = p
+      })
+      setAthletes(
+        (data as Athlete[]).map(a => ({ ...a, _phase: phaseMap[a.id] || null }))
+      )
     }
     setLoading(false)
   }, [user, supabase])
