@@ -122,10 +122,10 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
       if (paymentType === 'paid') {
         const { data: coachProfile } = await supabase
           .from('coach_profiles')
-          .select('stripe_charges_enabled, stripe_secret_key')
+          .select('stripe_charges_enabled, stripe_account_id')
           .eq('user_id', user.id)
           .maybeSingle()
-        if (!coachProfile?.stripe_charges_enabled && !coachProfile?.stripe_secret_key) {
+        if (!coachProfile?.stripe_charges_enabled && !coachProfile?.stripe_account_id) {
           toast("Connectez votre Stripe dans Profil avant d'ajouter un athlete payant", 'error')
           setSubmitting(false)
           return
