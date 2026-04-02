@@ -226,8 +226,8 @@ async function handleConnectStart(body: Record<string, string>, req: NextRequest
   const origin = req.headers.get('origin') || 'https://pierreapp.vercel.app'
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${origin}?connect=refresh#profile`,
-    return_url: `${origin}?connect=complete#profile`,
+    refresh_url: `${origin}/profile?connect=refresh`,
+    return_url: `${origin}/profile?connect=complete`,
     type: 'account_onboarding',
   })
 
