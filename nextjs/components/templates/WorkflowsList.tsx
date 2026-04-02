@@ -13,6 +13,7 @@ const STEP_TYPES = [
   { value: 'contract', label: 'Contrat', icon: 'fa-file-signature' },
   { value: 'questionnaire', label: 'Questionnaire', icon: 'fa-clipboard-list' },
   { value: 'formation', label: 'Formation', icon: 'fa-graduation-cap' },
+  { value: 'payment', label: 'Paiement', icon: 'fa-credit-card' },
 ] as const
 
 type StepType = (typeof STEP_TYPES)[number]['value']
@@ -348,6 +349,12 @@ function StepEditor({
             placeholder="Laisser vide pour lien libre"
           />
         </FormGroup>
+      )}
+      {step.type === 'payment' && (
+        <p style={{ fontSize: 13, color: 'var(--text3)', margin: '4px 0 0', padding: '0 4px' }}>
+          <i className="fas fa-info-circle" style={{ marginRight: 4 }} />
+          L&apos;athlete sera invite a payer via Stripe selon le plan configure a l&apos;ajout.
+        </p>
       )}
     </div>
   )

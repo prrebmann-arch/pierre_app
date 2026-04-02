@@ -39,6 +39,8 @@ function errorJson(message: string, status = 400) {
 
 // Actions called by athletes (not coaches)
 const ATHLETE_ACTIONS = ['cancellation-request', 'create-payment-sheet', 'confirm-payment']
+// Actions that can be called by either athletes or coaches
+const DUAL_AUTH_ACTIONS = ['create-checkout']
 
 // Rate limiter
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>()
@@ -77,6 +79,21 @@ export async function POST(req: NextRequest) {
         .eq('id', body?.athleteId)
         .maybeSingle()
       if (!athlete) return errorJson('Forbidden: not your athlete profile', 403)
+    } else if (DUAL_AUTH_ACTIONS.includes(action)) {
+      // Try athlete auth first (mobile), fall back to coach auth (web)
+      const { user } = await verifyAuth(req)
+      const supabase = getSupabaseAdmin()
+      if (body?.athleteId) {
+        const { data: athlete } = await supabase
+          .from('athletes')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('id', body.athleteId)
+          .maybeSingle()
+        if (!athlete) return errorJson('Forbidden: not your athlete profile', 403)
+      } else {
+        await verifyCoach(req, body, 'coachId', req.nextUrl.searchParams)
+      }
     } else {
       await verifyCoach(req, body, 'coachId', req.nextUrl.searchParams)
     }
@@ -475,6 +492,9 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
   }
 
   const origin = req.headers.get('origin') || 'https://pierreapp.vercel.app'
+  // Allow mobile apps to pass custom deep-link URLs for success/cancel redirects
+  const successUrl = body.successUrl || `${origin}?payment=success`
+  const cancelUrl = body.cancelUrl || `${origin}?payment=cancel`
   const metadata: Record<string, string> = { coach_id: coachId, athlete_id: athleteId, plan_id: plan.id, engagement_months: String(plan.engagement_months || 0) }
   let session: Stripe.Checkout.Session
 
@@ -482,14 +502,14 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
     session = await stripeInstance.checkout.sessions.create({
       customer: customer.id, payment_method_types: ['card'], mode: 'payment',
       line_items: [{ price_data: { currency: plan.currency || 'eur', product_data: { name: `Coaching ${athleteName || 'Athlète'}` }, unit_amount: plan.amount }, quantity: 1 }],
-      success_url: `${origin}?payment=success`, cancel_url: `${origin}?payment=cancel`, metadata,
+      success_url: successUrl, cancel_url: cancelUrl, metadata,
     }, stripeOpts)
   } else {
     const interval = ({ day: 'day', week: 'week', month: 'month' } as Record<string, string>)[plan.frequency] || 'month'
     const params: Record<string, unknown> = {
       customer: customer.id, payment_method_types: ['card'], mode: 'subscription',
       line_items: [{ price_data: { currency: plan.currency || 'eur', product_data: { name: `Coaching ${athleteName || 'Athlète'}` }, unit_amount: plan.amount, recurring: { interval, interval_count: plan.frequency_interval || 1 } }, quantity: 1 }],
-      success_url: `${origin}?payment=success`, cancel_url: `${origin}?payment=cancel`, metadata,
+      success_url: successUrl, cancel_url: cancelUrl, metadata,
     }
     if (plan.total_payments) (params.metadata as Record<string, string>).total_payments = String(plan.total_payments)
 
