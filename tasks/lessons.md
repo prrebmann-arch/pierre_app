@@ -41,3 +41,5 @@
 [2026-03-31] | setLoading(true) without try/finally leaves UI stuck | Always wrap the body of async functions that call setLoading(true) in a try/finally block with setLoading(false) in finally. Without this, any thrown error leaves the UI in a permanent loading state.
 
 [2026-03-31] | Old API paths referenced in component code | When renaming API routes, update all component fetch() calls to use the new paths directly, even if next.config.ts has redirects. Redirects add latency and can fail on POST requests (301/308 semantics).
+
+[2026-03-31] | Next.js 16.2.1 Turbopack ENOENT on _buildManifest.js.tmp during production build | Turbopack build consistently fails with ENOENT on temp manifest files. Use `next build --webpack` as a workaround until fixed upstream.

@@ -33,4 +33,16 @@
 - `styles/formations.module.css` already existed with all fm-* styles
 - Modal component uses `isOpen` prop (not conditional rendering)
 - Supabase join returns nested objects, need `as unknown as` for type assertions
-- Build ENOENT error is a Turbopack race condition (Next.js 16.2.1 bug), not a code issue
+- Build ENOENT error is a Turbopack race condition (Next.js 16.2.1 bug), fixed by using `--webpack` flag
+- All env vars verified against Vercel: all present (META_APP_ID_FB has fallback to META_APP_ID)
+
+## API Routes Audit (complete)
+- [x] `stripe-webhook/route.ts` — re-exports POST from `stripe/webhook/route.ts` (+ redirect in next.config.ts)
+- [x] `stripe/webhook/route.ts` — POST, verifies Stripe signature, routes Connect events via `account` field
+- [x] `stripe/route.ts` — POST + GET, uses verifyAuth/verifyCoach
+- [x] `stripe/cron/route.ts` — GET + POST, uses verifyCronSecret
+- [x] `instagram/*` — all 7 routes export POST (+ OPTIONS for CORS), auth verified
+- [x] `facebook/page-auth/route.ts` — POST + OPTIONS
+- [x] `push/route.ts` — POST, uses verifyAuth
+- [x] `authFetch` — defined inline in ProfilePage + setup-payment, adds Bearer JWT token
+- [x] Build passes with `--webpack` flag (40 pages, 0 errors)
