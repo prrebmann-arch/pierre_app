@@ -178,8 +178,6 @@ export default function ProfilePage() {
         stripe_onboarding_complete: false,
         stripe_charges_enabled: false,
         stripe_account_id: null,
-        stripe_secret_key_encrypted: null,
-        stripe_webhook_secret_encrypted: null,
       })
       .eq('user_id', user!.id)
     if (error) {
