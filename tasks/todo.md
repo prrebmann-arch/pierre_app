@@ -12,6 +12,11 @@
 - [x] TypeScript check passes (zero errors)
 - [x] Build passes successfully
 
+## Final Audit - supabase deps cleanup
+- [x] Removed `supabase` from ALL useCallback/useEffect dependency arrays across 27 occurrences
+- [x] Files fixed: nutrition, formations, MealEditor, ProfilePage, InstagramAnalytics, VideoDetail, ContentPlanner, MessagesInbox, FoodSearch, BilansOverview, VideoCompare, aliments, videos, templates, retours, supplements, questionnaires, roadmap, menstrual, training, bilans, posing, infos
+- [x] Build passes, pushed to main
+
 ## Notes
 - `styles/business.module.css` already existed with all biz-* styles converted to camelCase
 - `styles/formations.module.css` already existed with all fm-* styles

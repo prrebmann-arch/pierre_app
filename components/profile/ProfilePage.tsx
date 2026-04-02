@@ -170,13 +170,22 @@ export default function ProfilePage() {
   }
 
   const handleDisconnectStripe = async () => {
-    if (!confirm('Deconnecter votre Stripe ? Vos athletes ne pourront plus etre preleves.')) return
+    const ok = window.confirm('Deconnecter votre Stripe ? Vos athletes ne pourront plus etre preleves.')
+    if (!ok) return
     const { error } = await supabase
       .from('coach_profiles')
-      .update({ stripe_onboarding_complete: false, stripe_charges_enabled: false })
+      .update({
+        stripe_onboarding_complete: false,
+        stripe_charges_enabled: false,
+        stripe_account_id: null,
+        stripe_secret_key_encrypted: null,
+        stripe_publishable_key: null,
+        stripe_webhook_secret_encrypted: null,
+      })
       .eq('user_id', user!.id)
     if (error) {
-      toast('Erreur', 'error')
+      console.error('[Profile] Disconnect Stripe error:', error)
+      toast('Erreur: ' + error.message, 'error')
       return
     }
     refreshCoach()
