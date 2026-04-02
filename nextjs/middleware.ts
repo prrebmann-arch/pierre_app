@@ -1,48 +1,19 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request })
+export function middleware(request: NextRequest) {
+  // Check for Supabase auth cookie (sb-*-auth-token)
+  const hasAuthCookie = request.cookies.getAll().some(c => c.name.includes('-auth-token'))
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  const publicPaths = ['/', '/login', '/privacy']
+  const publicPaths = ['/', '/login', '/privacy', '/setup-payment']
   const isPublic = publicPaths.some(p => request.nextUrl.pathname === p) || request.nextUrl.pathname.startsWith('/api/')
 
-  if (!user && !isPublic) {
+  if (!hasAuthCookie && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (request.nextUrl.pathname.startsWith('/admin')) {
-    if (!user || user.email !== process.env.ADMIN_EMAIL) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
-  }
-
-  return supabaseResponse
+  return NextResponse.next()
 }
 
 export const config = {
