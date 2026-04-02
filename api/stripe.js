@@ -48,7 +48,7 @@ async function getCoachStripe(supabase, coachId) {
 }
 
 // Actions called by athletes (not coaches)
-const ATHLETE_ACTIONS = ['cancellation-request', 'create-payment-sheet', 'confirm-payment'];
+const ATHLETE_ACTIONS = ['cancellation-request', 'create-payment-sheet', 'confirm-payment', 'create-checkout'];
 
 module.exports = async function handler(req, res) {
   // CORS
