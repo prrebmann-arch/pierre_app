@@ -129,7 +129,7 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
     setCompIdx(defaultPrev ? sorted.indexOf(defaultPrev) : -1)
 
     setLoading(false)
-  }, [videoId, supabase, toast])
+  }, [videoId, toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadVideo()

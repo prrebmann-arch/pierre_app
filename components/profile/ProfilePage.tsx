@@ -104,7 +104,7 @@ export default function ProfilePage() {
           window.history.replaceState({}, '', '/profile')
         })
     }
-  }, [user, supabase, refreshCoach, toast])
+  }, [user, refreshCoach, toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const authFetch = useCallback(
     async (url: string, opts: RequestInit = {}) => {

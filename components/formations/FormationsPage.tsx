@@ -98,7 +98,7 @@ export default function FormationsPage() {
     })
     setMemberCounts(counts)
     setLoading(false)
-  }, [user, supabase])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadFormations() }, [loadFormations])
 
@@ -111,7 +111,7 @@ export default function FormationsPage() {
       .eq('coach_id', user.id)
       .order('prenom')
     setAllAthletes(data || [])
-  }, [user, supabase])
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── View formation detail ──
   const viewFormation = useCallback(async (formationId: string) => {
@@ -146,7 +146,7 @@ export default function FormationsPage() {
         .order('prenom')
       setAllAthletes(aths || [])
     }
-  }, [user, supabase, toast])
+  }, [user, toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Create formation ──
   const openCreateModal = async () => {

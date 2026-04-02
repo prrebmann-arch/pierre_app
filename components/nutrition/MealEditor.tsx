@@ -122,7 +122,7 @@ export default function MealEditor({
       alimentsCache = (data || []) as Aliment[]
     }
     load()
-  }, [supabase, foodRefreshKey])
+  }, [foodRefreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Compute grand totals
   const totals = meals.reduce(

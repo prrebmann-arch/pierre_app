@@ -115,7 +115,7 @@ export default function NutritionPage() {
     groups.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0))
     setDiets(groups)
     setLoading(false)
-  }, [athleteId, supabase])
+  }, [athleteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadPlans() }, [loadPlans])
 
@@ -153,7 +153,7 @@ export default function NutritionPage() {
     ])
     const logs = ((logsByUser?.length ? logsByUser : logsByAthlete) || []) as NutritionLog[]
     setNutriLogs(logs)
-  }, [athleteId, supabase])
+  }, [athleteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Open editor for new diet
   function createNewDiet() {

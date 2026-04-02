@@ -235,7 +235,7 @@ export default function InstagramAnalytics() {
     } finally {
       setLoading(false)
     }
-  }, [user, supabase, toast])
+  }, [user, toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -315,7 +315,7 @@ export default function InstagramAnalytics() {
     } finally {
       setSyncing(false)
     }
-  }, [account, user, supabase, toast, loadData])
+  }, [account, user, toast, loadData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Connect Instagram ──
   const connectInstagram = () => {
