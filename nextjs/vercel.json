@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/instagram/sync-stories", "schedule": "0 8 * * *" },
+    { "path": "/api/stripe/cron", "schedule": "0 9 * * *" }
+  ]
+}

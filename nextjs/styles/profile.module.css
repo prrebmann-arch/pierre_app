@@ -1,0 +1,202 @@
+.profilePage {
+  max-width: 800px;
+}
+
+.section {
+  margin-bottom: 20px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+}
+
+.row + .row {
+  border-top: 1px solid var(--border);
+}
+
+.rowLabel {
+  font-weight: 600;
+}
+
+.rowSub {
+  color: var(--text3);
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 16px;
+}
+
+.infoLabel {
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.infoValue {
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.statusConnected {
+  color: var(--success);
+}
+
+.statusDisconnected {
+  color: var(--text3);
+}
+
+.stripeContainer {
+  padding: 16px 0;
+}
+
+.stripeError {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.invoiceTable {
+  width: 100%;
+  font-size: 14px;
+  border-collapse: collapse;
+}
+
+.invoiceTable th {
+  color: var(--text3);
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 500;
+}
+
+.invoiceTable td {
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.invoiceAmount {
+  font-weight: 600;
+}
+
+.cardBody {
+  padding: 16px;
+}
+
+/* Import modal */
+.importItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.importItem:last-child {
+  border-bottom: none;
+}
+
+.importName {
+  font-weight: 600;
+}
+
+.importDetail {
+  color: var(--text3);
+  font-size: 13px;
+}
+
+.importListWrap {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.importFooter {
+  padding: 16px;
+  text-align: right;
+}
+
+/* Setup payment page */
+.paymentWall {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--bg);
+}
+
+.paymentCard {
+  background: var(--bg2);
+  border: var(--card-border);
+  border-radius: var(--radius);
+  padding: 40px;
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+}
+
+.paymentCard h1 {
+  font-size: 1.5rem;
+  margin-bottom: 8px;
+}
+
+.paymentCard p {
+  color: var(--text3);
+  margin-bottom: 24px;
+}
+
+.paymentStripeWrap {
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.paymentError {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: left;
+}
+
+/* Privacy page */
+.privacyPage {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.privacyPage h1 {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.privacyPage h2 {
+  font-size: 1.2rem;
+  margin-top: 2rem;
+}
+
+.privacyPage p,
+.privacyPage li {
+  font-size: 0.95rem;
+  color: var(--text2);
+}
+
+.privacyDate {
+  color: var(--text3);
+  font-size: 0.85rem;
+}

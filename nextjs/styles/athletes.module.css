@@ -1,0 +1,474 @@
+/* ===== ATHLETES LIST ===== */
+.pageHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.pageTitle {
+  font-size: clamp(1.3rem, 3vw, 1.6rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+.countLabel {
+  font-size: 13px;
+  color: var(--text3);
+  margin-left: 8px;
+  font-weight: 400;
+}
+.searchBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.searchInput {
+  flex: 1;
+  max-width: 360px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px 10px 36px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.searchInput:focus {
+  border-color: var(--primary);
+}
+.searchWrap {
+  position: relative;
+  flex: 1;
+  max-width: 360px;
+}
+.searchIcon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* ===== ATHLETE GRID ===== */
+.athleteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+/* ===== ATHLETE CARD ===== */
+.athleteCard {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  position: relative;
+  overflow: hidden;
+}
+.athleteCard:hover {
+  border-color: var(--primary-border);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3), 0 0 20px rgba(179, 8, 8, 0.08);
+}
+.cardTopBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.cardAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+.cardAvatarFallback {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--bg3), var(--bg4));
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text2);
+}
+.cardInfo {
+  flex: 1;
+  min-width: 0;
+}
+.cardName {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cardEmail {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.phaseBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+.statGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+.statBox {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+}
+.statValue {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+  line-height: 1;
+}
+.statLabel {
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* ===== ATHLETE TABS ===== */
+.athleteTabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.athleteTabBtn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text3);
+  padding: 10px 14px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  margin-bottom: -1px;
+  text-decoration: none;
+}
+.athleteTabBtn:hover {
+  color: var(--text2);
+}
+.athleteTabActive {
+  color: var(--text);
+  border-bottom-color: var(--primary);
+}
+.tabSep {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+  margin: 0 6px;
+  flex-shrink: 0;
+}
+
+/* ===== DETAIL HEADER ===== */
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.backBtn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.backBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+  border-color: var(--text3);
+}
+.detailAvatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 2px solid var(--border);
+}
+.detailAvatarFallback {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--bg3), var(--bg4));
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text2);
+}
+.detailName {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+
+/* ===== APERCU STYLES ===== */
+.apLayout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 18px;
+  align-items: stretch;
+}
+.apMain { display: flex; flex-direction: column; gap: 18px; }
+.apRow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.apCard {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  transition: all 0.15s;
+}
+.apCard:hover { border-color: var(--hover-border); box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+.apCardHeader {
+  padding: 16px 18px 0;
+  font-size: 11.5px; font-weight: 700; color: var(--text2);
+  display: flex; align-items: center; gap: 7px;
+  text-transform: uppercase; letter-spacing: 0.4px;
+}
+.apCardHeader i { color: var(--primary); font-size: 12px; opacity: 0.7; }
+.apCardBody { padding: 14px 18px 18px; }
+.apCardActivity {
+  display: flex; flex-direction: column;
+  min-height: 0;
+  background: var(--glass-bg);
+}
+.apCardActivity .apCardBody {
+  flex: 1; overflow-y: auto;
+}
+
+/* ===== INFO CARDS ===== */
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.infoCard {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 20px;
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+  transition: all 0.15s;
+}
+.infoCard:hover {
+  border-color: var(--hover-border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.infoCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.infoCardTitle {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text2);
+  letter-spacing: 0.5px;
+}
+.infoEditBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+.infoEditBtn:hover {
+  background: var(--bg3);
+  color: var(--text);
+  border-color: var(--text3);
+}
+.infoRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle, var(--border));
+}
+.infoRow:last-child {
+  border-bottom: none;
+}
+.infoLabel {
+  font-size: 13px;
+  color: var(--text2);
+}
+.infoValue {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.infoEditInput {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  width: 200px;
+  text-align: right;
+  transition: border-color 0.2s;
+}
+.infoEditInput:focus { border-color: var(--primary); }
+
+/* ===== ONBOARDING SECTION ===== */
+.obSection {
+  margin-top: 24px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  padding: 24px;
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+}
+.obHeader { margin-bottom: 16px; }
+.obTitle { font-size: 16px; font-weight: 700; color: var(--text); }
+.obSubtitle { font-size: 12px; color: var(--text3); margin-top: 4px; }
+.obProgress {
+  height: 4px; background: var(--bg4); border-radius: 2px;
+  margin-bottom: 24px; overflow: hidden;
+}
+.obProgressFill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.obSteps { display: flex; flex-direction: column; gap: 0; }
+.obStep {
+  display: flex; gap: 16px; position: relative;
+  padding-bottom: 20px;
+}
+.obStep:last-child { padding-bottom: 0; }
+.obStepMarker {
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; z-index: 1;
+}
+.obStepBody { flex: 1; min-width: 0; }
+.obStepHeader {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  min-height: 32px;
+}
+.obStepTitle { font-size: 14px; font-weight: 600; color: var(--text); }
+.obBadge {
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.obBadgeDone { background: rgba(34,197,94,0.15); color: var(--success); }
+.obBadgePending { background: var(--hover-bg); color: var(--text3); }
+.obStepContent { margin-top: 10px; }
+.obAnswers { display: flex; flex-direction: column; gap: 8px; }
+.obAnswer { background: var(--bg3); border-radius: 8px; padding: 10px 14px; }
+.obAnswerQ { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+.obAnswerA { font-size: 13px; font-weight: 600; color: var(--text); }
+
+/* ===== FORM EXTRAS ===== */
+.paymentSection {
+  border-top: 1px solid var(--border);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+.paymentTitle {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.payTypeGroup {
+  display: flex;
+  gap: 16px;
+}
+.payTypeLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.payTypeLabelActive {
+  border-color: var(--primary);
+  background: rgba(179, 8, 8, 0.1);
+}
+
+@media (max-width: 1024px) {
+  .apLayout { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .apRow { grid-template-columns: 1fr; }
+  .infoGrid { grid-template-columns: 1fr; }
+  .athleteGrid { grid-template-columns: 1fr; }
+  .statGrid { grid-template-columns: 1fr 1fr; }
+}

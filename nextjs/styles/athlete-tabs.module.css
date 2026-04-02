@@ -1,0 +1,387 @@
+/* ── Apercu ── */
+.apLayout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 16px;
+}
+.apMain {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.statCard {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.statCardBar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+.statIconWrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.statValue {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+.statSub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 6px;
+}
+.chartCard {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  padding: 24px;
+}
+.chartsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+.bottomRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 14px;
+}
+.clickCard {
+  composes: chartCard;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.clickCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+.miniBar {
+  display: flex;
+  gap: 3px;
+  align-items: flex-end;
+}
+.activitySidebar {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.activityScroll {
+  padding: 8px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+/* ── Info cards ── */
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.infoCard {
+  background: var(--bg2);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 20px;
+}
+.infoCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.infoCardTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+.infoLabel {
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.infoValue {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ── Posing grid ── */
+.posingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.posingCard {
+  background: var(--bg2);
+  border: var(--card-border);
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+.posingCard:hover {
+  transform: translateY(-2px);
+}
+.posingThumb {
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  border-radius: 8px 8px 0 0;
+}
+.posingThumbPlaceholder {
+  width: 100%;
+  height: 140px;
+  background: var(--bg3);
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Filter buttons ── */
+.filterBar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.filterBtn {
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.filterBtn:hover {
+  border-color: var(--primary);
+}
+.filterBtnActive {
+  composes: filterBtn;
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.filterCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 4px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ── Supplements ── */
+.suppGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.suppCard {
+  background: var(--bg2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 16px;
+}
+.suppCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.suppCardName {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+}
+.suppCardBrand {
+  font-size: 11px;
+  color: var(--text3);
+}
+.suppCardFooter {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ── Retour card ── */
+.retourCard {
+  background: var(--bg2);
+  border: var(--card-border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.retourIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(179, 8, 8, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Menstrual ── */
+.menstrualStats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.menstrualStatCard {
+  flex: 1;
+  background: var(--bg2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+}
+.menstrualStatVal {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text);
+}
+.menstrualStatLabel {
+  font-size: 11px;
+  color: var(--text3);
+}
+.phaseBar {
+  display: flex;
+  height: 32px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.phaseBarSegment {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.phaseBarLabel {
+  font-size: 9px;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Compliance grid ── */
+.complianceGrid {
+  display: flex;
+  gap: 4px;
+}
+.complianceDay {
+  text-align: center;
+  flex: 1;
+}
+.complianceDayLabel {
+  font-size: 9px;
+  color: var(--text3);
+  margin-bottom: 4px;
+}
+.complianceDayBar {
+  height: 24px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.complianceDayCount {
+  font-size: 9px;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Questionnaire ── */
+.qtCard {
+  background: var(--bg2);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.qtCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.qtDetail {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ── Progress bar ── */
+.progressBar {
+  flex: 1;
+  height: 5px;
+  background: var(--bg4);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progressFill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s;
+}
+
+@media (max-width: 1100px) {
+  .apLayout {
+    grid-template-columns: 1fr;
+  }
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .chartsRow {
+    grid-template-columns: 1fr;
+  }
+  .bottomRow {
+    grid-template-columns: 1fr;
+  }
+  .infoGrid {
+    grid-template-columns: 1fr;
+  }
+}

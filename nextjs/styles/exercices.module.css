@@ -1,0 +1,148 @@
+/* ===== EXERCICES MODULE ===== */
+
+.pageHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.pageTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.pageSub {
+  font-size: 13px;
+  color: var(--text3);
+}
+.searchRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.searchInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  font-size: 13px;
+}
+.searchInput:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.filterBtn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-family: inherit;
+}
+.filterBtn:hover {
+  border-color: var(--text3);
+}
+.filterBtnActive {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.filterCount {
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+/* Exercise row */
+.exRow {
+  background: var(--bg2);
+  border: var(--card-border);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.exRow:hover {
+  background: var(--bg3);
+}
+.exRowLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.exVideoIcon {
+  color: var(--primary);
+}
+.exVideoIconEmpty {
+  color: var(--bg4);
+}
+.exName {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+.exMeta {
+  font-size: 12px;
+  color: var(--text3);
+}
+.exTagPerso {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--primary);
+  color: #fff;
+  margin-left: 8px;
+}
+.exTagModified {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--warning);
+  color: #000;
+  margin-left: 8px;
+}
+
+/* Editor */
+.editorWrap {
+  max-width: 600px;
+}
+.editorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.editorTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+.editorHint {
+  font-size: 11px;
+  color: var(--warning);
+  margin-bottom: 16px;
+}
+.editorActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
