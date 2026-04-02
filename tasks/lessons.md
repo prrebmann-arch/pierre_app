@@ -21,3 +21,7 @@
 [2026-03-31] | setState during render via setTimeout is an anti-pattern | Use useEffect + useRef for initialization logic instead of setTimeout inside the render body. The setTimeout approach causes unnecessary re-renders and can lead to stale state.
 
 [2026-03-31] | Login redirect race condition with React state | Never rely on setTimeout to wait for React state updates after async calls. Instead, return the data from the async function and use it directly for redirect logic.
+
+[2026-03-31] | Vercel 404 despite successful build — framework detection | If Vercel shows `Builds: . [0ms]` and serves 404, it means the Framework Preset is wrong (e.g. "Other" instead of "Next.js"). Fix: add `"framework": "nextjs"` and `"buildCommand": "next build"` to `vercel.json`. Never rely on auto-detection alone.
+
+[2026-03-31] | createClient() returns new object each render causing infinite loops | Supabase `createBrowserClient()` returns a new object each call. When stored in component state or used in useCallback/useEffect dependency arrays, it triggers infinite re-render loops. Fix: make `createClient()` a singleton (cache in module-level variable). Also remove `supabase` from dependency arrays in useCallback/useEffect — it is a stable singleton, not a reactive value.

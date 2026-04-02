@@ -56,7 +56,8 @@ export default function AddAthleteForm({ isOpen, onClose }: AddAthleteFormProps)
       .then(({ data }) => {
         setWorkflows(data || [])
       })
-  }, [isOpen, user, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user])
 
   const resetForm = () => {
     setPrenom('')
@@ -206,10 +207,15 @@ export default function AddAthleteForm({ isOpen, onClose }: AddAthleteFormProps)
 
       const insertedAthlete = insertedAthletes?.[0]
 
-      // Show WhatsApp message with credentials
+      // Copy WhatsApp credentials message to clipboard
       if (insertedAthlete && authData?.user) {
-        const whatsappMessage = `Bienvenue dans l'app de coaching ! 🏋️\n\nVoici tes identifiants:\n\nEmail: ${trimEmail}\nMot de passe: ${tempPassword}\n\nConnecte-toi pour voir tes séances!`
-        window.prompt('Copie ce message WhatsApp pour ton athlète:', whatsappMessage)
+        const whatsappMessage = `Bienvenue dans l'app de coaching !\n\nVoici tes identifiants:\n\nEmail: ${trimEmail}\nMot de passe: ${tempPassword}\n\nConnecte-toi pour voir tes seances!`
+        try {
+          await navigator.clipboard.writeText(whatsappMessage)
+          toast('Identifiants copies dans le presse-papier !', 'success')
+        } catch {
+          toast(`Mot de passe: ${tempPassword} (notez-le)`, 'success')
+        }
       }
 
       // Create payment plan

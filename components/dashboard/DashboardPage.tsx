@@ -249,7 +249,8 @@ export default function DashboardPage() {
     setRecentActivity(activity)
 
     setLoading(false)
-  }, [user, athletes, athletesLoading, supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, athletes, athletesLoading])
 
   useEffect(() => {
     if (user && !athletesLoading) {

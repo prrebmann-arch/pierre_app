@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { User, CoachProfile } from '@/lib/types'
 
@@ -20,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [coach, setCoach] = useState<CoachProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const initRef = useRef(false)
 
   const supabase = createClient()
 
@@ -32,13 +33,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profile = data as CoachProfile | null
     setCoach(profile)
     return profile
-  }, [supabase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const refreshCoach = useCallback(async () => {
     if (user) await fetchCoach(user.id)
   }, [user, fetchCoach])
 
   useEffect(() => {
+    if (initRef.current) return
+    initRef.current = true
+
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (session?.user) {
@@ -62,7 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase, fetchCoach])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const signIn = async (email: string, password: string): Promise<CoachProfile | null> => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
