@@ -27,3 +27,15 @@
 [2026-03-31] | createClient() returns new object each render causing infinite loops | Supabase `createBrowserClient()` returns a new object each call. When stored in component state or used in useCallback/useEffect dependency arrays, it triggers infinite re-render loops. Fix: make `createClient()` a singleton (cache in module-level variable). Also remove `supabase` from dependency arrays in useCallback/useEffect — it is a stable singleton, not a reactive value.
 
 [2026-03-31] | SSR browser client session hijack on signUp | `createBrowserClient` from `@supabase/ssr` syncs session to cookies. Calling `signUp` on it switches the coach's cookie-session to the new athlete. Use a disposable vanilla `createClient` from `@supabase/supabase-js` with `persistSession: false` for signUp, so the main SSR client is never touched.
+
+[2026-03-31] | Object references in useCallback/useEffect deps cause re-render loops | Never use context-derived objects (selectedAthlete, user) as dependency array values. Use primitive fields instead (selectedAthlete?.id, user?.id). Also memoize context provider values with useMemo to prevent unnecessary consumer re-renders.
+
+[2026-03-31] | useCallback used before definition in useEffect | If a useEffect calls a useCallback function, the useCallback MUST be declared before the useEffect in the component body. Also add it to the dependency array. Even though closures capture the variable, ordering matters for readability and lint rules.
+
+[2026-03-31] | DB NOT NULL constraint violated by client-side upsert | Always check the DB schema for NOT NULL constraints before passing potentially null values in upserts. `stripe_customers.athlete_id` is NOT NULL — passing null crashes silently. Guard with an early return + user-facing error message.
+
+[2026-03-31] | Querying non-existent DB columns (stripe_secret_key, stripe_webhook_secret) | The actual coach_profiles table only has stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled. All coach Stripe operations must use Stripe Connect (platform key + stripeAccount option), NOT individual coach secret keys.
+
+[2026-03-31] | setLoading(true) without try/finally leaves UI stuck | Always wrap the body of async functions that call setLoading(true) in a try/finally block with setLoading(false) in finally. Without this, any thrown error leaves the UI in a permanent loading state.
+
+[2026-03-31] | Old API paths referenced in component code | When renaming API routes, update all component fetch() calls to use the new paths directly, even if next.config.ts has redirects. Redirects add latency and can fail on POST requests (301/308 semantics).

@@ -7,9 +7,6 @@ export interface CoachProfile {
   trial_ends_at: string | null
   has_payment_method: boolean
   stripe_account_id?: string
-  stripe_secret_key_encrypted?: string
-  stripe_publishable_key?: string
-  stripe_webhook_secret_encrypted?: string
   stripe_onboarding_complete?: boolean
   stripe_charges_enabled?: boolean
   allow_prorata?: boolean

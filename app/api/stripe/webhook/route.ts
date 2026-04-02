@@ -1,7 +1,7 @@
 // Stripe Webhook — handles both platform and coach events
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { decrypt } from '@/lib/api/crypto';
+// decrypt no longer needed — using Stripe Connect (platform key + stripeAccount)
 
 export const runtime = 'nodejs';
 
@@ -21,46 +21,21 @@ export async function POST(request: Request) {
 
   try {
     event = getPlatformStripe().webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);
-  } catch (platformErr: unknown) {
-    console.error('[webhook] Platform signature failed:', (platformErr as Error).message);
-    // Not a platform event — try verifying with coach's own webhook secret
-    try {
-      const body = JSON.parse(rawBody);
-      const accountId = body.account; // Stripe Connect sets this on connected account events
-      if (accountId) {
-        // Lookup coach by Stripe account ID and verify with their webhook secret
-        const { data: coach } = await supabase
-          .from('coach_profiles')
-          .select('user_id, stripe_webhook_secret')
-          .eq('stripe_account_id', accountId)
-          .maybeSingle();
-        if (coach?.stripe_webhook_secret) {
-          // Verify signature with coach's webhook secret
-          event = getPlatformStripe().webhooks.constructEvent(rawBody, sig, coach.stripe_webhook_secret);
-          isCoachWebhook = true;
-        } else {
-          // Coach found but no webhook secret — reject for security
-          await supabase.from('stripe_audit_log').insert({
-            action: 'webhook_no_secret', actor_type: 'system',
-            metadata: { account_id: accountId, ip: request.headers.get('x-forwarded-for') || '' },
-          });
-          return Response.json({ error: 'Webhook secret not configured for this account' }, { status: 400 });
-        }
-      } else {
-        // No account ID and platform signature failed — reject
-        await supabase.from('stripe_audit_log').insert({
-          action: 'webhook_signature_failed', actor_type: 'system',
-          metadata: { ip: request.headers.get('x-forwarded-for') || '' },
-        });
-        return Response.json({ error: 'Invalid webhook signature' }, { status: 400 });
-      }
-    } catch (verifyErr: unknown) {
-      await supabase.from('stripe_audit_log').insert({
-        action: 'webhook_signature_failed', actor_type: 'system',
-        metadata: { ip: request.headers.get('x-forwarded-for') || '', error: (verifyErr as Error).message },
-      });
-      return Response.json({ error: 'Invalid webhook' }, { status: 400 });
+
+    // Stripe Connect: connected-account events are signed with the platform
+    // webhook secret but carry an `account` field. Detect them here so they
+    // get routed to handleCoachEvent instead of handlePlatformEvent.
+    if ((event as unknown as Record<string, unknown>).account) {
+      isCoachWebhook = true;
     }
+  } catch (platformErr: unknown) {
+    // Signature verification failed — reject
+    console.error('[webhook] Signature failed:', (platformErr as Error).message);
+    await supabase.from('stripe_audit_log').insert({
+      action: 'webhook_signature_failed', actor_type: 'system',
+      metadata: { ip: request.headers.get('x-forwarded-for') || '', error: (platformErr as Error).message },
+    });
+    return Response.json({ error: 'Invalid webhook signature' }, { status: 400 });
   }
 
   // Replay protection: check if this event was already processed
@@ -107,11 +82,11 @@ async function handleCoachEvent(event: Stripe.Event, supabase: ReturnType<typeof
       const planId = session.metadata?.plan_id;
 
       if (session.mode === 'subscription' && session.subscription) {
-        const coachStripe = await getCoachStripeInstance(supabase, coachId);
+        const coachConnect = await getCoachStripeInstance(supabase, coachId);
 
         let sub: Stripe.Subscription | null = null;
-        if (coachStripe) {
-          sub = await coachStripe.subscriptions.retrieve(session.subscription as string).catch(() => null) as Stripe.Subscription | null;
+        if (coachConnect) {
+          sub = await coachConnect.stripe.subscriptions.retrieve(session.subscription as string, { stripeAccount: coachConnect.accountId }).catch(() => null) as Stripe.Subscription | null;
         }
 
         await supabase.from('stripe_customers').upsert({
@@ -185,9 +160,9 @@ async function handleCoachEvent(event: Stripe.Event, supabase: ReturnType<typeof
           const updates: Record<string, unknown> = { payments_completed: newCount, payment_status: 'active' };
           if (plan.total_payments && newCount >= plan.total_payments) {
             updates.payment_status = 'completed';
-            const coachStripe = await getCoachStripeInstance(supabase, sc.coach_id);
-            if (coachStripe && plan.stripe_subscription_id) {
-              await coachStripe.subscriptions.cancel(plan.stripe_subscription_id);
+            const coachConnect = await getCoachStripeInstance(supabase, sc.coach_id);
+            if (coachConnect && plan.stripe_subscription_id) {
+              await coachConnect.stripe.subscriptions.cancel(plan.stripe_subscription_id, { stripeAccount: coachConnect.accountId });
             }
           }
           await supabase.from('athlete_payment_plans').update(updates).eq('id', plan.id);
@@ -323,12 +298,11 @@ async function handlePlatformEvent(event: Stripe.Event, supabase: ReturnType<typ
   }
 }
 
-// Helper: get Stripe instance from coach's saved key
-async function getCoachStripeInstance(supabase: ReturnType<typeof createClient<any>>, coachId: string | undefined): Promise<Stripe | null> {
+// Helper: get Stripe instance + account ID for a coach via Connect
+async function getCoachStripeInstance(supabase: ReturnType<typeof createClient<any>>, coachId: string | undefined): Promise<{ stripe: Stripe; accountId: string } | null> {
   if (!coachId) return null;
   const { data } = await supabase.from('coach_profiles')
-    .select('stripe_secret_key').eq('user_id', coachId).single();
-  if (!data?.stripe_secret_key) return null;
-  const key = decrypt(data.stripe_secret_key);
-  return new Stripe(key);
+    .select('stripe_account_id').eq('user_id', coachId).single();
+  if (!data?.stripe_account_id) return null;
+  return { stripe: getPlatformStripe(), accountId: data.stripe_account_id };
 }

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { verifyAuth, verifyCoach, authErrorResponse } from '@/lib/api/auth'
-import { encrypt, decrypt } from '@/lib/api/crypto'
 
 // Platform Stripe instance (Pierre's account — for SaaS billing only)
 function getPlatformStripe() {
@@ -16,17 +15,17 @@ function getSupabaseAdmin() {
   )
 }
 
-// Get a Stripe instance using the coach's own key
+// Get a Stripe instance for a coach via Stripe Connect
+// Returns platform Stripe + the coach's connected account ID
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getCoachStripe(supabase: any, coachId: string): Promise<Stripe | null> {
+async function getCoachStripe(supabase: any, coachId: string): Promise<{ stripe: Stripe; accountId: string } | null> {
   const { data } = await supabase
     .from('coach_profiles')
-    .select('stripe_secret_key')
+    .select('stripe_account_id, stripe_charges_enabled')
     .eq('user_id', coachId)
-    .single() as { data: { stripe_secret_key?: string } | null }
-  if (!data?.stripe_secret_key) return null
-  const key = decrypt(data.stripe_secret_key)
-  return new Stripe(key, { apiVersion: '2024-04-10' as Stripe.LatestApiVersion })
+    .single() as { data: { stripe_account_id?: string; stripe_charges_enabled?: boolean } | null }
+  if (!data?.stripe_account_id || !data?.stripe_charges_enabled) return null
+  return { stripe: getPlatformStripe(), accountId: data.stripe_account_id }
 }
 
 function json(data: unknown, status = 200) {
@@ -314,7 +313,6 @@ async function handleSaveKey(body: Record<string, string>) {
 
     await supabase.from('coach_profiles').upsert({
       user_id: coachId,
-      stripe_secret_key: process.env.STRIPE_ENCRYPTION_KEY ? encrypt(stripeKey) : stripeKey,
       stripe_account_id: account.id,
       stripe_onboarding_complete: true,
       stripe_charges_enabled: true,
@@ -341,11 +339,11 @@ async function handleVerifyKey(body: Record<string, string>) {
   const coachId = body.coachId
   if (!coachId) return errorJson('Missing coachId')
 
-  const coachStripe = await getCoachStripe(supabase, coachId)
-  if (!coachStripe) return json({ connected: false })
+  const coachConnect = await getCoachStripe(supabase, coachId)
+  if (!coachConnect) return json({ connected: false })
 
   try {
-    const account = await coachStripe.accounts.retrieve()
+    const account = await coachConnect.stripe.accounts.retrieve(coachConnect.accountId)
     return json({
       connected: true,
       account_id: account.id,
@@ -364,13 +362,13 @@ async function handleImportSubscriptions(body: Record<string, string>) {
   if (!coachId) return errorJson('Missing coachId')
 
   const { data: profile } = await supabase.from('coach_profiles')
-    .select('stripe_account_id, stripe_charges_enabled, stripe_secret_key')
+    .select('stripe_account_id, stripe_charges_enabled')
     .eq('user_id', coachId).single()
 
   let stripeInstance: Stripe | null = null
   let stripeOpts: Stripe.RequestOptions = {}
 
-  // Try Connect first (verify charges_enabled live)
+  // Use Stripe Connect (verify charges_enabled live)
   if (profile?.stripe_account_id) {
     try {
       const account = await platformStripe.accounts.retrieve(profile.stripe_account_id)
@@ -379,11 +377,6 @@ async function handleImportSubscriptions(body: Record<string, string>) {
         stripeOpts = { stripeAccount: profile.stripe_account_id }
       }
     } catch { /* ignore */ }
-  }
-  // Fallback to direct key
-  if (!stripeInstance && profile?.stripe_secret_key) {
-    const k = decrypt(profile.stripe_secret_key)
-    stripeInstance = new Stripe(k, { apiVersion: '2024-04-10' as Stripe.LatestApiVersion })
   }
   if (!stripeInstance) {
     return errorJson('Stripe non configuré. Connectez votre Stripe dans Profil.')
@@ -451,7 +444,7 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
 
   // Get coach profile to determine which Stripe mode to use
   const { data: coachProfile } = await supabase.from('coach_profiles')
-    .select('stripe_account_id, stripe_charges_enabled, stripe_onboarding_complete, stripe_secret_key')
+    .select('stripe_account_id, stripe_charges_enabled, stripe_onboarding_complete')
     .eq('user_id', coachId).single()
 
   let stripeInstance: Stripe | null = null
@@ -467,12 +460,7 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
     } catch { /* ignore */ }
   }
 
-  if (!stripeInstance && coachProfile?.stripe_secret_key) {
-    const k = decrypt(coachProfile.stripe_secret_key)
-    stripeInstance = new Stripe(k, { apiVersion: '2024-04-10' as Stripe.LatestApiVersion })
-  }
-
-  // Last fallback: use platform Stripe directly (for testing)
+  // Fallback: use platform Stripe directly (for testing)
   if (!stripeInstance && coachProfile?.stripe_account_id) {
     stripeInstance = platformStripe
   }
@@ -751,17 +739,11 @@ async function handleCancel(body: Record<string, string>) {
   // Try Connect first, then direct key, then platform
   let sub: Stripe.Subscription | null = null
   const { data: profile } = await supabase.from('coach_profiles')
-    .select('stripe_account_id, stripe_secret_key').eq('user_id', coachId).maybeSingle()
+    .select('stripe_account_id').eq('user_id', coachId).maybeSingle()
 
   if (profile?.stripe_account_id) {
     try {
       sub = await platformStripe.subscriptions.cancel(subscriptionId, { stripeAccount: profile.stripe_account_id })
-    } catch { /* ignore */ }
-  }
-  if (!sub && profile?.stripe_secret_key) {
-    try {
-      const k = decrypt(profile.stripe_secret_key)
-      sub = await new Stripe(k, { apiVersion: '2024-04-10' as Stripe.LatestApiVersion }).subscriptions.cancel(subscriptionId)
     } catch { /* ignore */ }
   }
   if (!sub) {
@@ -834,9 +816,9 @@ async function handleCancellationRespond(body: Record<string, string>) {
   if (decision === 'accepted') {
     const plan = request.athlete_payment_plans
     if (plan?.stripe_subscription_id) {
-      const coachStripeInstance = await getCoachStripe(supabase, request.coach_id)
-      if (coachStripeInstance) {
-        await coachStripeInstance.subscriptions.update(plan.stripe_subscription_id, { cancel_at_period_end: true })
+      const coachConnect = await getCoachStripe(supabase, request.coach_id)
+      if (coachConnect) {
+        await coachConnect.stripe.subscriptions.update(plan.stripe_subscription_id, { cancel_at_period_end: true }, { stripeAccount: coachConnect.accountId })
       }
     }
     await supabase.from('athlete_payment_plans').update({ payment_status: 'canceled' }).eq('id', request.payment_plan_id)

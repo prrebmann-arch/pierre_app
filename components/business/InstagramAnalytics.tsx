@@ -168,7 +168,7 @@ export default function InstagramAnalytics() {
 
     const exchangeCode = async () => {
       try {
-        const resp = await fetch('/api/ig-auth', {
+        const resp = await fetch('/api/instagram/auth', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code, redirect_uri: window.location.origin + '/' }),
