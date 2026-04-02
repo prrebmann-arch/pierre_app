@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { PROG_PHASES } from '@/lib/constants'
 import { toDateStr, getWeekNumber, isBilanDate } from '@/lib/utils'
 import MensurationCharts from './MensurationCharts'
@@ -314,22 +314,30 @@ export default function BilanAccordion({
     }
   })
 
-  // Weight deltas
+  // Weight & mensuration deltas
   weekData.forEach((w, i) => {
     const prev = weekData[i + 1]
     ;(w as Record<string, unknown>).deltaKg = (prev && w.avgWeight !== null && prev.avgWeight !== null)
       ? +(w.avgWeight - prev.avgWeight).toFixed(1) : null
+    ;(w as Record<string, unknown>).deltaBelly = (prev && w.belly !== null && prev.belly !== null)
+      ? +(w.belly - prev.belly).toFixed(1) : null
+    ;(w as Record<string, unknown>).deltaHip = (prev && w.hip !== null && prev.hip !== null)
+      ? +(w.hip - prev.hip).toFixed(1) : null
+    ;(w as Record<string, unknown>).deltaThigh = (prev && w.thigh !== null && prev.thigh !== null)
+      ? +(w.thigh - prev.thigh).toFixed(1) : null
   })
 
-  // Initialize open weeks (current + first)
-  const initialOpen = new Set<string>()
-  weekData.forEach((w, idx) => {
-    if (w.key === todayMonday || idx === 0) initialOpen.add(w.key)
-  })
-  if (openWeeks.size === 0 && initialOpen.size > 0) {
-    // Use a timeout-free approach: set the initial open state
-    setTimeout(() => setOpenWeeks(initialOpen), 0)
-  }
+  // Initialize open weeks (current + first) via effect
+  const didInit = useRef(false)
+  useEffect(() => {
+    if (didInit.current || weekData.length === 0) return
+    didInit.current = true
+    const init = new Set<string>()
+    weekData.forEach((w, idx) => {
+      if (w.key === todayMonday || idx === 0) init.add(w.key)
+    })
+    if (init.size > 0) setOpenWeeks(init)
+  }, [weekData, todayMonday])
 
   const toggleWeek = useCallback((key: string) => {
     setOpenWeeks(prev => {
@@ -379,6 +387,10 @@ export default function BilanAccordion({
         const mondayLabel = w.monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
         const sundayLabel = sunday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
         const deltaKg = (w as Record<string, unknown>).deltaKg as number | null
+        const deltaBelly = (w as Record<string, unknown>).deltaBelly as number | null
+        const deltaHip = (w as Record<string, unknown>).deltaHip as number | null
+        const deltaThigh = (w as Record<string, unknown>).deltaThigh as number | null
+        const hasMensWeek = w.belly !== null || w.hip !== null || w.thigh !== null
 
         // Nutrition periods
         const nutriPeriods = getNutriPeriodsForWeek(w.monday)
@@ -541,6 +553,52 @@ export default function BilanAccordion({
                     </div>
                   )}
                 </div>
+              )}
+
+              {/* Mensuration summary + charts */}
+              {hasMensWeek && (
+                <>
+                  <div className={styles.mens}>
+                    {w.belly !== null && (
+                      <div className={styles.mensItem}>
+                        <span className={styles.mensLabel}><i className="fas fa-ruler-horizontal" style={{ color: '#E85D04', marginRight: 4 }} />Ventre</span>
+                        <span className={styles.mensVal}>{w.belly} cm</span>
+                        {deltaBelly !== null && (
+                          <span style={{ fontSize: 11, color: deltaBelly < 0 ? 'var(--success)' : deltaBelly > 0 ? 'var(--danger)' : 'var(--text3)' }}>
+                            {deltaBelly > 0 ? '+' : ''}{deltaBelly}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {w.hip !== null && (
+                      <div className={styles.mensItem}>
+                        <span className={styles.mensLabel}><i className="fas fa-ruler-combined" style={{ color: '#7209B7', marginRight: 4 }} />Hanches</span>
+                        <span className={styles.mensVal}>{w.hip} cm</span>
+                        {deltaHip !== null && (
+                          <span style={{ fontSize: 11, color: deltaHip < 0 ? 'var(--success)' : deltaHip > 0 ? 'var(--danger)' : 'var(--text3)' }}>
+                            {deltaHip > 0 ? '+' : ''}{deltaHip}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {w.thigh !== null && (
+                      <div className={styles.mensItem}>
+                        <span className={styles.mensLabel}><i className="fas fa-ruler" style={{ color: '#0096C7', marginRight: 4 }} />Cuisses</span>
+                        <span className={styles.mensVal}>{w.thigh} cm</span>
+                        {deltaThigh !== null && (
+                          <span style={{ fontSize: 11, color: deltaThigh < 0 ? 'var(--success)' : deltaThigh > 0 ? 'var(--danger)' : 'var(--text3)' }}>
+                            {deltaThigh > 0 ? '+' : ''}{deltaThigh}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <MensurationCharts
+                    bilans={bilans}
+                    upToDate={sorted[sorted.length - 1]?.date || w.key}
+                    suffix={w.key.replace(/-/g, '') + '_wk'}
+                  />
+                </>
               )}
 
               {/* Daily detail table */}

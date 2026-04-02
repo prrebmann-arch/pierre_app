@@ -211,7 +211,7 @@
   max-height: 0; overflow: hidden; transition: max-height 0.25s ease;
   margin: 0 0 4px; background: var(--bg3); border-radius: 8px;
 }
-.noteRowOpen { max-height: 400px; padding: 12px 16px; }
+.noteRowOpen { max-height: 600px; padding: 12px 16px; }
 
 /* Detail grid inside expanded row */
 .detailGrid {
