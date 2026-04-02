@@ -54,6 +54,23 @@ export default function SetupPaymentPage() {
     }
   }, [user, coach, loading, router])
 
+  // Handle return from Stripe 3D Secure redirect
+  useEffect(() => {
+    if (loading || !user) return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('setup') === 'success') {
+      supabase
+        .from('coach_profiles')
+        .update({ has_payment_method: true })
+        .eq('user_id', user.id)
+        .then(() => {
+          refreshCoach()
+          toast('Carte enregistree !', 'success')
+          router.push('/dashboard')
+        })
+    }
+  }, [user, loading, router, refreshCoach, toast]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSetup = async () => {
     if (!user) return
     setInitializing(true)
