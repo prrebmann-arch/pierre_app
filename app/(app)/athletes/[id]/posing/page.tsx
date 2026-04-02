@@ -37,19 +37,22 @@ export default function PosingPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const { data: ath } = await supabase.from('athletes').select('posing_enabled').eq('id', params.id).single()
-    const enabled = ath?.posing_enabled || false
-    setPosingEnabled(enabled)
+    try {
+      const { data: ath } = await supabase.from('athletes').select('posing_enabled').eq('id', params.id).single()
+      const enabled = ath?.posing_enabled || false
+      setPosingEnabled(enabled)
 
-    if (!enabled) { setLoading(false); return }
+      if (!enabled) { return }
 
-    const [{ data: vids }, { data: rets }] = await Promise.all([
-      supabase.from('posing_videos').select('*').eq('athlete_id', params.id).order('created_at', { ascending: false }),
-      supabase.from('posing_retours').select('*').eq('athlete_id', params.id).order('created_at', { ascending: false }),
-    ])
-    setVideos(vids || [])
-    setRetours(rets || [])
-    setLoading(false)
+      const [{ data: vids }, { data: rets }] = await Promise.all([
+        supabase.from('posing_videos').select('*').eq('athlete_id', params.id).order('created_at', { ascending: false }),
+        supabase.from('posing_retours').select('*').eq('athlete_id', params.id).order('created_at', { ascending: false }),
+      ])
+      setVideos(vids || [])
+      setRetours(rets || [])
+    } finally {
+      setLoading(false)
+    }
   }, [params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

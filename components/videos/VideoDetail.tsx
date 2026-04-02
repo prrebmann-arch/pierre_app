@@ -82,53 +82,54 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
 
   const loadVideo = useCallback(async () => {
     setLoading(true)
-    const { data: vid } = await supabase
-      .from('execution_videos')
-      .select('*')
-      .eq('id', videoId)
-      .single()
+    try {
+      const { data: vid } = await supabase
+        .from('execution_videos')
+        .select('*')
+        .eq('id', videoId)
+        .single()
 
-    if (!vid) {
-      toast('Video introuvable', 'error')
+      if (!vid) {
+        toast('Video introuvable', 'error')
+        return
+      }
+
+      setVideo(vid)
+      setFeedbackUrl(vid.coach_feedback_url || '')
+      setFeedbackNotes(vid.coach_notes || '')
+      setMarkTreated(vid.status === 'traite')
+      setExistingAudioUrl(vid.coach_audio_url || null)
+
+      const { data: ath } = await supabase
+        .from('athletes')
+        .select('id, prenom, nom, user_id')
+        .eq('id', vid.athlete_id)
+        .single()
+      setAthlete(ath || null)
+
+      // Previous videos of same exercise for comparison
+      const { data: prevVids } = await supabase
+        .from('execution_videos')
+        .select('id, video_url, thumbnail_url, date, serie_number')
+        .eq('athlete_id', vid.athlete_id)
+        .eq('exercise_name', vid.exercise_name)
+        .neq('id', vid.id)
+        .order('date', { ascending: true })
+        .limit(50)
+
+      const sorted = (prevVids || []) as CompVideo[]
+      setCompVideos(sorted)
+
+      // Default comparison: same serie + earlier date
+      const defaultPrev =
+        sorted.findLast((v) => v.serie_number === vid.serie_number && v.date < vid.date) ??
+        sorted.findLast((v) => v.date < vid.date) ??
+        sorted[sorted.length - 1] ??
+        null
+      setCompIdx(defaultPrev ? sorted.indexOf(defaultPrev) : -1)
+    } finally {
       setLoading(false)
-      return
     }
-
-    setVideo(vid)
-    setFeedbackUrl(vid.coach_feedback_url || '')
-    setFeedbackNotes(vid.coach_notes || '')
-    setMarkTreated(vid.status === 'traite')
-    setExistingAudioUrl(vid.coach_audio_url || null)
-
-    const { data: ath } = await supabase
-      .from('athletes')
-      .select('id, prenom, nom, user_id')
-      .eq('id', vid.athlete_id)
-      .single()
-    setAthlete(ath || null)
-
-    // Previous videos of same exercise for comparison
-    const { data: prevVids } = await supabase
-      .from('execution_videos')
-      .select('id, video_url, thumbnail_url, date, serie_number')
-      .eq('athlete_id', vid.athlete_id)
-      .eq('exercise_name', vid.exercise_name)
-      .neq('id', vid.id)
-      .order('date', { ascending: true })
-      .limit(50)
-
-    const sorted = (prevVids || []) as CompVideo[]
-    setCompVideos(sorted)
-
-    // Default comparison: same serie + earlier date
-    const defaultPrev =
-      sorted.findLast((v) => v.serie_number === vid.serie_number && v.date < vid.date) ??
-      sorted.findLast((v) => v.date < vid.date) ??
-      sorted[sorted.length - 1] ??
-      null
-    setCompIdx(defaultPrev ? sorted.indexOf(defaultPrev) : -1)
-
-    setLoading(false)
   }, [videoId, toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

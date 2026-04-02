@@ -85,36 +85,39 @@ export default function NutritionPage() {
 
   const loadPlans = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('nutrition_plans')
-      .select('*')
-      .eq('athlete_id', athleteId)
-      .order('created_at', { ascending: false })
+    try {
+      const { data } = await supabase
+        .from('nutrition_plans')
+        .select('*')
+        .eq('athlete_id', athleteId)
+        .order('created_at', { ascending: false })
 
-    const allPlans = (data || []) as NutritionPlan[]
-    setPlans(allPlans)
+      const allPlans = (data || []) as NutritionPlan[]
+      setPlans(allPlans)
 
-    // Group by diet name
-    const byName: Record<string, NutritionPlan[]> = {}
-    allPlans.forEach((p) => {
-      const name = p.nom || 'Diete'
-      if (!byName[name]) byName[name] = []
-      byName[name].push(p)
-    })
+      // Group by diet name
+      const byName: Record<string, NutritionPlan[]> = {}
+      allPlans.forEach((p) => {
+        const name = p.nom || 'Diete'
+        if (!byName[name]) byName[name] = []
+        byName[name].push(p)
+      })
 
-    const groups: DietGroup[] = []
-    Object.entries(byName).forEach(([name, dietPlans]) => {
-      const sorted = [...dietPlans].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-      const tPlan = sorted.find((p) => p.actif && (p.meal_type === 'training' || p.meal_type === 'entrainement'))
-        || sorted.find((p) => p.meal_type === 'training' || p.meal_type === 'entrainement') || null
-      const rPlan = sorted.find((p) => p.actif && (p.meal_type === 'rest' || p.meal_type === 'repos'))
-        || sorted.find((p) => p.meal_type === 'rest' || p.meal_type === 'repos') || null
-      const isActive = dietPlans.some((p) => p.actif)
-      groups.push({ name, tPlan, rPlan, isActive, versionCount: dietPlans.length, ids: dietPlans.map((p) => p.id) })
-    })
-    groups.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0))
-    setDiets(groups)
-    setLoading(false)
+      const groups: DietGroup[] = []
+      Object.entries(byName).forEach(([name, dietPlans]) => {
+        const sorted = [...dietPlans].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+        const tPlan = sorted.find((p) => p.actif && (p.meal_type === 'training' || p.meal_type === 'entrainement'))
+          || sorted.find((p) => p.meal_type === 'training' || p.meal_type === 'entrainement') || null
+        const rPlan = sorted.find((p) => p.actif && (p.meal_type === 'rest' || p.meal_type === 'repos'))
+          || sorted.find((p) => p.meal_type === 'rest' || p.meal_type === 'repos') || null
+        const isActive = dietPlans.some((p) => p.actif)
+        groups.push({ name, tPlan, rPlan, isActive, versionCount: dietPlans.length, ids: dietPlans.map((p) => p.id) })
+      })
+      groups.sort((a, b) => (b.isActive ? 1 : 0) - (a.isActive ? 1 : 0))
+      setDiets(groups)
+    } finally {
+      setLoading(false)
+    }
   }, [athleteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadPlans() }, [loadPlans])

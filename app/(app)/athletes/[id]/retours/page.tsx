@@ -29,13 +29,16 @@ export default function RetoursPage() {
 
   const loadRetours = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase
-      .from('bilan_retours')
-      .select('*')
-      .eq('athlete_id', params.id)
-      .order('created_at', { ascending: false })
-    setRetours(data || [])
-    setLoading(false)
+    try {
+      const { data } = await supabase
+        .from('bilan_retours')
+        .select('*')
+        .eq('athlete_id', params.id)
+        .order('created_at', { ascending: false })
+      setRetours(data || [])
+    } finally {
+      setLoading(false)
+    }
   }, [params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

@@ -108,7 +108,7 @@ export default function VideoCompare({ video, compVideos, compIdx }: VideoCompar
 
   const loadTraining = useCallback(async () => {
     setLoading(true)
-
+    try {
     // Find matching session
     const { data: allProgs } = await supabase
       .from('workout_programs')
@@ -156,7 +156,6 @@ export default function VideoCompare({ video, compVideos, compIdx }: VideoCompar
     }
 
     if (!matchSession) {
-      setLoading(false)
       return
     }
 
@@ -213,7 +212,9 @@ export default function VideoCompare({ video, compVideos, compIdx }: VideoCompar
       }
     }
     setPrevLogIdx(defaultPrevIdx)
-    setLoading(false)
+    } finally {
+      setLoading(false)
+    }
   }, [video]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

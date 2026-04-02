@@ -65,31 +65,32 @@ export default function EditAthleteForm({ isOpen, onClose, athlete }: EditAthlet
     }
 
     setSubmitting(true)
+    try {
+      const updateData = {
+        prenom: trimPrenom,
+        nom: trimNom,
+        email: trimEmail,
+        poids_actuel: parseFloat(poids) || null,
+        poids_objectif: parseFloat(poidsObj) || null,
+        objectif,
+      }
 
-    const updateData = {
-      prenom: trimPrenom,
-      nom: trimNom,
-      email: trimEmail,
-      poids_actuel: parseFloat(poids) || null,
-      poids_objectif: parseFloat(poidsObj) || null,
-      objectif,
-    }
+      const { error } = await supabase
+        .from('athletes')
+        .update(updateData)
+        .eq('id', athlete.id)
 
-    const { error } = await supabase
-      .from('athletes')
-      .update(updateData)
-      .eq('id', athlete.id)
+      if (error) {
+        toast(error.message, 'error')
+        return
+      }
 
-    if (error) {
-      toast(error.message, 'error')
+      toast('Informations mises a jour !', 'success')
+      onClose()
+      await refreshAthletes()
+    } finally {
       setSubmitting(false)
-      return
     }
-
-    toast('Informations mises a jour !', 'success')
-    setSubmitting(false)
-    onClose()
-    await refreshAthletes()
   }
 
   return (

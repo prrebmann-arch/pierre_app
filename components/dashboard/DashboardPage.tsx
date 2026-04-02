@@ -80,7 +80,7 @@ export default function DashboardPage() {
     if (!user || athletesLoading) return
 
     setLoading(true)
-
+    try {
     const athleteUserIds = athletes.map(a => a.user_id).filter(Boolean) as string[]
     const athleteIds = athletes.map(a => a.id)
 
@@ -247,8 +247,9 @@ export default function DashboardPage() {
       .filter(Boolean)
       .slice(0, 20) as ActivityItem[]
     setRecentActivity(activity)
-
-    setLoading(false)
+    } finally {
+      setLoading(false)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, athletes, athletesLoading])
 

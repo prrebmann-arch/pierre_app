@@ -57,38 +57,39 @@ export default function TemplatesPage() {
   const loadData = useCallback(async () => {
     if (!coach) return
     setLoading(true)
-
-    if (activeTab === 'training') {
-      const { data } = await supabase
-        .from('training_templates')
-        .select('*')
-        .eq('coach_id', coach.id)
-        .order('created_at', { ascending: false })
-      setTrainingTemplates((data || []) as TrainingTemplate[])
-    } else if (activeTab === 'nutrition') {
-      const { data } = await supabase
-        .from('nutrition_templates')
-        .select('*')
-        .eq('coach_id', coach.id)
-        .order('created_at', { ascending: false })
-      setNutritionTemplates(data || [])
-    } else if (activeTab === 'workflow') {
-      const { data } = await supabase
-        .from('onboarding_workflows')
-        .select('*')
-        .eq('coach_id', coach.id)
-        .order('created_at', { ascending: false })
-      setWorkflows(data || [])
-    } else if (activeTab === 'questionnaires') {
-      const { data } = await supabase
-        .from('questionnaire_templates')
-        .select('*')
-        .eq('coach_id', coach.id)
-        .order('created_at', { ascending: false })
-      setQuestionnaireTemplates(data || [])
+    try {
+      if (activeTab === 'training') {
+        const { data } = await supabase
+          .from('training_templates')
+          .select('*')
+          .eq('coach_id', coach.id)
+          .order('created_at', { ascending: false })
+        setTrainingTemplates((data || []) as TrainingTemplate[])
+      } else if (activeTab === 'nutrition') {
+        const { data } = await supabase
+          .from('nutrition_templates')
+          .select('*')
+          .eq('coach_id', coach.id)
+          .order('created_at', { ascending: false })
+        setNutritionTemplates(data || [])
+      } else if (activeTab === 'workflow') {
+        const { data } = await supabase
+          .from('onboarding_workflows')
+          .select('*')
+          .eq('coach_id', coach.id)
+          .order('created_at', { ascending: false })
+        setWorkflows(data || [])
+      } else if (activeTab === 'questionnaires') {
+        const { data } = await supabase
+          .from('questionnaire_templates')
+          .select('*')
+          .eq('coach_id', coach.id)
+          .order('created_at', { ascending: false })
+        setQuestionnaireTemplates(data || [])
+      }
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [coach, activeTab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

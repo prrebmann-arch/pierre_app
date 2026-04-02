@@ -25,40 +25,41 @@ export default function VideosPage() {
   const loadVideos = useCallback(async () => {
     if (!user) return
     setLoading(true)
+    try {
+      const { data: athletes } = await supabase
+        .from('athletes')
+        .select('id, prenom, nom, user_id')
+        .eq('coach_id', user.id)
 
-    const { data: athletes } = await supabase
-      .from('athletes')
-      .select('id, prenom, nom, user_id')
-      .eq('coach_id', user.id)
+      const athleteIds = (athletes || []).map((a) => a.id)
+      if (!athleteIds.length) {
+        setVideos([])
+        return
+      }
 
-    const athleteIds = (athletes || []).map((a) => a.id)
-    if (!athleteIds.length) {
-      setVideos([])
+      const { data: vids } = await supabase
+        .from('execution_videos')
+        .select('*')
+        .in('athlete_id', athleteIds)
+        .order('created_at', { ascending: false })
+        .limit(MAX_VIDEOS_LOAD)
+
+      const athleteMap: Record<string, { prenom: string; nom: string }> = {}
+      ;(athletes || []).forEach((a) => {
+        athleteMap[a.id] = a
+      })
+
+      setVideos(
+        (vids || []).map((v) => ({
+          ...v,
+          _athleteName: athleteMap[v.athlete_id]
+            ? `${athleteMap[v.athlete_id].prenom} ${athleteMap[v.athlete_id].nom}`
+            : '',
+        })) as VideoItem[],
+      )
+    } finally {
       setLoading(false)
-      return
     }
-
-    const { data: vids } = await supabase
-      .from('execution_videos')
-      .select('*')
-      .in('athlete_id', athleteIds)
-      .order('created_at', { ascending: false })
-      .limit(MAX_VIDEOS_LOAD)
-
-    const athleteMap: Record<string, { prenom: string; nom: string }> = {}
-    ;(athletes || []).forEach((a) => {
-      athleteMap[a.id] = a
-    })
-
-    setVideos(
-      (vids || []).map((v) => ({
-        ...v,
-        _athleteName: athleteMap[v.athlete_id]
-          ? `${athleteMap[v.athlete_id].prenom} ${athleteMap[v.athlete_id].nom}`
-          : '',
-      })) as VideoItem[],
-    )
-    setLoading(false)
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

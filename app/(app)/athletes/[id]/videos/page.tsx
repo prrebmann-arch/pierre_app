@@ -24,15 +24,18 @@ export default function AthleteVideosPage() {
 
   const loadVideos = useCallback(async () => {
     setLoading(true)
-    const { data: vids } = await supabase
-      .from('execution_videos')
-      .select('*')
-      .eq('athlete_id', athleteId)
-      .order('created_at', { ascending: false })
-      .limit(MAX_VIDEOS_LOAD)
+    try {
+      const { data: vids } = await supabase
+        .from('execution_videos')
+        .select('*')
+        .eq('athlete_id', athleteId)
+        .order('created_at', { ascending: false })
+        .limit(MAX_VIDEOS_LOAD)
 
-    setVideos((vids || []) as VideoItem[])
-    setLoading(false)
+      setVideos((vids || []) as VideoItem[])
+    } finally {
+      setLoading(false)
+    }
   }, [athleteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Push browser history state when entering sub-views

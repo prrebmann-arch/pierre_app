@@ -200,30 +200,32 @@ export default function TrainingPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [athleteRes, programsRes, logsRes] = await Promise.all([
-      supabase.from('athletes').select('cardio_config, pas_journalier').eq('id', athleteId).single(),
-      supabase.from('workout_programs').select('*, workout_sessions(*)').eq('athlete_id', athleteId).order('created_at', { ascending: false }),
-      supabase.from('workout_logs').select('*').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(500),
-    ])
-    setAthleteCardio({
-      cardio_config: athleteRes.data?.cardio_config || null,
-      pas_journalier: athleteRes.data?.pas_journalier || null,
-    })
-    const progs = (programsRes.data as WorkoutProgram[]) || []
-    setPrograms(progs)
-    setWorkoutLogs((logsRes.data as WorkoutLog[]) || [])
-
-    // Build session lookup
-    const sMap: Record<string, WorkoutSession & { _exs: Record<string, unknown>[]; _progName: string }> = {}
-    progs.forEach((p) => {
-      (p.workout_sessions || []).forEach((s) => {
-        const exs = parseExercises(s.exercices)
-        ;(sMap as Record<string, unknown>)[s.id] = { ...s, _exs: exs, _progName: p.nom }
+    try {
+      const [athleteRes, programsRes, logsRes] = await Promise.all([
+        supabase.from('athletes').select('cardio_config, pas_journalier').eq('id', athleteId).single(),
+        supabase.from('workout_programs').select('*, workout_sessions(*)').eq('athlete_id', athleteId).order('created_at', { ascending: false }),
+        supabase.from('workout_logs').select('*').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(500),
+      ])
+      setAthleteCardio({
+        cardio_config: athleteRes.data?.cardio_config || null,
+        pas_journalier: athleteRes.data?.pas_journalier || null,
       })
-    })
-    setSessionMap(sMap)
+      const progs = (programsRes.data as WorkoutProgram[]) || []
+      setPrograms(progs)
+      setWorkoutLogs((logsRes.data as WorkoutLog[]) || [])
 
-    setLoading(false)
+      // Build session lookup
+      const sMap: Record<string, WorkoutSession & { _exs: Record<string, unknown>[]; _progName: string }> = {}
+      progs.forEach((p) => {
+        (p.workout_sessions || []).forEach((s) => {
+          const exs = parseExercises(s.exercices)
+          ;(sMap as Record<string, unknown>)[s.id] = { ...s, _exs: exs, _progName: p.nom }
+        })
+      })
+      setSessionMap(sMap)
+    } finally {
+      setLoading(false)
+    }
   }, [athleteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

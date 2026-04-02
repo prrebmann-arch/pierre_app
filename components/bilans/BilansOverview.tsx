@@ -261,14 +261,17 @@ export default function BilansOverview() {
     const athleteUserIds = athletes.map(a => a.user_id).filter(Boolean) as string[]
     if (!athleteUserIds.length) { setReports([]); setLoading(false); return }
     setLoading(true)
-    const { data } = await supabase
-      .from('daily_reports')
-      .select('id, user_id, date, weight, energy, sleep_quality, stress, adherence, sessions_executed, session_performance, steps')
-      .in('user_id', athleteUserIds)
-      .order('date', { ascending: false })
-      .limit(1000)
-    setReports((data as DailyReport[]) || [])
-    setLoading(false)
+    try {
+      const { data } = await supabase
+        .from('daily_reports')
+        .select('id, user_id, date, weight, energy, sleep_quality, stress, adherence, sessions_executed, session_performance, steps')
+        .in('user_id', athleteUserIds)
+        .order('date', { ascending: false })
+        .limit(1000)
+      setReports((data as DailyReport[]) || [])
+    } finally {
+      setLoading(false)
+    }
   }, [user, athletes]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reload reports when athletes list changes

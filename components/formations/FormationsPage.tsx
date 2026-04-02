@@ -87,17 +87,20 @@ export default function FormationsPage() {
   const loadFormations = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const [fRes, mRes] = await Promise.all([
-      supabase.from('formations').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('formation_members').select('formation_id, athlete_id'),
-    ])
-    setFormations(fRes.data || [])
-    const counts: Record<string, number> = {}
-    ;(mRes.data || []).forEach((m: { formation_id: string }) => {
-      counts[m.formation_id] = (counts[m.formation_id] || 0) + 1
-    })
-    setMemberCounts(counts)
-    setLoading(false)
+    try {
+      const [fRes, mRes] = await Promise.all([
+        supabase.from('formations').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('formation_members').select('formation_id, athlete_id'),
+      ])
+      setFormations(fRes.data || [])
+      const counts: Record<string, number> = {}
+      ;(mRes.data || []).forEach((m: { formation_id: string }) => {
+        counts[m.formation_id] = (counts[m.formation_id] || 0) + 1
+      })
+      setMemberCounts(counts)
+    } finally {
+      setLoading(false)
+    }
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadFormations() }, [loadFormations])

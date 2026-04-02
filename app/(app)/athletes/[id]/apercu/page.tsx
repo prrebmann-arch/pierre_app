@@ -42,26 +42,29 @@ export default function ApercuPage() {
 
   async function loadData() {
     setLoading(true)
-    const { data: ath } = await supabase.from('athletes').select('*').eq('id', params.id).single()
-    const userId = ath?.user_id
+    try {
+      const { data: ath } = await supabase.from('athletes').select('*').eq('id', params.id).single()
+      const userId = ath?.user_id
 
-    const [reportsRes, phasesRes, progsRes, nutriRes, trackRes] = await Promise.all([
-      userId
-        ? supabase.from('daily_reports').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(60)
-        : Promise.resolve({ data: [] }),
-      supabase.from('roadmap_phases').select('*').eq('athlete_id', params.id).eq('status', 'en_cours').order('position').limit(1),
-      supabase.from('workout_programs').select('id, nom, actif, workout_sessions(id, nom, exercices)').eq('athlete_id', params.id).eq('actif', true).limit(1),
-      supabase.from('nutrition_plans').select('*').eq('athlete_id', params.id).eq('actif', true),
-      supabase.from('daily_tracking').select('date, water_ml, steps').eq('athlete_id', params.id).order('date', { ascending: false }).limit(7),
-    ])
+      const [reportsRes, phasesRes, progsRes, nutriRes, trackRes] = await Promise.all([
+        userId
+          ? supabase.from('daily_reports').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(60)
+          : Promise.resolve({ data: [] }),
+        supabase.from('roadmap_phases').select('*').eq('athlete_id', params.id).eq('status', 'en_cours').order('position').limit(1),
+        supabase.from('workout_programs').select('id, nom, actif, workout_sessions(id, nom, exercices)').eq('athlete_id', params.id).eq('actif', true).limit(1),
+        supabase.from('nutrition_plans').select('*').eq('athlete_id', params.id).eq('actif', true),
+        supabase.from('daily_tracking').select('date, water_ml, steps').eq('athlete_id', params.id).order('date', { ascending: false }).limit(7),
+      ])
 
-    setAthlete(ath)
-    setReports(reportsRes.data || [])
-    setActivePhase(phasesRes.data?.[0] || null)
-    setActiveProg(progsRes.data?.[0] || null)
-    setNutritionPlans(nutriRes.data || [])
-    setTrackingRows(trackRes.data || [])
-    setLoading(false)
+      setAthlete(ath)
+      setReports(reportsRes.data || [])
+      setActivePhase(phasesRes.data?.[0] || null)
+      setActiveProg(progsRes.data?.[0] || null)
+      setNutritionPlans(nutriRes.data || [])
+      setTrackingRows(trackRes.data || [])
+    } finally {
+      setLoading(false)
+    }
   }
 
   if (loading) {

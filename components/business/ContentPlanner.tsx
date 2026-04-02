@@ -128,17 +128,20 @@ export default function ContentPlanner() {
   const loadData = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const [dRes, hRes, tRes, rRes] = await Promise.all([
-      supabase.from('ig_drafts').select('*').eq('user_id', user.id).order('scheduled_at', { ascending: true }),
-      supabase.from('ig_hashtag_groups').select('*').eq('user_id', user.id).order('name'),
-      supabase.from('ig_caption_templates').select('*').eq('user_id', user.id).order('title'),
-      supabase.from('ig_reels').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
-    ])
-    setDrafts(dRes.data || [])
-    setHashtagGroups(hRes.data || [])
-    setCaptionTemplates(tRes.data || [])
-    setReels(rRes.data || [])
-    setLoading(false)
+    try {
+      const [dRes, hRes, tRes, rRes] = await Promise.all([
+        supabase.from('ig_drafts').select('*').eq('user_id', user.id).order('scheduled_at', { ascending: true }),
+        supabase.from('ig_hashtag_groups').select('*').eq('user_id', user.id).order('name'),
+        supabase.from('ig_caption_templates').select('*').eq('user_id', user.id).order('title'),
+        supabase.from('ig_reels').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
+      ])
+      setDrafts(dRes.data || [])
+      setHashtagGroups(hRes.data || [])
+      setCaptionTemplates(tRes.data || [])
+      setReels(rRes.data || [])
+    } finally {
+      setLoading(false)
+    }
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadData() }, [loadData])

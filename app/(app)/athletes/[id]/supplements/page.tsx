@@ -65,20 +65,23 @@ export default function SupplementsPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    const startDate = sevenDaysAgo.toISOString().slice(0, 10)
-    const today = new Date().toISOString().slice(0, 10)
+    try {
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const startDate = sevenDaysAgo.toISOString().slice(0, 10)
+      const today = new Date().toISOString().slice(0, 10)
 
-    const [{ data: assigns }, { data: ath }, { data: logData }] = await Promise.all([
-      supabase.from('athlete_supplements').select('*, supplements(*)').eq('athlete_id', params.id),
-      supabase.from('athletes').select('supplementation_unlocked').eq('id', params.id).single(),
-      supabase.from('supplement_logs').select('*').eq('athlete_id', params.id).gte('taken_date', startDate).lte('taken_date', today).order('taken_date', { ascending: false }),
-    ])
-    setAssignments((assigns || []).filter((a: any) => a.actif !== false))
-    setUnlocked(ath?.supplementation_unlocked || false)
-    setLogs(logData || [])
-    setLoading(false)
+      const [{ data: assigns }, { data: ath }, { data: logData }] = await Promise.all([
+        supabase.from('athlete_supplements').select('*, supplements(*)').eq('athlete_id', params.id),
+        supabase.from('athletes').select('supplementation_unlocked').eq('id', params.id).single(),
+        supabase.from('supplement_logs').select('*').eq('athlete_id', params.id).gte('taken_date', startDate).lte('taken_date', today).order('taken_date', { ascending: false }),
+      ])
+      setAssignments((assigns || []).filter((a: any) => a.actif !== false))
+      setUnlocked(ath?.supplementation_unlocked || false)
+      setLogs(logData || [])
+    } finally {
+      setLoading(false)
+    }
   }, [params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

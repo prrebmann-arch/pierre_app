@@ -79,40 +79,42 @@ export default function InfosPage() {
 
   const loadAthlete = useCallback(async () => {
     setLoading(true)
-    const { data } = await supabase.from('athletes').select('*').eq('id', params.id).single()
-    setAthlete(data)
+    try {
+      const { data } = await supabase.from('athletes').select('*').eq('id', params.id).single()
+      setAthlete(data)
 
-    if (data) {
-      // Load payment data
-      const [{ data: plan }, { data: payments }, { data: cancels }] = await Promise.all([
-        supabase.from('athlete_payment_plans').select('*').eq('athlete_id', params.id).eq('coach_id', user?.id).maybeSingle(),
-        supabase.from('payment_history').select('*').eq('athlete_id', params.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(10),
-        supabase.from('cancellation_requests').select('*').eq('athlete_id', params.id).eq('coach_id', user?.id).order('created_at', { ascending: false }).limit(5),
-      ])
-      setPaymentPlan(plan)
-      setPaymentHistory(payments || [])
-      setCancelRequests(cancels || [])
+      if (data) {
+        // Load payment data
+        const [{ data: plan }, { data: payments }, { data: cancels }] = await Promise.all([
+          supabase.from('athlete_payment_plans').select('*').eq('athlete_id', params.id).eq('coach_id', user?.id).maybeSingle(),
+          supabase.from('payment_history').select('*').eq('athlete_id', params.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(10),
+          supabase.from('cancellation_requests').select('*').eq('athlete_id', params.id).eq('coach_id', user?.id).order('created_at', { ascending: false }).limit(5),
+        ])
+        setPaymentPlan(plan)
+        setPaymentHistory(payments || [])
+        setCancelRequests(cancels || [])
 
-      // Load onboarding
-      let ob: any = null
-      if (data.user_id || data.id) {
-        const r1 = await supabase.from('athlete_onboarding').select('*').eq('athlete_id', data.user_id).limit(1)
-        ob = r1.data?.[0] || null
-        if (!ob) {
-          const r2 = await supabase.from('athlete_onboarding').select('*').eq('athlete_id', data.id).limit(1)
-          ob = r2.data?.[0] || null
+        // Load onboarding
+        let ob: any = null
+        if (data.user_id || data.id) {
+          const r1 = await supabase.from('athlete_onboarding').select('*').eq('athlete_id', data.user_id).limit(1)
+          ob = r1.data?.[0] || null
+          if (!ob) {
+            const r2 = await supabase.from('athlete_onboarding').select('*').eq('athlete_id', data.id).limit(1)
+            ob = r2.data?.[0] || null
+          }
+        }
+        setOnboarding(ob)
+        if (ob?.workflow_id) {
+          const { data: wf } = await supabase.from('onboarding_workflows').select('*').eq('id', ob.workflow_id).single()
+          setWorkflow(wf)
+        } else {
+          setWorkflow(null)
         }
       }
-      setOnboarding(ob)
-      if (ob?.workflow_id) {
-        const { data: wf } = await supabase.from('onboarding_workflows').select('*').eq('id', ob.workflow_id).single()
-        setWorkflow(wf)
-      } else {
-        setWorkflow(null)
-      }
+    } finally {
+      setLoading(false)
     }
-
-    setLoading(false)
   }, [params.id, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

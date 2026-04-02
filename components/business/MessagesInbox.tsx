@@ -240,18 +240,21 @@ export default function MessagesInbox() {
     if (!user) return
     ;(async () => {
       setLoading(true)
-      const acct = await loadAccount()
-      if (acct?.page_access_token) {
-        const convos = await loadConversations()
-        if (!convos.length) {
-          // Try sync if no local data
-          await syncMessages()
-        } else {
-          // Background sync
-          syncMessages()
+      try {
+        const acct = await loadAccount()
+        if (acct?.page_access_token) {
+          const convos = await loadConversations()
+          if (!convos.length) {
+            // Try sync if no local data
+            await syncMessages()
+          } else {
+            // Background sync
+            syncMessages()
+          }
         }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])

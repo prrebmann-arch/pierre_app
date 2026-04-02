@@ -304,6 +304,7 @@ export default function BusinessDashboard() {
   const loadAll = useCallback(async () => {
     if (!user) return
     setLoading(true)
+    try {
     const [cfgRes, entriesRes, clientsRes, stripeRes] = await Promise.all([
       supabase.from('project_config').select('*').eq('user_id', user.id).single(),
       supabase.from('daily_entries').select('*').eq('user_id', user.id),
@@ -332,8 +333,9 @@ export default function BusinessDashboard() {
     const today = new Date().getDay()
     const dayMap: Record<number, string> = { 1: 'lundi', 2: 'mardi', 3: 'mercredi', 4: 'jeudi', 5: 'vendredi', 6: 'samedi' }
     if (dayMap[today]) setDay(dayMap[today])
-
-    setLoading(false)
+    } finally {
+      setLoading(false)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
@@ -519,14 +521,17 @@ export default function BusinessDashboard() {
     setPaymentClientName(client?.name || 'Client')
     setLoadingPayments(true)
     setShowPaymentModal(true)
-    const { data } = await supabase
-      .from('payment_history')
-      .select('*')
-      .eq('stripe_customer_id', stripe.stripe_customer_id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-    setPaymentHistory((data || []) as PaymentRecord[])
-    setLoadingPayments(false)
+    try {
+      const { data } = await supabase
+        .from('payment_history')
+        .select('*')
+        .eq('stripe_customer_id', stripe.stripe_customer_id)
+        .order('created_at', { ascending: false })
+        .limit(20)
+      setPaymentHistory((data || []) as PaymentRecord[])
+    } finally {
+      setLoadingPayments(false)
+    }
   }
 
   function openObjModal() {

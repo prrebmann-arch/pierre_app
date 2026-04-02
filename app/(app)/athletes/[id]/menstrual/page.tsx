@@ -30,13 +30,16 @@ export default function MenstrualPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const [{ data: logs }, { data: ath }] = await Promise.all([
-      supabase.from('menstrual_logs').select('*').eq('athlete_id', params.id).order('start_date', { ascending: false }).limit(24),
-      supabase.from('athletes').select('menstrual_tracking_enabled').eq('id', params.id).single(),
-    ])
-    setEnabled(ath?.menstrual_tracking_enabled || false)
-    setEntries(logs || [])
-    setLoading(false)
+    try {
+      const [{ data: logs }, { data: ath }] = await Promise.all([
+        supabase.from('menstrual_logs').select('*').eq('athlete_id', params.id).order('start_date', { ascending: false }).limit(24),
+        supabase.from('athletes').select('menstrual_tracking_enabled').eq('id', params.id).single(),
+      ])
+      setEnabled(ath?.menstrual_tracking_enabled || false)
+      setEntries(logs || [])
+    } finally {
+      setLoading(false)
+    }
   }, [params.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

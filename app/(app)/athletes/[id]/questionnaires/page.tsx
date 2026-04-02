@@ -51,33 +51,35 @@ export default function QuestionnairesPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
+    try {
+      const { data: assigns } = await supabase
+        .from('questionnaire_assignments')
+        .select('*, questionnaire_templates(titre)')
+        .eq('athlete_id', params.id)
+        .order('sent_at', { ascending: false })
 
-    const { data: assigns } = await supabase
-      .from('questionnaire_assignments')
-      .select('*, questionnaire_templates(titre)')
-      .eq('athlete_id', params.id)
-      .order('sent_at', { ascending: false })
+      const completedIds = (assigns || []).filter((a: any) => a.status === 'completed').map((a: any) => a.id)
+      const rmap: Record<string, any> = {}
+      if (completedIds.length > 0) {
+        const { data: responses } = await supabase
+          .from('questionnaire_responses')
+          .select('*')
+          .in('assignment_id', completedIds)
+        ;(responses || []).forEach((r: any) => { rmap[r.assignment_id] = r })
+      }
 
-    const completedIds = (assigns || []).filter((a: any) => a.status === 'completed').map((a: any) => a.id)
-    const rmap: Record<string, any> = {}
-    if (completedIds.length > 0) {
-      const { data: responses } = await supabase
-        .from('questionnaire_responses')
-        .select('*')
-        .in('assignment_id', completedIds)
-      ;(responses || []).forEach((r: any) => { rmap[r.assignment_id] = r })
+      const { data: tpls } = await supabase
+        .from('questionnaire_templates')
+        .select('id, titre, questions')
+        .eq('coach_id', user?.id)
+        .order('titre')
+
+      setAssignments(assigns || [])
+      setResponsesMap(rmap)
+      setTemplates(tpls || [])
+    } finally {
+      setLoading(false)
     }
-
-    const { data: tpls } = await supabase
-      .from('questionnaire_templates')
-      .select('id, titre, questions')
-      .eq('coach_id', user?.id)
-      .order('titre')
-
-    setAssignments(assigns || [])
-    setResponsesMap(rmap)
-    setTemplates(tpls || [])
-    setLoading(false)
   }, [params.id, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

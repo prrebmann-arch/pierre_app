@@ -64,12 +64,15 @@ export default function AutomationsPage() {
   const loadAutomations = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const { data } = await supabase.from('automations')
-      .select('*, automation_messages(*)')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-    setAutomations((data || []) as Automation[])
-    setLoading(false)
+    try {
+      const { data } = await supabase.from('automations')
+        .select('*, automation_messages(*)')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+      setAutomations((data || []) as Automation[])
+    } finally {
+      setLoading(false)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
