@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import type { Athlete } from '@/lib/types'
@@ -84,21 +84,18 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     await fetchAthletes()
   }, [fetchAthletes])
 
-  const selectedAthlete = selectedAthleteId
-    ? athletes.find(a => a.id === selectedAthleteId) ?? null
-    : null
+  const selectedAthlete = useMemo(
+    () => (selectedAthleteId ? athletes.find(a => a.id === selectedAthleteId) ?? null : null),
+    [selectedAthleteId, athletes],
+  )
+
+  const value = useMemo(
+    () => ({ athletes, loading, refreshAthletes, selectedAthleteId, selectedAthlete, setSelectedAthleteId }),
+    [athletes, loading, refreshAthletes, selectedAthleteId, selectedAthlete],
+  )
 
   return (
-    <AthleteContext.Provider
-      value={{
-        athletes,
-        loading,
-        refreshAthletes,
-        selectedAthleteId,
-        selectedAthlete,
-        setSelectedAthleteId,
-      }}
-    >
+    <AthleteContext.Provider value={value}>
       {children}
     </AthleteContext.Provider>
   )

@@ -56,28 +56,31 @@ export default function RoadmapPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true)
-    const userId = selectedAthlete?.user_id
+    try {
+      const userId = selectedAthlete?.user_id
 
-    const [phasesRes, progsRes, nutritionsRes, reportsRes] = await Promise.all([
-      supabase
-        .from('roadmap_phases')
-        .select('*')
-        .eq('athlete_id', athleteId)
-        .order('position')
-        .order('start_date'),
-      supabase.from('workout_programs').select('id,nom').eq('athlete_id', athleteId),
-      supabase.from('nutrition_plans').select('id,nom').eq('athlete_id', athleteId),
-      userId
-        ? supabase.from('daily_reports').select('date,weight').eq('user_id', userId)
-        : Promise.resolve({ data: [] }),
-    ])
+      const [phasesRes, progsRes, nutritionsRes, reportsRes] = await Promise.all([
+        supabase
+          .from('roadmap_phases')
+          .select('*')
+          .eq('athlete_id', athleteId)
+          .order('position')
+          .order('start_date'),
+        supabase.from('workout_programs').select('id,nom').eq('athlete_id', athleteId),
+        supabase.from('nutrition_plans').select('id,nom').eq('athlete_id', athleteId),
+        userId
+          ? supabase.from('daily_reports').select('date,weight').eq('user_id', userId)
+          : Promise.resolve({ data: [] }),
+      ])
 
-    setPhases((phasesRes.data || []) as RoadmapPhase[])
-    setPrograms((progsRes.data || []) as ProgramRef[])
-    setNutritions((nutritionsRes.data || []) as NutritionRef[])
-    setReports((reportsRes.data || []) as DailyReport[])
-    setLoading(false)
-  }, [athleteId, selectedAthlete]) // eslint-disable-line react-hooks/exhaustive-deps
+      setPhases((phasesRes.data || []) as RoadmapPhase[])
+      setPrograms((progsRes.data || []) as ProgramRef[])
+      setNutritions((nutritionsRes.data || []) as NutritionRef[])
+      setReports((reportsRes.data || []) as DailyReport[])
+    } finally {
+      setLoading(false)
+    }
+  }, [athleteId, selectedAthlete?.user_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadData()
@@ -126,7 +129,7 @@ export default function RoadmapPage() {
     if (rows.length) {
       await supabase.from('programming_weeks').insert(rows)
     }
-  }, [athleteId, user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [athleteId, user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAdd = () => {
     let defaultStart: Date

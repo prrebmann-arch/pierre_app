@@ -127,58 +127,60 @@ export default function BilansPage() {
   const loadData = useCallback(async () => {
     if (!selectedAthlete?.user_id) return
     setLoading(true)
+    try {
+      const [bilansRes, progRes, nutriRes, phasesRes, wlogsRes] = await Promise.all([
+        supabase.from('daily_reports').select('*').eq('user_id', selectedAthlete.user_id).order('date', { ascending: false }),
+        supabase.from('programming_weeks').select('*').eq('athlete_id', selectedAthlete.id).order('week_date'),
+        supabase.from('nutrition_plans').select('*').eq('athlete_id', selectedAthlete.id),
+        supabase.from('roadmap_phases').select('*').eq('athlete_id', selectedAthlete.id).order('start_date'),
+        supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }),
+      ])
 
-    const [bilansRes, progRes, nutriRes, phasesRes, wlogsRes] = await Promise.all([
-      supabase.from('daily_reports').select('*').eq('user_id', selectedAthlete.user_id).order('date', { ascending: false }),
-      supabase.from('programming_weeks').select('*').eq('athlete_id', selectedAthlete.id).order('week_date'),
-      supabase.from('nutrition_plans').select('*').eq('athlete_id', selectedAthlete.id),
-      supabase.from('roadmap_phases').select('*').eq('athlete_id', selectedAthlete.id).order('start_date'),
-      supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }),
-    ])
+      const bilanData = (bilansRes.data || []) as DailyReport[]
+      setBilans(bilanData)
+      setAllWLogs(wlogsRes.data || [])
+      setProgWeeks(progRes.data || [])
+      setNutriPlans(nutriRes.data || [])
+      setRoadmapPhases((phasesRes.data || []).sort((a: { start_date?: string }, b: { start_date?: string }) => (a.start_date || '').localeCompare(b.start_date || '')))
 
-    const bilanData = (bilansRes.data || []) as DailyReport[]
-    setBilans(bilanData)
-    setAllWLogs(wlogsRes.data || [])
-    setProgWeeks(progRes.data || [])
-    setNutriPlans(nutriRes.data || [])
-    setRoadmapPhases((phasesRes.data || []).sort((a: { start_date?: string }, b: { start_date?: string }) => (a.start_date || '').localeCompare(b.start_date || '')))
+      // Build photo history with signed URLs
+      const history: Record<PhotoType, PhotoEntry[]> = { front: [], side: [], back: [] }
+      const photoPromises: Promise<void>[] = []
 
-    // Build photo history with signed URLs
-    const history: Record<PhotoType, PhotoEntry[]> = { front: [], side: [], back: [] }
-    const photoPromises: Promise<void>[] = []
+      bilanData.forEach((b: DailyReport) => {
+        (['front', 'side', 'back'] as PhotoType[]).forEach(pos => {
+          const raw = b[`photo_${pos}`] as string | null
+          if (!raw) return
 
-    bilanData.forEach((b: DailyReport) => {
-      (['front', 'side', 'back'] as PhotoType[]).forEach(pos => {
-        const raw = b[`photo_${pos}`] as string | null
-        if (!raw) return
+          let path = raw
+          const bucketMarker = '/athlete-photos/'
+          const idx = raw.indexOf(bucketMarker)
+          if (idx !== -1) {
+            path = raw.substring(idx + bucketMarker.length).split('?')[0]
+          }
 
-        let path = raw
-        const bucketMarker = '/athlete-photos/'
-        const idx = raw.indexOf(bucketMarker)
-        if (idx !== -1) {
-          path = raw.substring(idx + bucketMarker.length).split('?')[0]
-        }
-
-        photoPromises.push(
-          supabase.storage
-            .from('athlete-photos')
-            .createSignedUrl(path, 3600)
-            .then(({ data, error }) => {
-              if (data?.signedUrl) {
-                history[pos].push({ date: b.date, url: data.signedUrl })
-              } else if (raw.startsWith('http')) {
-                history[pos].push({ date: b.date, url: raw })
-              }
-            })
-        )
+          photoPromises.push(
+            supabase.storage
+              .from('athlete-photos')
+              .createSignedUrl(path, 3600)
+              .then(({ data, error }) => {
+                if (data?.signedUrl) {
+                  history[pos].push({ date: b.date, url: data.signedUrl })
+                } else if (raw.startsWith('http')) {
+                  history[pos].push({ date: b.date, url: raw })
+                }
+              })
+          )
+        })
       })
-    })
 
-    await Promise.all(photoPromises)
-    Object.values(history).forEach(arr => arr.sort((a, b) => a.date.localeCompare(b.date)))
-    setPhotoHistory(history)
-    setLoading(false)
-  }, [selectedAthlete]) // eslint-disable-line react-hooks/exhaustive-deps
+      await Promise.all(photoPromises)
+      Object.values(history).forEach(arr => arr.sort((a, b) => a.date.localeCompare(b.date)))
+      setPhotoHistory(history)
+    } finally {
+      setLoading(false)
+    }
+  }, [selectedAthlete?.id, selectedAthlete?.user_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadData() }, [loadData])
 
