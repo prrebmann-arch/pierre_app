@@ -1140,6 +1140,8 @@
 .bentoLg .bentoContent { flex:0 0 44%; }
 .bentoLg .bentoVisual { flex:1; }
 
+.bentoVisualDashboard { margin-top:16px; }
+
 /* === Dashboard visual === */
 .bvRow {
   display:flex; gap:8px; margin-bottom:12px;
