@@ -936,15 +936,18 @@ export default function NutritionPage() {
                             <span style={{ fontSize: 9, padding: '2px 6px', borderRadius: 8, background: 'var(--primary)', color: '#fff', fontWeight: 700 }}>ACTIF</span>
                           )}
                         </div>
-                        {d.versionCount > 1 && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setExpandedVersions(isExpanded ? null : d.name) }}
-                            style={{ fontSize: 10, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
-                          >
-                            <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`} style={{ fontSize: 8 }} />
-                            {d.versionCount} versions
-                          </button>
-                        )}
+                        {(() => {
+                          const uniqueDates = new Set(plans.filter(p => (p.nom || 'Diete') === d.name).map(p => (p.created_at || '').slice(0, 10)).filter(Boolean))
+                          return uniqueDates.size > 1 ? (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setExpandedVersions(isExpanded ? null : d.name) }}
+                              style={{ fontSize: 10, color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 4 }}
+                            >
+                              <i className={`fa-solid fa-chevron-${isExpanded ? 'up' : 'down'}`} style={{ fontSize: 8 }} />
+                              {uniqueDates.size} versions
+                            </button>
+                          ) : null
+                        })()}
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         {tK !== null ? (
