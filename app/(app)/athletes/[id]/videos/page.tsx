@@ -5,7 +5,9 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { MAX_VIDEOS_LOAD } from '@/lib/constants'
 import VideosGrid, { type VideoItem } from '@/components/videos/VideosGrid'
-import VideoDetail from '@/components/videos/VideoDetail'
+import dynamic from 'next/dynamic'
+
+const VideoDetail = dynamic(() => import('@/components/videos/VideoDetail'), { ssr: false })
 import styles from '@/styles/videos.module.css'
 
 type Filter = 'all' | 'a_traiter' | 'traite'
@@ -27,7 +29,7 @@ export default function AthleteVideosPage() {
     try {
       const { data: vids } = await supabase
         .from('execution_videos')
-        .select('*')
+        .select('id, athlete_id, exercise_name, serie_number, date, status, video_url, thumbnail_url, session_name, session_id, coach_feedback_url, coach_notes, coach_audio_url, created_at')
         .eq('athlete_id', athleteId)
         .order('created_at', { ascending: false })
         .limit(MAX_VIDEOS_LOAD)

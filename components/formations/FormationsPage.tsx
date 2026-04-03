@@ -176,7 +176,7 @@ export default function FormationsPage() {
       visibility: createVisibility,
     }).select().single()
 
-    if (error) { toast('Erreur creation', 'error'); console.error(error); return }
+    if (error) { toast('Erreur creation', 'error'); return }
 
     if (createVisibility === 'selected' && selectedAthletes.size > 0) {
       const rows = [...selectedAthletes].map(aid => ({ formation_id: formation.id, athlete_id: aid }))

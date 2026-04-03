@@ -6,20 +6,11 @@ import { createClient } from '@/lib/supabase/client'
 import { toDateStr } from '@/lib/utils'
 import { DEFAULT_STEPS_GOAL, DEFAULT_WATER_GOAL, PROG_PHASES, MS_PER_DAY } from '@/lib/constants'
 import type { ProgPhaseKey } from '@/lib/constants'
+import dynamic from 'next/dynamic'
 import Skeleton from '@/components/ui/Skeleton'
 import styles from '@/styles/athlete-tabs.module.css'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Filler,
-  Tooltip as ChartTooltip,
-} from 'chart.js'
-import { Line } from 'react-chartjs-2'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, ChartTooltip)
+const WeightChart = dynamic(() => import('@/components/charts/WeightChart'), { ssr: false })
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -43,16 +34,16 @@ export default function ApercuPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const { data: ath } = await supabase.from('athletes').select('*').eq('id', params.id).single()
+      const { data: ath } = await supabase.from('athletes').select('id, user_id, prenom, nom, pas_journalier, water_goal_ml, date_naissance').eq('id', params.id).single()
       const userId = ath?.user_id
 
       const [reportsRes, phasesRes, progsRes, nutriRes, trackRes] = await Promise.all([
         userId
-          ? supabase.from('daily_reports').select('*').eq('user_id', userId).order('date', { ascending: false }).limit(60)
+          ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, steps, adherence').eq('user_id', userId).order('date', { ascending: false }).limit(60)
           : Promise.resolve({ data: [] }),
-        supabase.from('roadmap_phases').select('*').eq('athlete_id', params.id).eq('status', 'en_cours').order('position').limit(1),
+        supabase.from('roadmap_phases').select('id, athlete_id, phase, name, end_date, status, position').eq('athlete_id', params.id).eq('status', 'en_cours').order('position').limit(1),
         supabase.from('workout_programs').select('id, nom, actif, workout_sessions(id, nom, exercices)').eq('athlete_id', params.id).eq('actif', true).limit(1),
-        supabase.from('nutrition_plans').select('*').eq('athlete_id', params.id).eq('actif', true),
+        supabase.from('nutrition_plans').select('id, athlete_id, meal_type, calories_objectif, proteines, glucides, lipides, actif').eq('athlete_id', params.id).eq('actif', true),
         supabase.from('daily_tracking').select('date, water_ml, steps').eq('athlete_id', params.id).order('date', { ascending: false }).limit(7),
       ])
 
@@ -272,9 +263,7 @@ export default function ApercuPage() {
             <span style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg3)', padding: '3px 10px', borderRadius: 8 }}>30 jours</span>
           </div>
           {validWeights.length > 1 ? (
-            <div style={{ position: 'relative', height: 160 }}>
-              <Line data={weightChartData} options={weightChartOptions} />
-            </div>
+            <WeightChart data={weightChartData} options={weightChartOptions} />
           ) : (
             <div style={{ height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text3)', fontSize: 12 }}>Pas assez de donnees</div>
           )}

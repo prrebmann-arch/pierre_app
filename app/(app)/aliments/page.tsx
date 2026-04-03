@@ -51,7 +51,7 @@ export default function AlimentsPage() {
   const loadAliments = useCallback(async () => {
     const { data, error } = await supabase
       .from('aliments_db')
-      .select('*')
+      .select('id, nom, calories, proteines, glucides, lipides, coach_id')
       .order('nom', { ascending: true })
     if (error) { toast('Erreur chargement aliments', 'error'); return }
     setAliments((data || []) as Aliment[])

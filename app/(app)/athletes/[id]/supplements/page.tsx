@@ -74,7 +74,7 @@ export default function SupplementsPage() {
       const [{ data: assigns }, { data: ath }, { data: logData }] = await Promise.all([
         supabase.from('athlete_supplements').select('*, supplements(*)').eq('athlete_id', params.id),
         supabase.from('athletes').select('supplementation_unlocked').eq('id', params.id).single(),
-        supabase.from('supplement_logs').select('*').eq('athlete_id', params.id).gte('taken_date', startDate).lte('taken_date', today).order('taken_date', { ascending: false }),
+        supabase.from('supplement_logs').select('id, athlete_id, supplement_id, taken_date, taken').eq('athlete_id', params.id).gte('taken_date', startDate).lte('taken_date', today).order('taken_date', { ascending: false }),
       ])
       setAssignments((assigns || []).filter((a: any) => a.actif !== false))
       setUnlocked(ath?.supplementation_unlocked || false)

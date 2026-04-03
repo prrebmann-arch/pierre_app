@@ -1,5 +1,6 @@
 'use client'
 
+import { useCallback } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useTheme } from 'next-themes'
@@ -54,14 +55,14 @@ export default function Sidebar() {
     return pathname.startsWith(route)
   }
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await signOut()
     router.push('/')
-  }
+  }, [signOut, router])
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     setTheme(theme === 'light' ? 'dark' : 'light')
-  }
+  }, [theme, setTheme])
 
   const userInitial = user?.email?.charAt(0).toUpperCase() ?? 'C'
   const userName = user?.email?.split('@')[0] ?? 'Coach'

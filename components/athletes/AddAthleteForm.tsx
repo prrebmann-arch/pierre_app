@@ -156,7 +156,6 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
         if (authError && authError.message.includes('already registered')) {
           authData = null
         } else if (authError) {
-          console.error('[AddAthlete] signUp error:', authError)
           toast(authError.message, 'error')
           setSubmitting(false)
           return
@@ -164,7 +163,6 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
           authData = signUpData
         }
       } catch (err) {
-        console.error('[AddAthlete] signUp exception:', err)
         toast('Erreur lors de la creation du compte', 'error')
         setSubmitting(false)
         return
@@ -202,7 +200,6 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
         .select()
 
       if (error) {
-        console.error('[AddAthlete] Insert error:', error)
         toast(error.message, 'error')
         setSubmitting(false)
         return
@@ -283,7 +280,6 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
       // Show WhatsApp modal in PARENT (after form is closed)
       if (onCreated) onCreated(msg)
     } catch (err) {
-      console.error('[AddAthlete] Unexpected error:', err)
       toast('Erreur inattendue', 'error')
     } finally {
       setSubmitting(false)

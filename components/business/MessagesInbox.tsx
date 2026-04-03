@@ -95,7 +95,7 @@ export default function MessagesInbox() {
       })
       const data = await resp.json()
       if (data.error) {
-        console.error('[Messages] API error:', data.error)
+        // API error
         return []
       }
       const convos: Conversation[] = (data.data || []).map((c: Record<string, unknown>) => ({
@@ -108,7 +108,7 @@ export default function MessagesInbox() {
       setConversations(convos)
       return convos
     } catch (err) {
-      console.error('[Messages] Fetch error:', err)
+      // fetch error
       return []
     }
   }, [user])
@@ -124,7 +124,7 @@ export default function MessagesInbox() {
       })
       const data = await resp.json()
       if (data.error) {
-        console.error('[Messages] Thread error:', data.error)
+        // thread error
         setMessages([])
         return
       }
@@ -136,7 +136,7 @@ export default function MessagesInbox() {
       }))
       setMessages(msgs)
     } catch (err) {
-      console.error('[Messages] Thread fetch error:', err)
+      // thread fetch error
       setMessages([])
     }
   }, [user])
@@ -160,11 +160,11 @@ export default function MessagesInbox() {
       })
       const data = await resp.json()
       if (data.success) {
-        console.log(`[Messages] Sync done: ${data.conversations} convos, ${data.messages} msgs`)
+        // sync done
         await loadConversations()
       }
     } catch (err) {
-      console.error('[Messages] Sync error:', err)
+      // sync error
     } finally {
       setSyncing(false)
     }

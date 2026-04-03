@@ -91,13 +91,13 @@ export default function DashboardPage() {
       { data: settingsRows },
     ] = await Promise.all([
       athleteUserIds.length
-        ? supabase.from('daily_reports').select('*').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(500)
+        ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, adherence, steps').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(500)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),
       supabase.from('workout_programs').select('id, nom, athlete_id, actif').eq('coach_id', user.id),
       athleteIds.length
         ? supabase.from('execution_videos').select('id, athlete_id, exercise_name, created_at').in('athlete_id', athleteIds).eq('status', 'a_traiter').order('created_at', { ascending: false }).limit(50)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-      supabase.from('coach_settings').select('*').eq('coach_id', user.id).limit(1),
+      supabase.from('coach_settings').select('coach_id, max_videos_per_day').eq('coach_id', user.id).limit(1),
     ])
 
     // Coach settings
@@ -266,7 +266,7 @@ export default function DashboardPage() {
     }
   }, [loading, bilansToReview, lateAthletes, pendingVids, birthdays])
 
-  const sendBilanRappel = async (athlete: Athlete) => {
+  const sendBilanRappel = useCallback(async (athlete: Athlete) => {
     if (!athlete.user_id || sendingRappel.has(athlete.id) || sentRappels.has(athlete.id)) return
 
     // Check if already sent today
@@ -305,9 +305,10 @@ export default function DashboardPage() {
 
     setSentRappels(prev => new Set(prev).add(athlete.id))
     toast(`Rappel envoye a ${athlete.prenom}`, 'success')
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sendingRappel, sentRappels, toast])
 
-  const updateCoachSetting = async (key: string, value: number) => {
+  const updateCoachSetting = useCallback(async (key: string, value: number) => {
     if (!user) return
     const { error } = await supabase
       .from('coach_settings')
@@ -317,7 +318,8 @@ export default function DashboardPage() {
       return
     }
     toast('Reglage sauvegarde', 'success')
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, toast])
 
   // ── Loading state ──
   if (loading || athletesLoading) {

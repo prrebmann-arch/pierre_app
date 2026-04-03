@@ -176,7 +176,6 @@ export default function ContentPlanner() {
 
     if (error) {
       toast('Erreur sauvegarde', 'error')
-      console.error('[CP] Save error:', error)
       return
     }
 
@@ -267,7 +266,6 @@ export default function ContentPlanner() {
         loadData()
       }, 2000)
     } catch (err) {
-      console.error('[CP Publish]', err)
       setPublishing(false)
       toast('Erreur de publication', 'error')
     }
@@ -309,7 +307,6 @@ export default function ContentPlanner() {
     const { error } = await supabase.storage.from('content-drafts').upload(path, file, { contentType: file.type })
     if (error) {
       toast('Erreur upload', 'error')
-      console.error('[CP Upload]', error)
       return
     }
 

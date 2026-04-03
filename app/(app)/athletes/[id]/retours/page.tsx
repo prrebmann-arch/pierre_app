@@ -32,7 +32,7 @@ export default function RetoursPage() {
     try {
       const { data } = await supabase
         .from('bilan_retours')
-        .select('*')
+        .select('id, athlete_id, coach_id, loom_url, titre, commentaire, type, created_at')
         .eq('athlete_id', params.id)
         .order('created_at', { ascending: false })
       setRetours(data || [])

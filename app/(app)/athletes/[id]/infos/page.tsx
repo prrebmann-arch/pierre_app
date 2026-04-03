@@ -80,15 +80,15 @@ export default function InfosPage() {
   const loadAthlete = useCallback(async () => {
     setLoading(true)
     try {
-      const { data } = await supabase.from('athletes').select('*').eq('id', params.id).single()
+      const { data } = await supabase.from('athletes').select('id, user_id, coach_id, prenom, nom, email, avatar_url, date_naissance, genre, telephone, objectif, poids_actuel, poids_objectif, access_mode, pas_journalier, water_goal_ml, blessures, allergies, medicaments, notes_sante, onboarding_workflow_id, bilan_frequency, bilan_interval, bilan_day, bilan_anchor_date, bilan_month_day, bilan_notif_time, complete_bilan_frequency, complete_bilan_interval, complete_bilan_day, complete_bilan_anchor_date, complete_bilan_month_day, complete_bilan_notif_time, created_at').eq('id', params.id).single()
       setAthlete(data)
 
       if (data) {
         // Load payment data
         const [{ data: plan }, { data: payments }, { data: cancels }] = await Promise.all([
-          supabase.from('athlete_payment_plans').select('*').eq('athlete_id', params.id).eq('coach_id', user?.id).maybeSingle(),
-          supabase.from('payment_history').select('*').eq('athlete_id', params.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(10),
-          supabase.from('cancellation_requests').select('*').eq('athlete_id', params.id).eq('coach_id', user?.id).order('created_at', { ascending: false }).limit(5),
+          supabase.from('athlete_payment_plans').select('id, athlete_id, coach_id, payment_status, amount, frequency, is_free, stripe_subscription_id, stripe_customer_id, created_at').eq('athlete_id', params.id).eq('coach_id', user?.id).maybeSingle(),
+          supabase.from('payment_history').select('id, athlete_id, amount, status, stripe_invoice_id, created_at').eq('athlete_id', params.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(10),
+          supabase.from('cancellation_requests').select('id, athlete_id, coach_id, reason, status, created_at').eq('athlete_id', params.id).eq('coach_id', user?.id).order('created_at', { ascending: false }).limit(5),
         ])
         setPaymentPlan(plan)
         setPaymentHistory(payments || [])
@@ -97,16 +97,16 @@ export default function InfosPage() {
         // Load onboarding
         let ob: any = null
         if (data.user_id || data.id) {
-          const r1 = await supabase.from('athlete_onboarding').select('*').eq('athlete_id', data.user_id).limit(1)
+          const r1 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, status, completed_steps, created_at').eq('athlete_id', data.user_id).limit(1)
           ob = r1.data?.[0] || null
           if (!ob) {
-            const r2 = await supabase.from('athlete_onboarding').select('*').eq('athlete_id', data.id).limit(1)
+            const r2 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, status, completed_steps, created_at').eq('athlete_id', data.id).limit(1)
             ob = r2.data?.[0] || null
           }
         }
         setOnboarding(ob)
         if (ob?.workflow_id) {
-          const { data: wf } = await supabase.from('onboarding_workflows').select('*').eq('id', ob.workflow_id).single()
+          const { data: wf } = await supabase.from('onboarding_workflows').select('id, nom, steps, created_at').eq('id', ob.workflow_id).single()
           setWorkflow(wf)
         } else {
           setWorkflow(null)
@@ -571,7 +571,6 @@ export default function InfosPage() {
           }),
         })
       } catch (err) {
-        console.error('[deleteAthlete] Stripe cancel failed:', err)
         // Continue with deletion even if Stripe cancel fails
       }
     }

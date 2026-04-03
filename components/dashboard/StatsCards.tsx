@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { memo, useEffect, useRef } from 'react'
 import styles from '@/styles/dashboard.module.css'
 
 interface StatCardData {
@@ -31,7 +31,7 @@ interface StatsCardsProps {
   stats: StatCardData[]
 }
 
-export default function StatsCards({ stats }: StatsCardsProps) {
+const StatsCards = memo(function StatsCards({ stats }: StatsCardsProps) {
   const refs = useRef<Map<string, HTMLElement>>(new Map())
 
   useEffect(() => {
@@ -75,6 +75,7 @@ export default function StatsCards({ stats }: StatsCardsProps) {
       ))}
     </div>
   )
-}
+})
 
+export default StatsCards
 export type { StatCardData }

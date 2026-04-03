@@ -363,7 +363,6 @@ export default function ProgramEditor({
 
       onSaved()
     } catch (err) {
-      console.error('Save error:', err)
       toast('Erreur lors de la sauvegarde', 'error')
     } finally {
       setSaving(false)

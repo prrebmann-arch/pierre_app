@@ -30,14 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await supabase
         .from('coach_profiles')
-        .select('*')
+        .select('id, user_id, email, display_name, plan, trial_ends_at, has_payment_method, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, avatar_url, bio, specialites, certifications, instagram, site_web, created_at')
         .eq('user_id', userId)
         .single()
       const profile = data as CoachProfile | null
       setCoach(profile)
       return profile
     } catch (err) {
-      console.error('[AuthContext] fetchCoach error:', err)
+      // fetchCoach error
       return null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await fetchCoach(session.user.id)
         }
       } catch (err) {
-        console.error('[AuthContext] init error:', err)
+        // init error
       } finally {
         setLoading(false)
       }

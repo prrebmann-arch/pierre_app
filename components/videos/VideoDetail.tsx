@@ -85,7 +85,7 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
     try {
       const { data: vid } = await supabase
         .from('execution_videos')
-        .select('*')
+        .select('id, athlete_id, exercise_name, serie_number, date, status, video_url, thumbnail_url, session_name, session_id, coach_feedback_url, coach_notes, coach_audio_url, created_at')
         .eq('id', videoId)
         .single()
 

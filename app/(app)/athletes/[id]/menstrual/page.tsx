@@ -32,7 +32,7 @@ export default function MenstrualPage() {
     setLoading(true)
     try {
       const [{ data: logs }, { data: ath }] = await Promise.all([
-        supabase.from('menstrual_logs').select('*').eq('athlete_id', params.id).order('start_date', { ascending: false }).limit(24),
+        supabase.from('menstrual_logs').select('id, athlete_id, start_date, end_date, flow_level, symptoms, notes, created_at').eq('athlete_id', params.id).order('start_date', { ascending: false }).limit(24),
         supabase.from('athletes').select('menstrual_tracking_enabled').eq('id', params.id).single(),
       ])
       setEnabled(ath?.menstrual_tracking_enabled || false)

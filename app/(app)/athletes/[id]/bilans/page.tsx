@@ -129,10 +129,10 @@ export default function BilansPage() {
     setLoading(true)
     try {
       const [bilansRes, progRes, nutriRes, phasesRes, wlogsRes] = await Promise.all([
-        supabase.from('daily_reports').select('*').eq('user_id', selectedAthlete.user_id).order('date', { ascending: false }),
-        supabase.from('programming_weeks').select('*').eq('athlete_id', selectedAthlete.id).order('week_date'),
-        supabase.from('nutrition_plans').select('*').eq('athlete_id', selectedAthlete.id),
-        supabase.from('roadmap_phases').select('*').eq('athlete_id', selectedAthlete.id).order('start_date'),
+        supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, steps, adherence, digestion, stress, humeur, douleurs, notes, photo_front, photo_side, photo_back, menstrual_flow, menstrual_symptoms').eq('user_id', selectedAthlete.user_id).order('date', { ascending: false }).limit(200),
+        supabase.from('programming_weeks').select('week_date, phase').eq('athlete_id', selectedAthlete.id).order('week_date'),
+        supabase.from('nutrition_plans').select('id, valid_from, meal_type, nom, calories_objectif, proteines, glucides, lipides, created_at').eq('athlete_id', selectedAthlete.id),
+        supabase.from('roadmap_phases').select('phase, name, start_date, end_date').eq('athlete_id', selectedAthlete.id).order('start_date'),
         supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }),
       ])
 
@@ -196,7 +196,6 @@ export default function BilansPage() {
       toast('Bilan supprime', 'success')
       loadData()
     } catch (err) {
-      console.error('deleteBilan error:', err)
       toast('Erreur lors de la suppression', 'error')
     }
   }, [toast, loadData]) // eslint-disable-line react-hooks/exhaustive-deps

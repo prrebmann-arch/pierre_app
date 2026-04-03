@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import EmptyState from '@/components/ui/EmptyState'
@@ -28,7 +28,9 @@ function getPaymentBadge(athlete: Athlete) {
   return PAYMENT_STATUS_MAP[plan.payment_status] || { label: 'En attente', color: '#f59e0b' }
 }
 
-function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => void }) {
+const badgeContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }
+
+const AthleteCard = memo(function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => void }) {
   const initials = (athlete.prenom?.charAt(0) || '') + (athlete.nom?.charAt(0) || '')
   const poids = athlete.poids_actuel ? `${athlete.poids_actuel} kg` : '\u2014'
   const activePhase = athlete._phase
@@ -37,15 +39,18 @@ function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => vo
   const phaseColor = phaseInfo ? phaseInfo.color : 'var(--primary)'
   const payBadge = getPaymentBadge(athlete)
 
+  const topBarStyle = useMemo(() => ({
+    background: phaseInfo ? phaseColor : 'var(--border)',
+    opacity: phaseInfo ? 0.8 : 0.3,
+  }), [phaseInfo, phaseColor])
+
+  const phaseBadgeStyle = useMemo(() => phaseLabel ? { color: phaseColor, background: `${phaseColor}18` } : undefined, [phaseLabel, phaseColor])
+  const payBadgeStyle = useMemo(() => ({ color: payBadge.color, background: `${payBadge.color}18` }), [payBadge.color])
+  const phaseValueStyle = useMemo(() => phaseInfo ? { color: phaseColor } : undefined, [phaseInfo, phaseColor])
+
   return (
     <div className={styles.athleteCard} onClick={onClick}>
-      <div
-        className={styles.cardTopBar}
-        style={{
-          background: phaseInfo ? phaseColor : 'var(--border)',
-          opacity: phaseInfo ? 0.8 : 0.3,
-        }}
-      />
+      <div className={styles.cardTopBar} style={topBarStyle} />
       <div className={styles.cardHead}>
         {athlete.avatar_url ? (
           <img src={athlete.avatar_url} alt="" className={styles.cardAvatar} />
@@ -58,19 +63,13 @@ function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => vo
           </div>
           <div className={styles.cardEmail}>{athlete.email || ''}</div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+        <div style={badgeContainerStyle}>
           {phaseLabel && (
-            <span
-              className={styles.phaseBadge}
-              style={{ color: phaseColor, background: `${phaseColor}18` }}
-            >
+            <span className={styles.phaseBadge} style={phaseBadgeStyle}>
               {phaseLabel}
             </span>
           )}
-          <span
-            className={styles.phaseBadge}
-            style={{ color: payBadge.color, background: `${payBadge.color}18` }}
-          >
+          <span className={styles.phaseBadge} style={payBadgeStyle}>
             {payBadge.label}
           </span>
         </div>
@@ -87,10 +86,7 @@ function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => vo
           <div className={styles.statLabel}>Objectif</div>
         </div>
         <div className={styles.statBox}>
-          <div
-            className={styles.statValue}
-            style={phaseInfo ? { color: phaseColor } : undefined}
-          >
+          <div className={styles.statValue} style={phaseValueStyle}>
             {phaseInfo ? phaseInfo.short : '\u2014'}
           </div>
           <div className={styles.statLabel}>Phase</div>
@@ -98,7 +94,7 @@ function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => vo
       </div>
     </div>
   )
-}
+})
 
 export default function AthletesList() {
   const { athletes, loading } = useAthleteContext()
@@ -106,6 +102,10 @@ export default function AthletesList() {
   const [search, setSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [credentialsMessage, setCredentialsMessage] = useState<string | null>(null)
+
+  const handleAthleteClick = useCallback((athleteId: string) => {
+    router.push(`/athletes/${athleteId}/apercu`)
+  }, [router])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return athletes
@@ -180,7 +180,7 @@ export default function AthletesList() {
             <AthleteCard
               key={athlete.id}
               athlete={athlete}
-              onClick={() => router.push(`/athletes/${athlete.id}/apercu`)}
+              onClick={() => handleAthleteClick(athlete.id)}
             />
           ))}
         </div>

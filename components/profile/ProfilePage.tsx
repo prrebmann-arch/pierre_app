@@ -72,7 +72,7 @@ export default function ProfilePage() {
           .limit(12)
         setInvoices((data as PlatformInvoice[]) || [])
       } catch (err) {
-        console.error('[ProfilePage] load error:', err)
+        // load error
       } finally {
         setLoading(false)
       }
@@ -190,7 +190,6 @@ export default function ProfilePage() {
       })
       .eq('user_id', user!.id)
     if (error) {
-      console.error('[Profile] Disconnect Stripe error:', error)
       toast('Erreur: ' + error.message, 'error')
       return
     }

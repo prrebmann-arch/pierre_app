@@ -36,7 +36,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, timedOut, router, isReturning])
 
-  if (loading && !timedOut) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--bg)', color: 'var(--text2)' }}>Chargement...</div>
+  if (loading && !timedOut) return (
+    <div className={styles.appLayout}>
+      {/* Sidebar skeleton */}
+      <div className={styles.sidebarSkeleton}>
+        <div className={styles.skelBrandRow}>
+          <div className="skeleton" style={{ width: 28, height: 28, borderRadius: 8 }} />
+          <div className="skeleton" style={{ width: 90, height: 14, borderRadius: 6 }} />
+        </div>
+        <div className={styles.skelNav}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="skeleton" style={{ width: '100%', height: 36, borderRadius: 10 }} />
+          ))}
+        </div>
+      </div>
+      {/* Content skeleton */}
+      <div className={styles.mainContentSkeleton}>
+        <div className="skeleton" style={{ width: 220, height: 28, borderRadius: 10, marginBottom: 24 }} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 20 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="skeleton" style={{ height: 120, borderRadius: 16 }} />
+          ))}
+        </div>
+        <div className="skeleton" style={{ width: '100%', height: 200, borderRadius: 16, marginTop: 24 }} />
+      </div>
+    </div>
+  )
   if (!user && !isReturning) return null
 
   return (

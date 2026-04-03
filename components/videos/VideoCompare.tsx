@@ -182,7 +182,7 @@ export default function VideoCompare({ video, compVideos, compIdx }: VideoCompar
     // Load workout logs
     let { data: logs } = await supabase
       .from('workout_logs')
-      .select('*')
+      .select('id, athlete_id, session_id, session_name, date, started_at, finished_at, exercices_completes')
       .eq('session_id', matchSession.id)
       .order('date', { ascending: false })
       .limit(30)
@@ -190,7 +190,7 @@ export default function VideoCompare({ video, compVideos, compIdx }: VideoCompar
     if (!logs?.length && (video.session_name || matchSession.nom)) {
       ;({ data: logs } = await supabase
         .from('workout_logs')
-        .select('*')
+        .select('id, athlete_id, session_id, session_name, date, started_at, finished_at, exercices_completes')
         .eq('athlete_id', video.athlete_id)
         .eq('session_name', video.session_name || matchSession.nom)
         .order('date', { ascending: false })

@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from 'react'
 import Link from 'next/link'
-import HeroParticles from './HeroParticles'
+import dynamic from 'next/dynamic'
+
+const HeroParticles = dynamic(() => import('./HeroParticles'), { ssr: false })
 import styles from '@/styles/landing.module.css'
 
 export default function Hero() {

@@ -46,6 +46,16 @@
 - [x] vercel.json: fixed buildCommand to use --webpack flag — prevents Turbopack ENOENT build failures on Vercel
 - [x] Build passes (0 errors, 40+ pages)
 
+## CSS & Loading Performance
+- [x] Font loading: added `display: 'swap'` to Inter font config — prevents render blocking
+- [x] App layout skeleton: replaced "Chargement..." with sidebar + content card skeletons
+- [x] Dashboard loading.tsx: stat card + chart area skeletons
+- [x] Athletes list loading.tsx: header + card grid skeletons
+- [x] Athlete detail loading.tsx: tab content skeletons
+- [x] Fade-in animation: added pageIn animation to mainContent children
+- [x] globals.css: 588 lines — kept as-is (all shared: variables, reset, buttons, forms, cards, modals, utilities — no feature bloat)
+- [x] Build passes (0 errors, 40+ pages)
+
 ## Notes
 - `styles/business.module.css` already existed with all biz-* styles converted to camelCase
 - `styles/formations.module.css` already existed with all fm-* styles
@@ -64,3 +74,14 @@
 - [x] `push/route.ts` — POST, uses verifyAuth
 - [x] `authFetch` — defined inline in ProfilePage + setup-payment, adds Bearer JWT token
 - [x] Build passes with `--webpack` flag (40 pages, 0 errors)
+
+## Bundle Optimization
+- [x] Extracted WeightChart into `components/charts/WeightChart.tsx` with chart.js registration
+- [x] Apercu page: dynamic import of WeightChart with `ssr: false` (chart.js no longer in main bundle)
+- [x] InstagramAnalytics: dynamic import with `ssr: false` + loading skeleton (chart.js + react-chartjs-2 lazy loaded)
+- [x] Verified: Font Awesome (122 icons used) — all.min.css is the pragmatic choice, no lighter alternative
+- [x] Verified: Stripe libs already route-level code-split (setup-payment, profile pages only)
+- [x] Verified: No moment/lodash/date-fns bloat — only lightweight custom utils
+- [x] Verified: All createClient() calls use singleton from `@/lib/supabase/client`
+- [x] Skipped: `<img>` to `next/image` — images are external URLs (Instagram, Supabase storage), would need remotePatterns config and risk breakage
+- [x] Build passes (0 errors, 51 routes)

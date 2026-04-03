@@ -88,7 +88,7 @@ export default function NutritionPage() {
     try {
       const { data } = await supabase
         .from('nutrition_plans')
-        .select('*')
+        .select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, created_at, macro_only, meal_times')
         .eq('athlete_id', athleteId)
         .order('created_at', { ascending: false })
 
@@ -151,8 +151,8 @@ export default function NutritionPage() {
 
     // Try both id and user_id as the athlete app may use either
     const [{ data: logsByUser }, { data: logsByAthlete }] = await Promise.all([
-      supabase.from('nutrition_logs').select('*').eq('athlete_id', ath.user_id).gte('date', fromDate).order('date', { ascending: false }),
-      supabase.from('nutrition_logs').select('*').eq('athlete_id', ath.id).gte('date', fromDate).order('date', { ascending: false }),
+      supabase.from('nutrition_logs').select('id, athlete_id, date, plan_id, meals_log').eq('athlete_id', ath.user_id).gte('date', fromDate).order('date', { ascending: false }),
+      supabase.from('nutrition_logs').select('id, athlete_id, date, plan_id, meals_log').eq('athlete_id', ath.id).gte('date', fromDate).order('date', { ascending: false }),
     ])
     const logs = ((logsByUser?.length ? logsByUser : logsByAthlete) || []) as NutritionLog[]
     setNutriLogs(logs)
@@ -173,7 +173,7 @@ export default function NutritionPage() {
   async function editDiet(tId: string | null, rId: string | null) {
     const id = tId || rId
     if (!id) return
-    const { data: plan } = await supabase.from('nutrition_plans').select('*').eq('id', id).single()
+    const { data: plan } = await supabase.from('nutrition_plans').select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, created_at, macro_only, meal_times').eq('id', id).single()
     if (!plan) { toast('Plan introuvable', 'error'); return }
 
     let meals: MealData[] = []

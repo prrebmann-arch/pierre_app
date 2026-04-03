@@ -61,30 +61,34 @@ export default function TemplatesPage() {
       if (activeTab === 'training') {
         const { data } = await supabase
           .from('training_templates')
-          .select('*')
+          .select('id, nom, category, pattern_type, pattern_data, sessions_data, created_at')
           .eq('coach_id', coach.id)
           .order('created_at', { ascending: false })
+          .limit(100)
         setTrainingTemplates((data || []) as TrainingTemplate[])
       } else if (activeTab === 'nutrition') {
         const { data } = await supabase
           .from('nutrition_templates')
-          .select('*')
+          .select('id, nom, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, macro_only, created_at')
           .eq('coach_id', coach.id)
           .order('created_at', { ascending: false })
+          .limit(100)
         setNutritionTemplates(data || [])
       } else if (activeTab === 'workflow') {
         const { data } = await supabase
           .from('onboarding_workflows')
-          .select('*')
+          .select('id, nom, coach_id, steps, created_at')
           .eq('coach_id', coach.id)
           .order('created_at', { ascending: false })
+          .limit(100)
         setWorkflows(data || [])
       } else if (activeTab === 'questionnaires') {
         const { data } = await supabase
           .from('questionnaire_templates')
-          .select('*')
+          .select('id, titre, coach_id, questions, created_at')
           .eq('coach_id', coach.id)
           .order('created_at', { ascending: false })
+          .limit(100)
         setQuestionnaireTemplates(data || [])
       }
     } finally {
