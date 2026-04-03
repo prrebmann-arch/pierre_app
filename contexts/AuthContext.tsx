@@ -45,10 +45,12 @@ interface AuthContextType {
   user: User | null
   coach: CoachProfile | null
   loading: boolean
+  accessToken: string | null
   signIn: (email: string, password: string) => Promise<CoachProfile | null>
   signUp: (email: string, password: string, plan: string) => Promise<CoachProfile | null>
   signOut: () => Promise<void>
   refreshCoach: () => Promise<void>
+  updateCoach: (partial: Partial<CoachProfile>) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const [user, setUser] = useState<User | null>(cachedUser.current)
   const [coach, setCoach] = useState<CoachProfile | null>(cachedCoach.current)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
   // If we have cached data, loading is already false — UI renders instantly
   const [loading, setLoading] = useState(!hasCachedSession.current)
   const initRef = useRef(false)
@@ -73,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data } = await supabase
         .from('coach_profiles')
-        .select('id, user_id, email, display_name, plan, trial_ends_at, has_payment_method, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, avatar_url, bio, specialites, certifications, instagram, site_web, created_at')
+        .select('id, user_id, email, display_name, plan, trial_ends_at, has_payment_method, stripe_account_id, stripe_onboarding_complete, stripe_charges_enabled, avatar_url, created_at')
         .eq('user_id', userId)
         .single()
       const profile = data as CoachProfile | null
@@ -94,6 +97,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) await fetchCoach(user.id)
   }, [user, fetchCoach])
 
+  const updateCoach = useCallback((partial: Partial<CoachProfile>) => {
+    setCoach((prev) => {
+      if (!prev) return prev
+      const updated = { ...prev, ...partial }
+      try { localStorage.setItem(CACHE_KEY_PROFILE, JSON.stringify(updated)) } catch { /* quota */ }
+      return updated
+    })
+  }, [])
+
   useEffect(() => {
     if (initRef.current) return
     initRef.current = true
@@ -104,6 +116,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           const u = { id: session.user.id, email: session.user.email! }
           setUser(u)
+          setAccessToken(session.access_token)
           try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
           // Background refresh of coach profile (UI already showing cached data)
           await fetchCoach(session.user.id)
@@ -111,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // No valid session — clear cache and state
           setUser(null)
           setCoach(null)
+          setAccessToken(null)
           localStorage.removeItem(CACHE_KEY_USER)
           localStorage.removeItem(CACHE_KEY_PROFILE)
         }
@@ -129,11 +143,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           const u = { id: session.user.id, email: session.user.email! }
           setUser(u)
+          setAccessToken(session.access_token)
           try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
           await fetchCoach(session.user.id)
         } else {
           setUser(null)
           setCoach(null)
+          setAccessToken(null)
           localStorage.removeItem(CACHE_KEY_USER)
           localStorage.removeItem(CACHE_KEY_PROFILE)
         }
@@ -164,6 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const u = { id: data.user.id, email: data.user.email! }
       setUser(u)
+      setAccessToken(data.session?.access_token ?? null)
       try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
       const profile = await fetchCoach(data.user.id)
       return profile
@@ -198,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const u = { id: data.user.id, email: data.user.email! }
       setUser(u)
+      setAccessToken(data.session?.access_token ?? null)
       try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
       const profile = await fetchCoach(data.user.id)
       return profile
@@ -211,14 +229,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setCoach(null)
+    setAccessToken(null)
     localStorage.removeItem(CACHE_KEY_USER)
     localStorage.removeItem(CACHE_KEY_PROFILE)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const value = useMemo(
-    () => ({ user, coach, loading, signIn, signUp, signOut, refreshCoach }),
-    [user, coach, loading, signIn, signUp, signOut, refreshCoach],
+    () => ({ user, coach, loading, accessToken, signIn, signUp, signOut, refreshCoach, updateCoach }),
+    [user, coach, loading, accessToken, signIn, signUp, signOut, refreshCoach, updateCoach],
   )
 
   return (

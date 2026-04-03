@@ -133,7 +133,7 @@ export default function ContentPlanner() {
         supabase.from('ig_drafts').select('id, user_id, caption, hashtags, media_urls, media_type, status, scheduled_at, created_at').eq('user_id', user.id).order('scheduled_at', { ascending: true }),
         supabase.from('ig_hashtag_groups').select('id, user_id, name, hashtags').eq('user_id', user.id).order('name'),
         supabase.from('ig_caption_templates').select('id, user_id, title, body').eq('user_id', user.id).order('title'),
-        supabase.from('ig_reels').select('id, user_id, ig_media_id, caption, published_at, views, likes, comments, shares, saves, reach, pillar_id').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_reels').select('id, user_id, ig_media_id, caption, published_at, views, likes, comments, shares, saves, reach, pillar').eq('user_id', user.id).order('published_at', { ascending: false }),
       ])
       setDrafts(dRes.data || [])
       setHashtagGroups(hRes.data || [])

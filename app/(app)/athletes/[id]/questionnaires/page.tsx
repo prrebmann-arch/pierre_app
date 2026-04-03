@@ -63,7 +63,7 @@ export default function QuestionnairesPage() {
       if (completedIds.length > 0) {
         const { data: responses } = await supabase
           .from('questionnaire_responses')
-          .select('id, assignment_id, answers, submitted_at')
+          .select('id, assignment_id, responses, submitted_at')
           .in('assignment_id', completedIds)
         ;(responses || []).forEach((r: any) => { rmap[r.assignment_id] = r })
       }

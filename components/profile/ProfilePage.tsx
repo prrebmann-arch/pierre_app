@@ -42,7 +42,7 @@ interface ImportSub {
 }
 
 export default function ProfilePage() {
-  const { user, coach, refreshCoach } = useAuth()
+  const { user, coach, refreshCoach, updateCoach, accessToken } = useAuth()
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -82,19 +82,16 @@ export default function ProfilePage() {
 
   const authFetch = useCallback(
     async (url: string, opts: RequestInit = {}) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
       return fetch(url, {
         ...opts,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
+          Authorization: `Bearer ${accessToken || ''}`,
           ...(opts.headers || {}),
         },
       })
     },
-    [supabase],
+    [accessToken],
   )
 
   // Check connect return
@@ -125,12 +122,12 @@ export default function ProfilePage() {
             toast('Erreur enregistrement carte', 'error')
             return
           }
-          refreshCoach()
+          updateCoach({ has_payment_method: true })
           toast('Carte enregistree avec succes', 'success')
           window.history.replaceState({}, '', '/profile')
         })
     }
-  }, [user, authFetch, refreshCoach, toast]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user, authFetch, updateCoach, toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // -- Actions --
 
@@ -145,7 +142,7 @@ export default function ProfilePage() {
       toast('Erreur mise a jour', 'error')
       return
     }
-    refreshCoach()
+    updateCoach({ display_name: name })
     toast('Nom mis a jour', 'success')
   }
 
@@ -193,7 +190,7 @@ export default function ProfilePage() {
       toast('Erreur: ' + error.message, 'error')
       return
     }
-    refreshCoach()
+    updateCoach({ stripe_onboarding_complete: false, stripe_charges_enabled: false, stripe_account_id: undefined })
     toast('Stripe deconnecte', 'success')
   }
 
@@ -212,7 +209,7 @@ export default function ProfilePage() {
       toast('Erreur', 'error')
       return
     }
-    refreshCoach()
+    updateCoach({ plan: newPlan })
     toast(`Plan change en ${newPlan === 'business' ? 'Business' : 'Athlete'}`, 'success')
   }
 
@@ -241,7 +238,7 @@ export default function ProfilePage() {
       toast('Erreur', 'error')
       return
     }
-    refreshCoach()
+    updateCoach({ allow_prorata: enabled })
     toast(enabled ? 'Prorata active' : 'Prorata desactive', 'success')
   }
 
@@ -254,7 +251,7 @@ export default function ProfilePage() {
       toast('Erreur', 'error')
       return
     }
-    refreshCoach()
+    updateCoach({ currency })
     toast('Devise mise a jour', 'success')
   }
 
@@ -506,7 +503,7 @@ export default function ProfilePage() {
                 <CardForm
                   onSuccess={() => {
                     setShowCardForm(false)
-                    refreshCoach()
+                    updateCoach({ has_payment_method: true })
                     toast('Carte enregistree avec succes', 'success')
                   }}
                   onCancel={() => setShowCardForm(false)}

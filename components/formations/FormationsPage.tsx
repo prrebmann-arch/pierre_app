@@ -89,7 +89,7 @@ export default function FormationsPage() {
     setLoading(true)
     try {
       const [fRes, mRes] = await Promise.all([
-        supabase.from('formations').select('id, coach_id, nom, description, status, created_at').eq('coach_id', user.id).order('created_at', { ascending: false }),
+        supabase.from('formations').select('id, coach_id, title, description, visibility, created_at').eq('coach_id', user.id).order('created_at', { ascending: false }),
         supabase.from('formation_members').select('formation_id, athlete_id'),
       ])
       setFormations(fRes.data || [])
@@ -120,8 +120,8 @@ export default function FormationsPage() {
   const viewFormation = useCallback(async (formationId: string) => {
     if (!user) return
     const [fRes, vRes, mRes, progRes] = await Promise.all([
-      supabase.from('formations').select('id, coach_id, nom, description, status, created_at').eq('id', formationId).single(),
-      supabase.from('formation_videos').select('id, formation_id, title, video_url, thumbnail_url, duration, position, created_at').eq('formation_id', formationId).order('position'),
+      supabase.from('formations').select('id, coach_id, title, description, visibility, created_at').eq('id', formationId).single(),
+      supabase.from('formation_videos').select('id, formation_id, title, video_url, position, created_at').eq('formation_id', formationId).order('position'),
       supabase.from('formation_members').select('athlete_id, athletes(id, prenom, nom, email, user_id)').eq('formation_id', formationId),
       supabase.from('formation_video_progress').select('user_id, video_id, watched'),
     ])

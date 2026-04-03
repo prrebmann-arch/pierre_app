@@ -64,17 +64,27 @@ async function syncStories(
 
       if (storiesData.error) continue;
 
-      for (const story of (storiesData.data || [])) {
-        const insights: Record<string, number> = {};
-        try {
-          const iRes = await fetch(`https://graph.instagram.com/v25.0/${story.id}/insights?metric=views,reach,replies,shares,total_interactions,navigation&access_token=${acct.access_token}`);
-          const iData = await iRes.json();
-          (iData.data || []).forEach((m: { name: string; values?: { value?: number }[] }) => {
-            insights[m.name] = m.values?.[0]?.value || 0;
-          });
-        } catch { /* ignore insight errors */ }
+      const stories = storiesData.data || [];
 
-        await supabase.from('ig_stories').upsert({
+      // Fetch all insights in parallel (one request per story)
+      const insightsMap = await Promise.all(
+        stories.map(async (story: { id: string }) => {
+          const insights: Record<string, number> = {};
+          try {
+            const iRes = await fetch(`https://graph.instagram.com/v25.0/${story.id}/insights?metric=views,reach,replies,shares,total_interactions,navigation&access_token=${acct.access_token}`);
+            const iData = await iRes.json();
+            (iData.data || []).forEach((m: { name: string; values?: { value?: number }[] }) => {
+              insights[m.name] = m.values?.[0]?.value || 0;
+            });
+          } catch { /* ignore insight errors */ }
+          return insights;
+        })
+      );
+
+      // Build all rows, then batch upsert
+      const rows = stories.map((story: { id: string; media_url?: string; thumbnail_url?: string; caption?: string; media_type?: string; timestamp: string }, idx: number) => {
+        const insights = insightsMap[idx];
+        return {
           user_id: acct.user_id,
           ig_story_id: story.id,
           ig_media_url: story.media_url || null,
@@ -89,9 +99,13 @@ async function syncStories(
           taps_back: insights.shares || 0,
           published_at: story.timestamp,
           expires_at: new Date(new Date(story.timestamp).getTime() + 24 * 60 * 60 * 1000).toISOString(),
-        }, { onConflict: 'ig_story_id' });
-        totalSynced++;
+        };
+      });
+
+      if (rows.length > 0) {
+        await supabase.from('ig_stories').upsert(rows, { onConflict: 'ig_story_id' });
       }
+      totalSynced += rows.length;
     } catch (err: unknown) {
       console.error(`[IG Sync Stories] Error for user ${acct.user_id}:`, (err as Error).message);
     }

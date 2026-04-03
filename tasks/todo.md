@@ -170,3 +170,26 @@
 - [x] Verified: All createClient() calls use singleton from `@/lib/supabase/client`
 - [x] Skipped: `<img>` to `next/image` — images are external URLs (Instagram, Supabase storage), would need remotePatterns config and risk breakage
 - [x] Build passes (0 errors, 51 routes)
+
+---
+
+# Optimistic Updates - ProfilePage
+
+## AuthContext
+- [x] Added `updateCoach(partial)` to AuthContext — merges partial updates into coach state + localStorage cache
+- [x] Exposed in context interface, value, and useMemo deps
+
+## ProfilePage — refreshCoach() replaced with updateCoach()
+- [x] handleEditName: `updateCoach({ display_name: name })`
+- [x] handleDisconnectStripe: `updateCoach({ stripe_onboarding_complete, stripe_charges_enabled, stripe_account_id })`
+- [x] handleChangePlan: `updateCoach({ plan: newPlan })`
+- [x] handleToggleProrata: `updateCoach({ allow_prorata: enabled })`
+- [x] handleUpdateCurrency: `updateCoach({ currency })`
+- [x] CardForm onSuccess: `updateCoach({ has_payment_method: true })`
+- [x] setup=success URL param: `updateCoach({ has_payment_method: true })`
+
+## Kept refreshCoach() (correct)
+- [x] connect=complete URL param — Stripe Connect external callback, server determines actual state
+
+## Verification
+- [x] TypeScript check passes (0 errors in modified files)

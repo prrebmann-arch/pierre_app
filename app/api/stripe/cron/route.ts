@@ -70,19 +70,28 @@ async function runInvoice(supabase: ReturnType<typeof createClient<any>>, now: D
 
   if (!coaches?.length) return results;
 
+  // Batch: fetch all existing invoices for this billing period in one query
+  const coachIds = coaches.map((c: { user_id: string }) => c.user_id);
+  const [{ data: existingInvoices }, { data: allActivitiesBatch }] = await Promise.all([
+    supabase.from('platform_invoices')
+      .select('coach_id').in('coach_id', coachIds).eq('month', billMonth).eq('year', billYear),
+    supabase.from('athlete_activity_log')
+      .select('coach_id, athlete_id, event, event_date').in('coach_id', coachIds)
+      .lte('event_date', `${billYear}-${String(billMonth).padStart(2, '0')}-${daysInMonth}`)
+      .order('event_date', { ascending: true }),
+  ]);
+  const existingCoachIds = new Set((existingInvoices || []).map((e: { coach_id: string }) => e.coach_id));
+
   for (const coach of coaches) {
     try {
-      const { data: existing } = await supabase.from('platform_invoices')
-        .select('id').eq('coach_id', coach.user_id).eq('month', billMonth).eq('year', billYear).maybeSingle();
-      if (existing) { results.skipped++; continue; }
+      if (existingCoachIds.has(coach.user_id)) { results.skipped++; continue; }
       if (coach.trial_ends_at && new Date(coach.trial_ends_at) > now) { results.skipped++; continue; }
 
       const monthStart = `${billYear}-${String(billMonth).padStart(2, '0')}-01`;
       const monthEnd = `${billYear}-${String(billMonth).padStart(2, '0')}-${daysInMonth}`;
 
-      const { data: allActivities } = await supabase.from('athlete_activity_log')
-        .select('athlete_id, event, event_date').eq('coach_id', coach.user_id)
-        .lte('event_date', monthEnd).order('event_date', { ascending: true });
+      // Filter activities for this coach from the batch result
+      const allActivities = (allActivitiesBatch || []).filter((a: { coach_id: string }) => a.coach_id === coach.user_id);
 
       const uniqueAthletes = [...new Set((allActivities || []).map((a: { athlete_id: string }) => a.athlete_id))];
       const detail: { athlete_id: string; days: number; cost: number }[] = [];

@@ -97,16 +97,16 @@ export default function InfosPage() {
         // Load onboarding
         let ob: any = null
         if (data.user_id || data.id) {
-          const r1 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, status, completed_steps, created_at').eq('athlete_id', data.user_id).limit(1)
+          const r1 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, completed, steps_completed, started_at').eq('athlete_id', data.user_id).limit(1)
           ob = r1.data?.[0] || null
           if (!ob) {
-            const r2 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, status, completed_steps, created_at').eq('athlete_id', data.id).limit(1)
+            const r2 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, completed, steps_completed, started_at').eq('athlete_id', data.id).limit(1)
             ob = r2.data?.[0] || null
           }
         }
         setOnboarding(ob)
         if (ob?.workflow_id) {
-          const { data: wf } = await supabase.from('onboarding_workflows').select('id, nom, steps, created_at').eq('id', ob.workflow_id).single()
+          const { data: wf } = await supabase.from('onboarding_workflows').select('id, name, steps, created_at').eq('id', ob.workflow_id).single()
           setWorkflow(wf)
         } else {
           setWorkflow(null)

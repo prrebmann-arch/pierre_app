@@ -51,7 +51,7 @@ interface IgReel {
   plays: number
   engagement_rate: number
   published_at: string | null
-  pillar_id?: string
+  pillar?: string
   format?: string
 }
 interface IgPillar { id: string; name: string; color: string }
@@ -208,11 +208,11 @@ export default function InstagramAnalytics() {
     try {
       const [acctRes, reelsRes, pillarsRes, snapshotsRes, goalsRes, storiesRes] = await Promise.all([
         supabase.from('ig_accounts').select('id, user_id, ig_user_id, ig_username, access_token, page_id, page_access_token, is_connected').eq('user_id', user.id).single(),
-        supabase.from('ig_reels').select('id, user_id, ig_media_id, caption, published_at, views, likes, comments, shares, saves, reach, pillar_id').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_reels').select('id, user_id, ig_media_id, caption, published_at, views, likes, comments, shares, saves, reach, pillar').eq('user_id', user.id).order('published_at', { ascending: false }),
         supabase.from('ig_content_pillars').select('id, user_id, name, color').eq('user_id', user.id).order('name'),
-        supabase.from('ig_snapshots').select('id, user_id, snapshot_date, followers, following, media_count').eq('user_id', user.id).order('snapshot_date', { ascending: true }),
-        supabase.from('ig_goals').select('id, user_id, metric, target, deadline').eq('user_id', user.id),
-        supabase.from('ig_stories').select('id, user_id, ig_media_id, published_at, views, replies, reach, media_type').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_snapshots').select('id, user_id, snapshot_date, followers, total_views, total_reach, new_followers').eq('user_id', user.id).order('snapshot_date', { ascending: true }),
+        supabase.from('ig_goals').select('id, user_id, metric, target_value, quarter').eq('user_id', user.id),
+        supabase.from('ig_stories').select('id, user_id, ig_story_id, published_at, impressions, replies, reach, story_type').eq('user_id', user.id).order('published_at', { ascending: false }),
       ])
       const acct = acctRes.data as IgAccount | null
       setAccount(acct)
@@ -433,10 +433,10 @@ export default function InstagramAnalytics() {
   // Pillar distribution
   const pillarCounts: Record<string, number> = {}
   filteredReels.forEach((r) => {
-    const pid = r.pillar_id || '_none'
+    const pid = r.pillar || '_none'
     pillarCounts[pid] = (pillarCounts[pid] || 0) + 1
   })
-  const hasPillarData = pillars.length > 0 && filteredReels.some((r) => r.pillar_id)
+  const hasPillarData = pillars.length > 0 && filteredReels.some((r) => r.pillar)
 
   // Quarter goals
   const qGoals = goals.filter((g) => g.quarter === quarter)
@@ -753,7 +753,7 @@ function GeneralTab({
               <thead><tr><th>#</th><th></th><th>Caption</th><th>Pillar</th><th>Views</th><th>Saves</th><th>Shares</th></tr></thead>
               <tbody>
                 {sortedReels.map((r, idx) => {
-                  const pillar = pillars.find((p) => p.id === r.pillar_id)
+                  const pillar = pillars.find((p) => p.id === r.pillar)
                   return (
                     <tr key={r.id} className="nd-tr" style={{ cursor: 'pointer' }} onClick={() => openReelModal(r)}>
                       <td style={{ padding: '6px 8px', fontSize: 12, color: 'var(--text3)', fontWeight: 600 }}>#{idx + 1}</td>
@@ -869,7 +869,7 @@ function ReelsTab({ reels, pillars, openReelModal, openPillarModal, deletePillar
               <thead><tr><th></th><th>Caption</th><th>Pillar</th><th>Views</th><th>Saves</th><th>Shares</th><th>Comments</th></tr></thead>
               <tbody>
                 {sorted.map((r) => {
-                  const pillar = pillars.find((p) => p.id === r.pillar_id)
+                  const pillar = pillars.find((p) => p.id === r.pillar)
                   return (
                     <tr key={r.id} className="nd-tr" style={{ cursor: 'pointer' }} onClick={() => openReelModal(r)}>
                       <td style={{ padding: '6px 8px' }}>
@@ -902,7 +902,7 @@ function ReelsTab({ reels, pillars, openReelModal, openPillarModal, deletePillar
           <div className={styles.pillarItemLeft}>
             <div className={styles.pillarDot} style={{ background: p.color || '#6b7280' }} />
             <span className={styles.pillarItemName}>{p.name}</span>
-            <span className={styles.pillarItemCount}>{reels.filter((r) => r.pillar_id === p.id).length} reels</span>
+            <span className={styles.pillarItemCount}>{reels.filter((r) => r.pillar === p.id).length} reels</span>
           </div>
           <div style={{ display: 'flex', gap: 4 }}>
             <button className="btn btn-outline btn-sm" onClick={() => openPillarModal(p)} title="Modifier"><i className="fas fa-pen" style={{ fontSize: 10 }} /></button>

@@ -10,7 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import styles from '@/styles/profile.module.css'
 
 export default function SetupPaymentPage() {
-  const { user, coach, loading, refreshCoach } = useAuth()
+  const { user, coach, loading, refreshCoach, accessToken } = useAuth()
   const { toast } = useToast()
   const router = useRouter()
   const supabase = createClient()
@@ -22,19 +22,16 @@ export default function SetupPaymentPage() {
 
   const authFetch = useCallback(
     async (url: string, opts: RequestInit = {}) => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
       return fetch(url, {
         ...opts,
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token || ''}`,
+          Authorization: `Bearer ${accessToken || ''}`,
           ...(opts.headers || {}),
         },
       })
     },
-    [supabase],
+    [accessToken],
   )
 
   // Redirect if not logged in or already has payment method
