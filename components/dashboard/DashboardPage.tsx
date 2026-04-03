@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -59,17 +59,28 @@ export default function DashboardPage() {
   const { user } = useAuth()
   const { athletes, loading: athletesLoading } = useAthleteContext()
   const { toast } = useToast()
-  const router = useRouter()
   const supabase = createClient()
 
-  const [loading, setLoading] = useState(true)
-  const [bilansToReview, setBilansToReview] = useState<BilanToReview[]>([])
-  const [lateAthletes, setLateAthletes] = useState<LateAthlete[]>([])
-  const [pendingVids, setPendingVids] = useState<PendingVideo[]>([])
-  const [birthdays, setBirthdays] = useState<Birthday[]>([])
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([])
-  const [coachSettings, setCoachSettings] = useState<Record<string, unknown>>({})
-  const [activePrograms, setActivePrograms] = useState(0)
+  const DASH_CACHE_KEY = 'dashboard_cache'
+
+  // Restore cached dashboard data instantly
+  const getCachedDash = () => {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = sessionStorage.getItem(DASH_CACHE_KEY)
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  }
+  const cached = getCachedDash()
+
+  const [loading, setLoading] = useState(!cached)
+  const [bilansToReview, setBilansToReview] = useState<BilanToReview[]>(cached?.bilansToReview ?? [])
+  const [lateAthletes, setLateAthletes] = useState<LateAthlete[]>(cached?.lateAthletes ?? [])
+  const [pendingVids, setPendingVids] = useState<PendingVideo[]>(cached?.pendingVids ?? [])
+  const [birthdays, setBirthdays] = useState<Birthday[]>(cached?.birthdays ?? [])
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>(cached?.recentActivity ?? [])
+  const [coachSettings, setCoachSettings] = useState<Record<string, unknown>>(cached?.coachSettings ?? {})
+  const [activePrograms, setActivePrograms] = useState(cached?.activePrograms ?? 0)
   const [sendingRappel, setSendingRappel] = useState<Set<string>>(new Set())
   const [sentRappels, setSentRappels] = useState<Set<string>>(new Set())
 
@@ -79,7 +90,8 @@ export default function DashboardPage() {
   const loadDashboard = useCallback(async () => {
     if (!user || athletesLoading) return
 
-    setLoading(true)
+    // Only show loading spinner if no cached data available
+    if (!sessionStorage.getItem(DASH_CACHE_KEY)) setLoading(true)
     try {
     const athleteUserIds = athletes.map(a => a.user_id).filter(Boolean) as string[]
     const athleteIds = athletes.map(a => a.id)
@@ -247,6 +259,21 @@ export default function DashboardPage() {
       .filter(Boolean)
       .slice(0, 20) as ActivityItem[]
     setRecentActivity(activity)
+
+    // Cache all dashboard data for instant load on next visit
+    try {
+      sessionStorage.setItem(DASH_CACHE_KEY, JSON.stringify({
+        bilansToReview: bilans,
+        lateAthletes: late,
+        pendingVids: vids,
+        birthdays: bdays,
+        recentActivity: activity,
+        coachSettings: settings,
+        activePrograms: programs.filter(p => p.actif).length,
+      }))
+    } catch {
+      // sessionStorage full — ignore
+    }
     } finally {
       setLoading(false)
     }
@@ -400,12 +427,9 @@ export default function DashboardPage() {
           <div className={styles.prcWelcomeDate}>
             <i className="fas fa-calendar-alt" /> {todayFull}
           </div>
-          <button
-            className="btn btn-red"
-            onClick={() => router.push('/athletes?new=1')}
-          >
+          <Link href="/athletes?new=1" className="btn btn-red">
             <i className="fas fa-plus" /> Ajouter un athlete
-          </button>
+          </Link>
         </div>
       </div>
 
@@ -431,10 +455,11 @@ export default function DashboardPage() {
                     const d = new Date((b.report.date as string) + 'T00:00:00')
                     const dateStr = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
                     return (
-                      <div
+                      <Link
                         key={b.athlete.id}
+                        href={`/athletes/${b.athlete.id}/bilans`}
                         className={styles.dashItem}
-                        onClick={() => router.push(`/athletes/${b.athlete.id}/bilans`)}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
                       >
                         <div className={styles.dashAvatar}>
                           {b.athlete.prenom.charAt(0)}{b.athlete.nom.charAt(0)}
@@ -447,7 +472,7 @@ export default function DashboardPage() {
                             {b.count} bilan{b.count > 1 ? 's' : ''} · dernier le {dateStr}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })
                 ) : (
@@ -524,10 +549,11 @@ export default function DashboardPage() {
                     const d = new Date(v.created_at)
                     const timeAgo = getTimeAgo(d)
                     return (
-                      <div
+                      <Link
                         key={v.id}
+                        href={`/athletes/${v.athlete.id}/videos`}
                         className={styles.dashItem}
-                        onClick={() => router.push(`/athletes/${v.athlete.id}/videos`)}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
                       >
                         <div className={styles.dashAvatar} style={{ background: 'var(--warning)' }}>
                           {v.athlete.prenom.charAt(0)}{v.athlete.nom.charAt(0)}
@@ -540,7 +566,7 @@ export default function DashboardPage() {
                             {v.exercise_name || 'Exercice'} · {timeAgo}
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     )
                   })
                 ) : (
@@ -568,10 +594,11 @@ export default function DashboardPage() {
                     const countdownColor = isToday ? 'var(--warning)' : b.daysLeft <= 7 ? 'var(--primary)' : 'var(--text3)'
                     const countdownText = isToday ? 'Aujourd\'hui !' : `J-${b.daysLeft}`
                     return (
-                      <div
+                      <Link
                         key={b.athlete.id}
+                        href={`/athletes/${b.athlete.id}/apercu`}
                         className={styles.dashItem}
-                        onClick={() => router.push(`/athletes/${b.athlete.id}`)}
+                        style={{ textDecoration: 'none', color: 'inherit' }}
                       >
                         <div
                           className={styles.dashAvatar}
@@ -593,7 +620,7 @@ export default function DashboardPage() {
                         <span style={{ fontSize: 13, fontWeight: 700, color: countdownColor, whiteSpace: 'nowrap' }}>
                           {countdownText}
                         </span>
-                      </div>
+                      </Link>
                     )
                   })
                 ) : (

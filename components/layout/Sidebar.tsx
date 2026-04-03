@@ -98,20 +98,12 @@ export default function Sidebar() {
 
       <div className={styles.sidebarFooter}>
         <div className={styles.sidebarUser}>
-          <div
-            className={styles.userAvatar}
-            onClick={() => router.push('/profile')}
-            title="Mon profil"
-          >
+          <Link href="/profile" className={styles.userAvatar} title="Mon profil">
             {userInitial}
-          </div>
-          <div
-            className={styles.userInfo}
-            onClick={() => router.push('/profile')}
-            title="Mon profil"
-          >
+          </Link>
+          <Link href="/profile" className={styles.userInfo} title="Mon profil">
             <div className={styles.userName}>{userName}</div>
-          </div>
+          </Link>
           <button
             className={styles.footerBtn}
             onClick={toggleTheme}

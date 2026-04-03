@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo, useCallback, memo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useMemo, memo } from 'react'
+import Link from 'next/link'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -30,7 +30,7 @@ function getPaymentBadge(athlete: Athlete) {
 
 const badgeContainerStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }
 
-const AthleteCard = memo(function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => void }) {
+const AthleteCard = memo(function AthleteCard({ athlete, href }: { athlete: Athlete; href: string }) {
   const initials = (athlete.prenom?.charAt(0) || '') + (athlete.nom?.charAt(0) || '')
   const poids = athlete.poids_actuel ? `${athlete.poids_actuel} kg` : '\u2014'
   const activePhase = athlete._phase
@@ -49,7 +49,7 @@ const AthleteCard = memo(function AthleteCard({ athlete, onClick }: { athlete: A
   const phaseValueStyle = useMemo(() => phaseInfo ? { color: phaseColor } : undefined, [phaseInfo, phaseColor])
 
   return (
-    <div className={styles.athleteCard} onClick={onClick}>
+    <Link href={href} className={styles.athleteCard} style={{ textDecoration: 'none', color: 'inherit' }}>
       <div className={styles.cardTopBar} style={topBarStyle} />
       <div className={styles.cardHead}>
         {athlete.avatar_url ? (
@@ -92,20 +92,15 @@ const AthleteCard = memo(function AthleteCard({ athlete, onClick }: { athlete: A
           <div className={styles.statLabel}>Phase</div>
         </div>
       </div>
-    </div>
+    </Link>
   )
 })
 
 export default function AthletesList() {
   const { athletes, loading } = useAthleteContext()
-  const router = useRouter()
   const [search, setSearch] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [credentialsMessage, setCredentialsMessage] = useState<string | null>(null)
-
-  const handleAthleteClick = useCallback((athleteId: string) => {
-    router.push(`/athletes/${athleteId}/apercu`)
-  }, [router])
 
   const filtered = useMemo(() => {
     if (!search.trim()) return athletes
@@ -180,7 +175,7 @@ export default function AthletesList() {
             <AthleteCard
               key={athlete.id}
               athlete={athlete}
-              onClick={() => handleAthleteClick(athlete.id)}
+              href={`/athletes/${athlete.id}/apercu`}
             />
           ))}
         </div>

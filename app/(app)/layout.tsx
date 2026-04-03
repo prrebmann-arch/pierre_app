@@ -27,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer)
   }, [loading])
 
+  // Redirect to login only after auth has definitively resolved with no user
   useEffect(() => {
     const shouldRedirect = !loading || timedOut
     if (!shouldRedirect) return
@@ -36,7 +37,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, timedOut, router, isReturning])
 
-  if (loading && !timedOut) return (
+  // Prefetch the most common routes for instant navigation
+  useEffect(() => {
+    router.prefetch('/dashboard')
+    router.prefetch('/athletes')
+    router.prefetch('/bilans')
+    router.prefetch('/templates')
+  }, [router])
+
+  // Optimistic rendering: if user exists (from cache or session), show app shell immediately
+  // The skeleton only shows when there's truly no cached session at all
+  if (!user && loading && !timedOut) return (
     <div className={styles.appLayout}>
       {/* Sidebar skeleton */}
       <div className={styles.sidebarSkeleton}>
@@ -62,7 +73,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     </div>
   )
-  if (!user && !isReturning) return null
+  if (!user && !loading && !isReturning) return null
 
   return (
     <AthleteProvider>
