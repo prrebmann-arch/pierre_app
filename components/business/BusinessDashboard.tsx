@@ -339,10 +339,10 @@ export default function BusinessDashboard() {
     setLoading(true)
     try {
     const [cfgRes, entriesRes, clientsRes, stripeRes] = await Promise.all([
-      supabase.from('project_config').select('*').eq('user_id', user.id).single(),
-      supabase.from('daily_entries').select('*').eq('user_id', user.id),
-      supabase.from('biz_clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('stripe_customers').select('*').eq('coach_id', user.id),
+      supabase.from('project_config').select('user_id, target_name, target_mrr, target_deadline, week_number, start_followers').eq('user_id', user.id).single(),
+      supabase.from('daily_entries').select('id, user_id, week_number, day_name, dms, rdvs, rdvs_attended, clients_online, clients_offline, clients_lost_online, clients_lost_offline, reels, followers, meta_ads_budget').eq('user_id', user.id),
+      supabase.from('biz_clients').select('id, user_id, name, email, price, client_type, billing_day, start_date, status, archived_at, archive_reason, created_at').eq('user_id', user.id).order('created_at', { ascending: false }),
+      supabase.from('stripe_customers').select('id, coach_id, athlete_id, stripe_customer_id').eq('coach_id', user.id),
     ])
 
     const cfg = cfgRes.data || DEFAULT_CONFIG
@@ -356,8 +356,8 @@ export default function BusinessDashboard() {
 
     // Load athlete payment plans + payment history
     const [plansRes, paymentsRes, athletesRes] = await Promise.all([
-      supabase.from('athlete_payment_plans').select('*').eq('coach_id', user.id),
-      supabase.from('payment_history').select('*').eq('coach_id', user.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(50),
+      supabase.from('athlete_payment_plans').select('id, athlete_id, coach_id, payment_status, amount, frequency, is_free').eq('coach_id', user.id),
+      supabase.from('payment_history').select('id, athlete_id, coach_id, amount, status, stripe_invoice_id, created_at').eq('coach_id', user.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(50),
       supabase.from('athletes').select('id, prenom, nom').eq('coach_id', user.id),
     ])
     setAthletePaymentPlans((plansRes.data || []) as AthletePaymentPlan[])
@@ -369,7 +369,7 @@ export default function BusinessDashboard() {
     const wk = cfg.week_number || 1
     setWeek(wk)
 
-    const objRes = await supabase.from('weekly_objectives').select('*').eq('user_id', user.id).lte('start_week', wk).order('start_week', { ascending: false }).limit(1).single()
+    const objRes = await supabase.from('weekly_objectives').select('id, user_id, start_week, dms_target, rdvs_target, clients_target, reels_target, followers_target').eq('user_id', user.id).lte('start_week', wk).order('start_week', { ascending: false }).limit(1).single()
     const obj = objRes.data || DEFAULT_OBJ
     setObjectives(obj as WeeklyObjectives)
     setEditObj(obj as WeeklyObjectives)
@@ -461,7 +461,7 @@ export default function BusinessDashboard() {
       { user_id: user.id, week_number: week, day_name: day, [field]: value },
       { onConflict: 'user_id,week_number,day_name' }
     )
-    const { data } = await supabase.from('daily_entries').select('*').eq('user_id', user.id)
+    const { data } = await supabase.from('daily_entries').select('id, user_id, week_number, day_name, dms, rdvs, rdvs_attended, clients_online, clients_offline, clients_lost_online, clients_lost_offline, reels, followers, meta_ads_budget').eq('user_id', user.id)
     setAllEntries((data || []) as DailyEntry[])
   }
 
@@ -513,7 +513,7 @@ export default function BusinessDashboard() {
     }
     setShowClientModal(false)
     toast(editingClient ? 'Client mis a jour !' : 'Client ajoute !', 'success')
-    const { data } = await supabase.from('biz_clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('biz_clients').select('id, user_id, name, email, price, client_type, billing_day, start_date, status, archived_at, archive_reason, created_at').eq('user_id', user.id).order('created_at', { ascending: false })
     setClients((data || []) as BizClient[])
   }
 

@@ -66,7 +66,7 @@ export default function ProfilePage() {
       try {
         const { data } = await supabase
           .from('platform_invoices')
-          .select('*')
+          .select('id, coach_id, amount, status, month, year, stripe_invoice_id, created_at')
           .eq('coach_id', user.id)
           .order('created_at', { ascending: false })
           .limit(12)
