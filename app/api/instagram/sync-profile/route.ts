@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       following: profile.follows_count,
       posts: profile.media_count,
       profile_pic: profile.profile_picture_url,
-    }, { headers: corsHeaders });
+    }, { headers: { ...corsHeaders, 'Cache-Control': 'private, max-age=300' } });
   } catch (err: unknown) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
   }

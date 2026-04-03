@@ -1,6 +1,16 @@
 // Instagram Webhook — Receive messages in real-time and store in Supabase
 import { createClient } from '@supabase/supabase-js';
 
+// Cached Supabase admin client (service role — persists across requests in same lambda)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+  return _supabaseAdmin;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const mode = searchParams.get('hub.mode');
@@ -18,10 +28,7 @@ export async function POST(request: Request) {
   console.log('[ig-webhook] Event received, entries:', (body.entry || []).length);
 
   try {
-    const supabase = createClient(
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
+    const supabase = getSupabaseAdmin();
 
     if (body.object === 'instagram' || body.object === 'page') {
       for (const entry of (body.entry || [])) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
+import { useState, useEffect, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import type { CoachProfile } from '@/lib/types'
@@ -16,6 +16,13 @@ export default function LoginPage() {
   const [plan, setPlan] = useState<'athlete' | 'business'>('athlete')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Prefetch all possible post-login destinations for instant navigation
+  useEffect(() => {
+    router.prefetch('/dashboard')
+    router.prefetch('/admin')
+    router.prefetch('/setup-payment')
+  }, [router])
 
   const redirect = (email: string, coachProfile: CoachProfile | null) => {
     if (email === 'rebmannpierre1@gmail.com') {

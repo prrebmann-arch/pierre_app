@@ -48,13 +48,13 @@ export default function AthleteDetailLayout({ children }: { children: React.Reac
     <div>
       {/* Header: back + avatar + name */}
       <div className={styles.detailHeader}>
-        <button
+        <Link
+          href="/athletes"
           className={styles.backBtn}
-          onClick={() => router.push('/athletes')}
           title="Retour aux athlètes"
         >
           <i className="fa-solid fa-arrow-left" />
-        </button>
+        </Link>
 
         {loading ? (
           <Skeleton width={48} height={48} />

@@ -14,7 +14,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!loading && (!user || user.email !== ADMIN_EMAIL)) {
-      router.push('/dashboard')
+      router.replace('/dashboard')
     }
   }, [user, loading, router])
 

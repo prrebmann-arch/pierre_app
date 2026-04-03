@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import styles from '@/styles/dashboard.module.css'
 import type { Athlete } from '@/lib/types'
 
@@ -31,8 +31,6 @@ interface ActivityFeedProps {
 }
 
 export default function ActivityFeed({ activities, maxHeight }: ActivityFeedProps) {
-  const router = useRouter()
-
   return (
     <div
       className={`${styles.dashCard} ${styles.dashCardActivity}`}
@@ -49,10 +47,10 @@ export default function ActivityFeed({ activities, maxHeight }: ActivityFeedProp
             const d = new Date(a.date + 'T00:00:00')
             const timeAgo = getTimeAgo(d)
             return (
-              <div
+              <Link
                 key={`${a.athlete.id}-${a.date}-${i}`}
+                href={`/athletes/${a.athlete.id}/bilans`}
                 className={styles.dashActivityItem}
-                onClick={() => router.push(`/athletes/${a.athlete.id}/bilans`)}
               >
                 <div className={styles.dashAvatarSm}>
                   {a.athlete.prenom.charAt(0)}{a.athlete.nom.charAt(0)}
@@ -72,7 +70,7 @@ export default function ActivityFeed({ activities, maxHeight }: ActivityFeedProp
                   ))}
                   <span className={styles.dashActivityTime}>{timeAgo}</span>
                 </div>
-              </div>
+              </Link>
             )
           })
         ) : (

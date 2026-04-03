@@ -1,6 +1,14 @@
 {
   "framework": "nextjs",
   "buildCommand": "next build --webpack",
+  "functions": {
+    "app/api/stripe/route.ts": { "maxDuration": 30 },
+    "app/api/stripe/webhook/route.ts": { "maxDuration": 30 },
+    "app/api/stripe/cron/route.ts": { "maxDuration": 120 },
+    "app/api/instagram/messages/route.ts": { "maxDuration": 60 },
+    "app/api/instagram/sync-reels/route.ts": { "maxDuration": 30 },
+    "app/api/instagram/sync-stories/route.ts": { "maxDuration": 30 }
+  },
   "crons": [
     { "path": "/api/instagram/sync-stories", "schedule": "0 8 * * *" },
     { "path": "/api/stripe/cron", "schedule": "0 9 * * *" }

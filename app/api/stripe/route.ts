@@ -3,16 +3,21 @@ import { createClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 import { verifyAuth, verifyCoach, authErrorResponse } from '@/lib/api/auth'
 
-// Platform Stripe instance (Pierre's account — for SaaS billing only)
+// Cached platform Stripe instance (Pierre's account — for SaaS billing only)
+let _platformStripe: Stripe | null = null
 function getPlatformStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-04-10' as Stripe.LatestApiVersion })
+  if (!_platformStripe) _platformStripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2024-04-10' as Stripe.LatestApiVersion })
+  return _platformStripe
 }
 
+// Cached Supabase admin client (service role — persists across requests in same lambda)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null
 function getSupabaseAdmin() {
-  return createClient(
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(
     process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_KEY!,
   )
+  return _supabaseAdmin
 }
 
 // Get a Stripe instance for a coach via Stripe Connect

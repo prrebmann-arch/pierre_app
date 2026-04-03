@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!shouldRedirect) return
     if (!user && !isReturning && !checkedRef.current) {
       checkedRef.current = true
-      router.push('/login')
+      router.replace('/login')
     }
   }, [user, loading, timedOut, router, isReturning])
 
@@ -43,6 +43,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     router.prefetch('/athletes')
     router.prefetch('/bilans')
     router.prefetch('/templates')
+    router.prefetch('/videos')
+    router.prefetch('/aliments')
+    router.prefetch('/exercices')
+    router.prefetch('/formations')
+    router.prefetch('/profile')
+    router.prefetch('/business')
+    router.prefetch('/login')
   }, [router])
 
   // Optimistic rendering: if user exists (from cache or session), show app shell immediately

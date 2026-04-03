@@ -4,6 +4,43 @@ import { createContext, useContext, useEffect, useState, useCallback, useMemo, u
 import { createClient } from '@/lib/supabase/client'
 import type { User, CoachProfile } from '@/lib/types'
 
+const CACHE_KEY_USER = 'coach_cached_user'
+const CACHE_KEY_PROFILE = 'coach_profile'
+
+function getCachedUser(): User | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_USER)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function getCachedCoach(): CoachProfile | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_PROFILE)
+    return raw ? JSON.parse(raw) : null
+  } catch { return null }
+}
+
+function hasSupabaseSession(): boolean {
+  try {
+    // Supabase stores session in localStorage with key containing 'auth-token'
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.includes('auth-token')) {
+        const val = localStorage.getItem(key)
+        if (val) {
+          const parsed = JSON.parse(val)
+          // Check token hasn't expired
+          if (parsed?.expires_at && parsed.expires_at > Date.now() / 1000) return true
+          // Some formats store in a nested structure
+          if (parsed?.access_token) return true
+        }
+      }
+    }
+  } catch { /* ignore */ }
+  return false
+}
+
 interface AuthContextType {
   user: User | null
   coach: CoachProfile | null
@@ -17,9 +54,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [coach, setCoach] = useState<CoachProfile | null>(null)
-  const [loading, setLoading] = useState(true)
+  // Initialize from cache synchronously — no network wait
+  const cachedUser = useRef(getCachedUser())
+  const cachedCoach = useRef(getCachedCoach())
+  const hasCachedSession = useRef(cachedUser.current !== null && hasSupabaseSession())
+
+  const [user, setUser] = useState<User | null>(cachedUser.current)
+  const [coach, setCoach] = useState<CoachProfile | null>(cachedCoach.current)
+  // If we have cached data, loading is already false — UI renders instantly
+  const [loading, setLoading] = useState(!hasCachedSession.current)
   const initRef = useRef(false)
   // Prevents onAuthStateChange from interfering during explicit signIn/signUp
   const signingInRef = useRef(false)
@@ -35,6 +78,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single()
       const profile = data as CoachProfile | null
       setCoach(profile)
+      // Cache for instant load on next visit
+      if (profile) {
+        try { localStorage.setItem(CACHE_KEY_PROFILE, JSON.stringify(profile)) } catch { /* quota */ }
+      }
       return profile
     } catch (err) {
       // fetchCoach error
@@ -55,8 +102,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
-          setUser({ id: session.user.id, email: session.user.email! })
+          const u = { id: session.user.id, email: session.user.email! }
+          setUser(u)
+          try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
+          // Background refresh of coach profile (UI already showing cached data)
           await fetchCoach(session.user.id)
+        } else {
+          // No valid session — clear cache and state
+          setUser(null)
+          setCoach(null)
+          localStorage.removeItem(CACHE_KEY_USER)
+          localStorage.removeItem(CACHE_KEY_PROFILE)
         }
       } catch (err) {
         // init error
@@ -71,11 +127,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Skip if signIn/signUp is handling state updates directly
         if (signingInRef.current) return
         if (session?.user) {
-          setUser({ id: session.user.id, email: session.user.email! })
+          const u = { id: session.user.id, email: session.user.email! }
+          setUser(u)
+          try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
           await fetchCoach(session.user.id)
         } else {
           setUser(null)
           setCoach(null)
+          localStorage.removeItem(CACHE_KEY_USER)
+          localStorage.removeItem(CACHE_KEY_PROFILE)
         }
       }
     )
@@ -102,7 +162,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error('Cet espace est reserve aux coachs. Connectez-vous via l\'app athlete.')
       }
 
-      setUser({ id: data.user.id, email: data.user.email! })
+      const u = { id: data.user.id, email: data.user.email! }
+      setUser(u)
+      try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
       const profile = await fetchCoach(data.user.id)
       return profile
     } finally {
@@ -134,7 +196,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (profileError) throw profileError
 
-      setUser({ id: data.user.id, email: data.user.email! })
+      const u = { id: data.user.id, email: data.user.email! }
+      setUser(u)
+      try { localStorage.setItem(CACHE_KEY_USER, JSON.stringify(u)) } catch { /* quota */ }
       const profile = await fetchCoach(data.user.id)
       return profile
     } finally {
@@ -147,6 +211,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
     setUser(null)
     setCoach(null)
+    localStorage.removeItem(CACHE_KEY_USER)
+    localStorage.removeItem(CACHE_KEY_PROFILE)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -4,6 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyCoach, authErrorResponse } from '@/lib/api/auth';
 import { getCorsHeaders, handlePreflight } from '@/lib/api/cors';
 
+// Cached Supabase admin client (service role — persists across requests in same lambda)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+  return _supabaseAdmin;
+}
+
 export const maxDuration = 60;
 
 export async function OPTIONS(request: Request) {
@@ -16,10 +26,7 @@ export async function POST(request: Request) {
 
   try { await verifyCoach(request, body, 'user_id'); } catch (e) { return authErrorResponse(e, corsHeaders); }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabase = getSupabaseAdmin();
 
   const BASE = 'https://graph.facebook.com/v25.0';
 
@@ -84,7 +91,7 @@ export async function POST(request: Request) {
           message_text,
           message_type: 'text',
           sent_at: new Date().toISOString(),
-        });
+        } as never);
 
         await supabase.from('ig_conversations').update({
           last_message_text: message_text,
@@ -142,24 +149,27 @@ export async function POST(request: Request) {
               }).eq('id', conv.id);
             }
 
-            for (const m of msgs) {
-              const { data: existing } = await supabase
-                .from('ig_messages')
-                .select('id')
-                .eq('ig_message_id', m.id)
-                .maybeSingle();
+            // Batch check existing messages instead of N+1 queries
+            const msgIds = msgs.map((m: { id: string }) => m.id);
+            const { data: existingMsgs } = await supabase
+              .from('ig_messages')
+              .select('ig_message_id')
+              .in('ig_message_id', msgIds);
+            const existingSet = new Set((existingMsgs || []).map((e: { ig_message_id: string }) => e.ig_message_id));
 
-              if (!existing) {
-                await supabase.from('ig_messages').insert({
+            const newMsgs = msgs.filter((m: { id: string }) => !existingSet.has(m.id));
+            if (newMsgs.length > 0) {
+              await supabase.from('ig_messages').insert(
+                newMsgs.map((m: { id: string; from?: { id?: string }; message?: string; created_time?: string }) => ({
                   ig_message_id: m.id,
                   conversation_id: conv.id,
                   sender: m.from?.id === ig_user_id ? 'coach' : 'participant',
                   message_text: m.message || '',
                   message_type: 'text',
                   sent_at: m.created_time,
-                });
-                syncedMessages++;
-              }
+                })) as never
+              );
+              syncedMessages += newMsgs.length;
             }
           } catch (err: unknown) {
             console.error('[ig-sync] Error for conv', conv.id, (err as Error).message);

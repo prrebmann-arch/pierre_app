@@ -5,14 +5,23 @@ import { createClient } from '@supabase/supabase-js';
 
 export const runtime = 'nodejs';
 
-// Platform Stripe (Pierre's account — for SaaS events)
+// Cached Supabase admin client (service role — persists across requests in same lambda)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+  return _supabaseAdmin;
+}
+
+// Cached platform Stripe (Pierre's account — for SaaS events)
+let _platformStripe: Stripe | null = null;
 function getPlatformStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+  if (!_platformStripe) _platformStripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  return _platformStripe;
 }
 
 export async function POST(request: Request) {
   console.log('[webhook] Received webhook call');
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+  const supabase = getSupabaseAdmin();
 
   // Log every hit BEFORE signature verification — helps diagnose delivery issues
   await supabase.from('stripe_audit_log').insert({

@@ -5,8 +5,18 @@ import { verifyCronSecret, authErrorResponse } from '@/lib/api/auth';
 
 export const maxDuration = 120;
 
+// Cached Stripe instance (persists across requests in same lambda)
+let _stripe: Stripe | null = null;
 function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!);
+  if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+  return _stripe;
+}
+
+// Cached Supabase admin client (service role)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+  return _supabaseAdmin;
 }
 
 export async function GET(request: Request) {
@@ -14,7 +24,7 @@ export async function GET(request: Request) {
   try { verifyCronSecret(request); } catch (e) { return authErrorResponse(e); }
 
   const { searchParams } = new URL(request.url);
-  const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!);
+  const supabase = getSupabaseAdmin();
   const action = searchParams.get('action');
   const now = new Date();
   const results: Record<string, unknown> = {};

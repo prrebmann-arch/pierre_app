@@ -4,6 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyCoach, authErrorResponse } from '@/lib/api/auth';
 import { getCorsHeaders, handlePreflight } from '@/lib/api/cors';
 
+// Cached Supabase admin client (service role — persists across requests in same lambda)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+  return _supabaseAdmin;
+}
+
 export async function OPTIONS(request: Request) {
   return handlePreflight(request);
 }
@@ -20,10 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing params' }, { status: 400, headers: corsHeaders });
     }
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_KEY!
-    );
+    const supabase = getSupabaseAdmin();
 
     // Fetch recent media (reels)
     const mediaRes = await fetch(`https://graph.instagram.com/v25.0/me/media?fields=id,caption,media_type,media_url,thumbnail_url,timestamp,like_count,comments_count&limit=50&access_token=${access_token}`);
@@ -73,7 +80,7 @@ export async function POST(request: Request) {
       synced++;
     }
 
-    return NextResponse.json({ synced, total: reels.length }, { headers: corsHeaders });
+    return NextResponse.json({ synced, total: reels.length }, { headers: { ...corsHeaders, 'Cache-Control': 'private, max-age=300' } });
   } catch (err: unknown) {
     return NextResponse.json({ error: (err as Error).message }, { status: 500, headers: corsHeaders });
   }

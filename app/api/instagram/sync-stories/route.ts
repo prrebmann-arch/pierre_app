@@ -5,15 +5,22 @@ import { createClient } from '@supabase/supabase-js';
 import { verifyCoach, verifyCronSecret, authErrorResponse } from '@/lib/api/auth';
 import { getCorsHeaders, handlePreflight } from '@/lib/api/cors';
 
+// Cached Supabase admin client (service role — persists across requests in same lambda)
+let _supabaseAdmin: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!_supabaseAdmin) _supabaseAdmin = createClient(
+    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  );
+  return _supabaseAdmin;
+}
+
 export async function OPTIONS(request: Request) {
   return handlePreflight(request);
 }
 
 export async function GET(request: Request) {
-  const supabase = createClient(
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabase = getSupabaseAdmin();
 
   // Cron job: verify cron secret
   try { verifyCronSecret(request); } catch (e) { return authErrorResponse(e); }
@@ -36,13 +43,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Missing params' }, { status: 400, headers: corsHeaders });
   }
 
-  const supabase = createClient(
-    process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
+  const supabase = getSupabaseAdmin();
 
   const totalSynced = await syncStories(supabase, [{ ig_user_id, access_token, user_id }]);
-  return NextResponse.json({ synced: totalSynced }, { headers: corsHeaders });
+  return NextResponse.json({ synced: totalSynced }, { headers: { ...corsHeaders, 'Cache-Control': 'private, max-age=300' } });
 }
 
 // Shared sync logic

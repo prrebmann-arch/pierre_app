@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -397,6 +398,7 @@ export default function BilansOverview() {
                   key={a.id}
                   className={styles.boRow}
                   onClick={() => router.push(`/athletes/${a.id}/bilans`)}
+                  onMouseEnter={() => router.prefetch(`/athletes/${a.id}/bilans`)}
                 >
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -422,12 +424,13 @@ export default function BilansOverview() {
                         <i className="fas fa-check" />
                       </button>
                     )}
-                    <button
+                    <Link
+                      href={`/athletes/${a.id}/bilans`}
                       className={styles.boActionBtn}
-                      onClick={(e) => { e.stopPropagation(); router.push(`/athletes/${a.id}/bilans`) }}
+                      onClick={(e) => { e.stopPropagation() }}
                     >
                       <i className="fas fa-eye" />
-                    </button>
+                    </Link>
                   </td>
                 </tr>
               )

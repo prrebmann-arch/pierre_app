@@ -16,10 +16,23 @@ interface AthleteContextType {
 
 const AthleteContext = createContext<AthleteContextType | undefined>(undefined)
 
+const CACHE_KEY = 'athletes_cache'
+
 export function AthleteProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const [athletes, setAthletes] = useState<Athlete[]>([])
-  const [loading, setLoading] = useState(true)
+  const [athletes, setAthletes] = useState<Athlete[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      return cached ? (JSON.parse(cached) as Athlete[]) : []
+    } catch {
+      return []
+    }
+  })
+  const [loading, setLoading] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return !sessionStorage.getItem(CACHE_KEY)
+  })
   const [selectedAthleteId, setSelectedAthleteId] = useState<string | null>(null)
   const fetchedRef = useRef<string | null>(null)
   const fetchingRef = useRef(false)
@@ -34,7 +47,8 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     }
     if (fetchingRef.current) return
     fetchingRef.current = true
-    setLoading(true)
+    // Only show loading spinner if no cached data
+    setLoading(prev => athletes.length === 0 ? true : prev)
 
     try {
       const supabase = createClient()
@@ -64,9 +78,13 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
         ;(plans || []).forEach((p: { athlete_id: string; payment_status: string; amount: number; frequency: string; is_free: boolean }) => {
           planMap[p.athlete_id] = { payment_status: p.payment_status, amount: p.amount, frequency: p.frequency, is_free: p.is_free }
         })
-        setAthletes(
-          (data as Athlete[]).map(a => ({ ...a, _phase: phaseMap[a.id] || null, _payment: planMap[a.id] || null }))
-        )
+        const fresh = (data as Athlete[]).map(a => ({ ...a, _phase: phaseMap[a.id] || null, _payment: planMap[a.id] || null }))
+        setAthletes(fresh)
+        try {
+          sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh))
+        } catch {
+          // sessionStorage full — ignore
+        }
       }
     } catch (err) {
       // fetch error
@@ -74,6 +92,7 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       fetchingRef.current = false
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId])
 
   useEffect(() => {
@@ -84,6 +103,7 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
       setAthletes([])
       setLoading(false)
       fetchedRef.current = null
+      try { sessionStorage.removeItem(CACHE_KEY) } catch { /* */ }
     }
   }, [userId, fetchAthletes])
 

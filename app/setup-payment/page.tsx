@@ -41,15 +41,15 @@ export default function SetupPaymentPage() {
   useEffect(() => {
     if (loading) return
     if (!user) {
-      router.push('/login')
+      router.replace('/login')
       return
     }
     if (coach?.has_payment_method) {
-      router.push('/dashboard')
+      router.replace('/dashboard')
       return
     }
     if (coach?.plan === 'free') {
-      router.push('/dashboard')
+      router.replace('/dashboard')
       return
     }
   }, [user, coach, loading, router])
@@ -66,7 +66,7 @@ export default function SetupPaymentPage() {
         .then(() => {
           refreshCoach()
           toast('Carte enregistree !', 'success')
-          router.push('/dashboard')
+          router.replace('/dashboard')
         })
     }
   }, [user, loading, router, refreshCoach, toast]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -97,7 +97,7 @@ export default function SetupPaymentPage() {
       .eq('user_id', user!.id)
     await refreshCoach()
     toast('Carte enregistree !', 'success')
-    router.push('/dashboard')
+    router.replace('/dashboard')
   }
 
   if (loading) {
