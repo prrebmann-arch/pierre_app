@@ -57,3 +57,5 @@
 [2026-03-31] | onAuthStateChange races with explicit signIn/signUp | Supabase fires onAuthStateChange synchronously during signIn. If both the listener AND the signIn caller set state, you get double renders and race conditions. Use a ref (signingInRef) to skip the listener during explicit auth calls.
 
 [2026-03-31] | Missing try/finally on async init = permanent loading screen | Every async function that sets loading=true MUST use try/finally to guarantee setLoading(false) runs. A single uncaught error in init() can leave the entire app stuck on "Chargement..." forever. Add a safety timeout in layout as defense-in-depth.
+
+[2026-03-31] | select('*') wastes bandwidth and slows queries | Always use explicit column lists in Supabase .select() calls. Reduces payload size significantly for tables with JSON/text columns (meals_data, exercices, etc.). Also add .limit() to any query that could return many rows.

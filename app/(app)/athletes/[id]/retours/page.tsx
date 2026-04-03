@@ -35,6 +35,7 @@ export default function RetoursPage() {
         .select('id, athlete_id, coach_id, loom_url, titre, commentaire, type, created_at')
         .eq('athlete_id', params.id)
         .order('created_at', { ascending: false })
+        .limit(100)
       setRetours(data || [])
     } finally {
       setLoading(false)

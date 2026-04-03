@@ -133,7 +133,7 @@ export default function BilansPage() {
         supabase.from('programming_weeks').select('week_date, phase').eq('athlete_id', selectedAthlete.id).order('week_date'),
         supabase.from('nutrition_plans').select('id, valid_from, meal_type, nom, calories_objectif, proteines, glucides, lipides, created_at').eq('athlete_id', selectedAthlete.id),
         supabase.from('roadmap_phases').select('phase, name, start_date, end_date').eq('athlete_id', selectedAthlete.id).order('start_date'),
-        supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }),
+        supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }).limit(500),
       ])
 
       const bilanData = (bilansRes.data || []) as DailyReport[]

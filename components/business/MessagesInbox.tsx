@@ -77,7 +77,7 @@ export default function MessagesInbox() {
     if (!user) return null
     const { data } = await supabase
       .from('ig_accounts')
-      .select('*')
+      .select('id, user_id, ig_user_id, ig_username, access_token, page_id, page_access_token')
       .eq('user_id', user.id)
       .single()
     setAccount(data)

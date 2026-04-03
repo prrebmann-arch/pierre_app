@@ -71,7 +71,7 @@ export default function LeadsPipeline() {
     if (!user) return
     setLoading(true)
     try {
-      const { data } = await supabase.from('leads').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+      const { data } = await supabase.from('leads').select('id, user_id, name, instagram_handle, email, phone, source, status, notes, tags, message_count, created_at').eq('user_id', user.id).order('created_at', { ascending: false })
       setLeads((data || []) as Lead[])
     } finally {
       setLoading(false)

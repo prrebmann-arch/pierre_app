@@ -130,10 +130,10 @@ export default function ContentPlanner() {
     setLoading(true)
     try {
       const [dRes, hRes, tRes, rRes] = await Promise.all([
-        supabase.from('ig_drafts').select('*').eq('user_id', user.id).order('scheduled_at', { ascending: true }),
-        supabase.from('ig_hashtag_groups').select('*').eq('user_id', user.id).order('name'),
-        supabase.from('ig_caption_templates').select('*').eq('user_id', user.id).order('title'),
-        supabase.from('ig_reels').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_drafts').select('id, user_id, caption, hashtags, media_urls, media_type, status, scheduled_at, created_at').eq('user_id', user.id).order('scheduled_at', { ascending: true }),
+        supabase.from('ig_hashtag_groups').select('id, user_id, name, hashtags').eq('user_id', user.id).order('name'),
+        supabase.from('ig_caption_templates').select('id, user_id, title, body').eq('user_id', user.id).order('title'),
+        supabase.from('ig_reels').select('id, user_id, ig_media_id, caption, published_at, views, likes, comments, shares, saves, reach, pillar_id').eq('user_id', user.id).order('published_at', { ascending: false }),
       ])
       setDrafts(dRes.data || [])
       setHashtagGroups(hRes.data || [])
@@ -209,7 +209,7 @@ export default function ContentPlanner() {
     setPublishStatus('Connexion a Instagram...')
     setPublishDetail('Verification du compte')
 
-    const { data: acct } = await supabase.from('ig_accounts').select('*').eq('user_id', user.id).single()
+    const { data: acct } = await supabase.from('ig_accounts').select('id, user_id, ig_user_id, ig_username, access_token, page_id, page_access_token').eq('user_id', user.id).single()
     if (!acct?.access_token || !acct?.ig_user_id) {
       setPublishing(false)
       toast("Connecte ton compte Instagram d'abord", 'error')

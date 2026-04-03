@@ -45,8 +45,8 @@ export default function PosingPage() {
       if (!enabled) { return }
 
       const [{ data: vids }, { data: rets }] = await Promise.all([
-        supabase.from('posing_videos').select('id, athlete_id, video_url, thumbnail_url, status, notes, created_at').eq('athlete_id', params.id).order('created_at', { ascending: false }),
-        supabase.from('posing_retours').select('id, athlete_id, coach_id, loom_url, titre, commentaire, video_id, created_at').eq('athlete_id', params.id).order('created_at', { ascending: false }),
+        supabase.from('posing_videos').select('id, athlete_id, video_url, thumbnail_url, status, notes, created_at').eq('athlete_id', params.id).order('created_at', { ascending: false }).limit(100),
+        supabase.from('posing_retours').select('id, athlete_id, coach_id, loom_url, titre, commentaire, video_id, created_at').eq('athlete_id', params.id).order('created_at', { ascending: false }).limit(100),
       ])
       setVideos(vids || [])
       setRetours(rets || [])

@@ -207,12 +207,12 @@ export default function InstagramAnalytics() {
     setLoading(true)
     try {
       const [acctRes, reelsRes, pillarsRes, snapshotsRes, goalsRes, storiesRes] = await Promise.all([
-        supabase.from('ig_accounts').select('*').eq('user_id', user.id).single(),
-        supabase.from('ig_reels').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
-        supabase.from('ig_content_pillars').select('*').eq('user_id', user.id).order('name'),
-        supabase.from('ig_snapshots').select('*').eq('user_id', user.id).order('snapshot_date', { ascending: true }),
-        supabase.from('ig_goals').select('*').eq('user_id', user.id),
-        supabase.from('ig_stories').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_accounts').select('id, user_id, ig_user_id, ig_username, access_token, page_id, page_access_token, is_connected').eq('user_id', user.id).single(),
+        supabase.from('ig_reels').select('id, user_id, ig_media_id, caption, published_at, views, likes, comments, shares, saves, reach, pillar_id').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_content_pillars').select('id, user_id, name, color').eq('user_id', user.id).order('name'),
+        supabase.from('ig_snapshots').select('id, user_id, snapshot_date, followers, following, media_count').eq('user_id', user.id).order('snapshot_date', { ascending: true }),
+        supabase.from('ig_goals').select('id, user_id, metric, target, deadline').eq('user_id', user.id),
+        supabase.from('ig_stories').select('id, user_id, ig_media_id, published_at, views, replies, reach, media_type').eq('user_id', user.id).order('published_at', { ascending: false }),
       ])
       const acct = acctRes.data as IgAccount | null
       setAccount(acct)

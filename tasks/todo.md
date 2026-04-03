@@ -1,3 +1,88 @@
+# Supabase Query Optimization (Full Codebase)
+
+## select('*') -> select(specific columns)
+- [x] AthleteContext: athletes select — 22 columns instead of *
+- [x] AuthContext: coach_profiles select — 16 columns instead of *
+- [x] DashboardPage: daily_reports + coach_settings selects
+- [x] Apercu page: athletes, daily_reports, roadmap_phases, nutrition_plans selects
+- [x] Infos page: athletes (full profile), athlete_payment_plans, payment_history, cancellation_requests, athlete_onboarding, onboarding_workflows
+- [x] Bilans page: daily_reports (18 columns), programming_weeks, nutrition_plans, roadmap_phases
+- [x] Retours page: bilan_retours select
+- [x] Roadmap page: roadmap_phases select (both load + sync)
+- [x] Questionnaires page: questionnaire_responses select
+- [x] Videos pages (athlete + global): execution_videos select
+- [x] Nutrition page: nutrition_plans, nutrition_logs selects
+- [x] Supplements page: supplement_logs select
+- [x] Menstrual page: menstrual_logs select
+- [x] Training page: workout_programs + sessions, workout_logs selects
+- [x] Posing page: posing_videos, posing_retours selects
+- [x] Templates page: training_templates, nutrition_templates, onboarding_workflows, questionnaire_templates
+- [x] Aliments page: aliments_db select
+- [x] FoodSearch + MealEditor: aliments_db select
+- [x] VideoDetail: execution_videos select
+- [x] VideoCompare: workout_logs select
+- [x] ProfilePage: platform_invoices select
+- [x] BusinessDashboard: project_config, daily_entries, biz_clients, stripe_customers, athlete_payment_plans, payment_history, weekly_objectives
+- [x] ContentPlanner: ig_drafts, ig_hashtag_groups, ig_caption_templates, ig_reels, ig_accounts
+- [x] InstagramAnalytics: ig_accounts, ig_reels, ig_content_pillars, ig_snapshots, ig_goals, ig_stories
+- [x] MessagesInbox: ig_accounts select
+- [x] LeadsPipeline: leads select
+- [x] FormationsPage: formations, formation_videos selects
+
+## Pagination/limits added
+- [x] DashboardPage: already had limits (500 reports, 50 videos)
+- [x] Bilans: daily_reports .limit(200), workout_logs .limit(500)
+- [x] Retours: bilan_retours .limit(100)
+- [x] Posing: posing_videos .limit(100), posing_retours .limit(100)
+- [x] Templates: all 4 tabs .limit(100)
+
+## Parallel queries (Promise.all)
+- [x] DashboardPage: already uses Promise.all for 4 queries
+- [x] Apercu: already uses Promise.all for 5 queries
+- [x] Infos: already uses Promise.all for payment data (3 queries)
+- [x] Bilans: already uses Promise.all for 5 queries
+- [x] All other pages already batched where applicable
+
+## Navigation refetch check
+- [x] Athlete detail layout uses AthleteContext (shared, not refetched on tab change)
+- [x] Each tab page loads its own data on mount (correct: tab-specific data)
+- [x] No unnecessary refetching detected
+
+## Build
+- [x] TypeScript check passes (0 errors)
+- [x] Build passes (51 routes)
+
+---
+
+# Performance Optimization - Server Components & Lazy Loading
+
+## Landing Page (/)
+- [x] Remove 'use client' from Pricing (static content, only uses Link)
+- [x] HowItWorks, SocialProof, FinalCTA, Footer were already server components
+- [x] Lazy load HeroParticles with dynamic import (ssr: false) — heavy canvas animation
+- [x] Features kept as client (IntersectionObserver), Hero kept as client (parallax/scroll)
+
+## Lazy Loading Heavy Components
+- [x] VideoDetail — dynamic import in athletes/[id]/videos and /videos pages
+- [x] BilansOverview — dynamic import in /bilans page
+- [x] InstagramAnalytics — dynamic import in /business/instagram page (Chart.js + react-chartjs-2)
+- [x] WeightChart — extracted Chart.js into separate component, dynamic import in apercu page
+
+## Other Pages
+- [x] Privacy page — already a server component (no 'use client')
+- [x] Login page — must stay client (form state, useAuth), already minimal
+- [x] Admin pages — must stay client (client-side Supabase + useState/search)
+
+## Query Optimization
+- [x] BusinessDashboard — optimized select() to fetch only needed columns
+- [x] ProfilePage — optimized select() to fetch only needed columns
+
+## Build
+- [x] Build passes (0 errors, 40+ pages)
+- [x] Pushed to main
+
+---
+
 # Phase 6 - Business Pages & Formations
 
 ## Payment Status Visibility Fix

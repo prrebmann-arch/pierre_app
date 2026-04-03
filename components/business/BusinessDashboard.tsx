@@ -470,7 +470,7 @@ export default function BusinessDashboard() {
     if (nw < 1) return
     setWeek(nw)
     await supabase.from('project_config').upsert({ user_id: user!.id, week_number: nw }, { onConflict: 'user_id' })
-    const objRes = await supabase.from('weekly_objectives').select('*').eq('user_id', user!.id).lte('start_week', nw).order('start_week', { ascending: false }).limit(1).single()
+    const objRes = await supabase.from('weekly_objectives').select('id, user_id, start_week, dms_target, rdvs_target, clients_target, reels_target, followers_target').eq('user_id', user!.id).lte('start_week', nw).order('start_week', { ascending: false }).limit(1).single()
     setObjectives((objRes.data || DEFAULT_OBJ) as WeeklyObjectives)
   }
 
@@ -525,7 +525,7 @@ export default function BusinessDashboard() {
     setShowArchiveModal(false)
     setArchiveReason('')
     toast('Client archive', 'success')
-    const { data } = await supabase.from('biz_clients').select('*').eq('user_id', user!.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('biz_clients').select('id, user_id, name, email, price, client_type, billing_day, start_date, status, archived_at, archive_reason, created_at').eq('user_id', user!.id).order('created_at', { ascending: false })
     setClients((data || []) as BizClient[])
   }
 
@@ -534,7 +534,7 @@ export default function BusinessDashboard() {
     await supabase.from('biz_clients').delete().eq('id', id)
     setShowClientModal(false)
     toast('Client supprime', 'success')
-    const { data } = await supabase.from('biz_clients').select('*').eq('user_id', user!.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('biz_clients').select('id, user_id, name, email, price, client_type, billing_day, start_date, status, archived_at, archive_reason, created_at').eq('user_id', user!.id).order('created_at', { ascending: false })
     setClients((data || []) as BizClient[])
   }
 
@@ -581,7 +581,7 @@ export default function BusinessDashboard() {
     try {
       const { data } = await supabase
         .from('payment_history')
-        .select('*')
+        .select('id, athlete_id, amount, status, stripe_invoice_id, created_at')
         .eq('stripe_customer_id', stripe.stripe_customer_id)
         .order('created_at', { ascending: false })
         .limit(20)
