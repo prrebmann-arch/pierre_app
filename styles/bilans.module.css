@@ -62,8 +62,8 @@
 
 /* Stats row */
 .stats {
-  display: grid; grid-template-columns: 94px repeat(12, 1fr) minmax(70px,auto) 36px;
-  gap: 0; padding: 10px 0 0; margin: 0 -4px; align-items: end;
+  display: grid; grid-template-columns: 94px repeat(12, 1fr) 70px 36px;
+  gap: 0; padding: 10px 0 0; margin: 0; align-items: end;
 }
 .stat { display: flex; flex-direction: column; align-items: center; }
 .statLabel { font-size: 9px; font-weight: 700; color: var(--text3); letter-spacing: 0.3px; margin-bottom: 2px; }
@@ -122,9 +122,9 @@
 .weekNoteText { display: block; color: var(--text2); line-height: 1.4; }
 
 /* Daily detail table */
-.daysTable { padding: 0 16px 12px; overflow-x: auto; }
+.daysTable { padding: 0 18px 12px; overflow-x: auto; }
 .dayHdr {
-  display: grid; grid-template-columns: 94px repeat(12, 1fr) minmax(70px,auto) 36px;
+  display: grid; grid-template-columns: 94px repeat(12, 1fr) 70px 36px;
   gap: 0; padding: 10px 0 8px; border-bottom: 1px solid var(--border-subtle);
 }
 .dayHdr span {
@@ -135,12 +135,12 @@
 .dhEnd { text-align: center; }
 
 .dayRow {
-  display: grid; grid-template-columns: 94px repeat(12, 1fr) minmax(70px,auto) 36px;
+  display: grid; grid-template-columns: 94px repeat(12, 1fr) 70px 36px;
   gap: 0; padding: 8px 0; align-items: center;
   border-bottom: 1px solid var(--border-subtle);
 }
 .dayAvg {
-  display: grid; grid-template-columns: 94px repeat(12, 1fr) minmax(70px,auto) 36px;
+  display: grid; grid-template-columns: 94px repeat(12, 1fr) 70px 36px;
   gap: 0; padding: 6px 0; align-items: center;
   border-bottom: 2px solid var(--border);
   background: var(--bg2);
@@ -233,10 +233,10 @@
 @media (max-width: 768px) {
   .header { padding: 14px 14px; }
   .headerTop { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .stats { grid-template-columns: 80px repeat(12, 1fr) minmax(60px,auto) 32px; min-width: 720px; padding: 10px 14px 0; }
+  .stats { grid-template-columns: 80px repeat(12, 1fr) 60px 32px; min-width: 720px; }
   .statValue { font-size: 12px; }
-  .daysTable { overflow-x: auto; }
-  .dayHdr, .dayRow, .dayAvg { grid-template-columns: 80px repeat(12, 1fr) minmax(60px,auto) 32px; min-width: 720px; }
+  .daysTable { overflow-x: auto; padding: 0 14px 12px; }
+  .dayHdr, .dayRow, .dayAvg { grid-template-columns: 80px repeat(12, 1fr) 60px 32px; min-width: 720px; }
   .mens { gap: 16px; }
 }
 

@@ -276,6 +276,43 @@ export default function NutritionPage() {
         if (plan.actif) {
           await supabase.from('nutrition_plans').update({ actif: false }).eq('id', planId)
         }
+
+        // Duplicate the complementary plan (ON<->OFF) so the version pair stays complete
+        const isTraining = plan.meal_type === 'training' || plan.meal_type === 'entrainement'
+        const complementaryTypes = isTraining ? ['rest', 'repos'] : ['training', 'entrainement']
+        const { data: compPlan } = await supabase
+          .from('nutrition_plans')
+          .select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, macro_only, meal_times')
+          .eq('athlete_id', plan.athlete_id)
+          .eq('nom', plan.nom)
+          .eq('actif', true)
+          .in('meal_type', complementaryTypes)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        if (compPlan) {
+          const { error: compError } = await supabase.from('nutrition_plans').insert({
+            nom: compPlan.nom,
+            athlete_id: compPlan.athlete_id,
+            coach_id: compPlan.coach_id || user?.id,
+            meal_type: compPlan.meal_type,
+            calories_objectif: compPlan.calories_objectif,
+            proteines: compPlan.proteines,
+            glucides: compPlan.glucides,
+            lipides: compPlan.lipides,
+            meals_data: typeof compPlan.meals_data === 'string' ? compPlan.meals_data : JSON.stringify(compPlan.meals_data || []),
+            actif: true,
+            valid_from: new Date().toISOString().split('T')[0],
+            macro_only: compPlan.macro_only || false,
+            meal_times: compPlan.meal_times,
+          })
+          if (!compError) {
+            // Deactivate the old complementary plan
+            await supabase.from('nutrition_plans').update({ actif: false }).eq('id', compPlan.id)
+          }
+        }
+
         toast('Nouvelle version de diete creee avec les changements acceptes', 'success')
       }
     }
