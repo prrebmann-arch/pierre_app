@@ -342,8 +342,8 @@ export default function SupplementsPage() {
                         <i className="fas fa-shopping-cart" /> Acheter
                       </a>
                     )}
-                    {/* Delay / on-track badge */}
-                    {!history.isOnDemand && (
+                    {/* Delay / on-track badge (supplementation only) */}
+                    {tab === 'supplementation' && !history.isOnDemand && (
                       history.delayDays > 0 ? (
                         <span className={styles.suppBadgeLate}>
                           <i className="fas fa-exclamation-triangle" style={{ marginRight: 3 }} />
@@ -374,8 +374,8 @@ export default function SupplementsPage() {
                   {a.notes && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>{a.notes}</div>}
                 </div>
 
-                {/* 14-day history grid */}
-                <div className={styles.suppHistorySection}>
+                {/* 14-day history grid (supplementation only) */}
+                {tab === 'supplementation' && <div className={styles.suppHistorySection}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                     <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)' }}>Historique 14 jours</span>
                     {!history.isOnDemand && history.missedCount > 0 && (
@@ -406,7 +406,7 @@ export default function SupplementsPage() {
                     <span><span className={styles.suppDot} style={{ background: 'var(--bg4)' }} /> Pas prevu</span>
                     <span><span className={styles.suppDot} style={{ background: 'var(--info, #3b82f6)' }} /> Aujourd&apos;hui</span>
                   </div>
-                </div>
+                </div>}
 
                 {/* Today status */}
                 {tab === 'supplementation' && (
