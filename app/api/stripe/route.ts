@@ -513,7 +513,9 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
       const msPerDay = 1000 * 60 * 60 * 24
       const daysUntilAnchor = Math.max(1, Math.ceil((anchorDate.getTime() - now.getTime()) / msPerDay))
       const daysInPeriod = 30 // approximate month
-      const prorataAmount = Math.round((plan.amount * daysUntilAnchor) / daysInPeriod)
+      let prorataAmount = Math.round((plan.amount * daysUntilAnchor) / daysInPeriod)
+      // Stripe minimum is 50 cents for EUR — if prorata is less, charge the minimum
+      if (prorataAmount < 50) prorataAmount = 50
 
       // Switch to payment mode (not subscription) — charge prorata now
       params.mode = 'payment'
@@ -534,7 +536,12 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
       delete params.subscription_data
     }
 
-    session = await stripeInstance.checkout.sessions.create(params as Stripe.Checkout.SessionCreateParams, stripeOpts)
+    try {
+      session = await stripeInstance.checkout.sessions.create(params as Stripe.Checkout.SessionCreateParams, stripeOpts)
+    } catch (checkoutErr) {
+      console.error('[stripe] checkout.create failed:', (checkoutErr as Error).message, JSON.stringify(params))
+      return errorJson('Erreur Stripe: ' + (checkoutErr as Error).message, 500)
+    }
   }
 
   await supabase.from('athlete_payment_plans').update({ stripe_customer_id: customer.id }).eq('id', plan.id)
