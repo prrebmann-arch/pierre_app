@@ -12,6 +12,22 @@ import type { Athlete } from '@/lib/types'
 
 import { PROG_PHASES } from '@/lib/constants'
 
+const PAYMENT_STATUS_MAP: Record<string, { label: string; color: string }> = {
+  active: { label: 'Actif', color: '#22c55e' },
+  pending: { label: 'En attente', color: '#f59e0b' },
+  past_due: { label: 'Impaye', color: '#ef4444' },
+  canceled: { label: 'Annule', color: '#ef4444' },
+  completed: { label: 'Termine', color: '#6366f1' },
+  free: { label: 'Gratuit', color: '#22c55e' },
+}
+
+function getPaymentBadge(athlete: Athlete) {
+  const plan = athlete._payment
+  if (!plan) return { label: 'Gratuit', color: '#22c55e' }
+  if (plan.is_free) return { label: 'Gratuit', color: '#22c55e' }
+  return PAYMENT_STATUS_MAP[plan.payment_status] || { label: 'En attente', color: '#f59e0b' }
+}
+
 function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => void }) {
   const initials = (athlete.prenom?.charAt(0) || '') + (athlete.nom?.charAt(0) || '')
   const poids = athlete.poids_actuel ? `${athlete.poids_actuel} kg` : '\u2014'
@@ -19,6 +35,7 @@ function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => vo
   const phaseInfo = activePhase?.phase ? (PROG_PHASES as Record<string, { label: string; short: string; color: string }>)[activePhase.phase] : null
   const phaseLabel = phaseInfo ? phaseInfo.label : (activePhase?.name || '')
   const phaseColor = phaseInfo ? phaseInfo.color : 'var(--primary)'
+  const payBadge = getPaymentBadge(athlete)
 
   return (
     <div className={styles.athleteCard} onClick={onClick}>
@@ -41,14 +58,22 @@ function AthleteCard({ athlete, onClick }: { athlete: Athlete; onClick: () => vo
           </div>
           <div className={styles.cardEmail}>{athlete.email || ''}</div>
         </div>
-        {phaseLabel && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          {phaseLabel && (
+            <span
+              className={styles.phaseBadge}
+              style={{ color: phaseColor, background: `${phaseColor}18` }}
+            >
+              {phaseLabel}
+            </span>
+          )}
           <span
             className={styles.phaseBadge}
-            style={{ color: phaseColor, background: `${phaseColor}18` }}
+            style={{ color: payBadge.color, background: `${payBadge.color}18` }}
           >
-            {phaseLabel}
+            {payBadge.label}
           </span>
-        )}
+        </div>
       </div>
       <div className={styles.statGrid}>
         <div className={styles.statBox}>

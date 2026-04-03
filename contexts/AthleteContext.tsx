@@ -38,7 +38,7 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
 
     try {
       const supabase = createClient()
-      const [{ data, error }, { data: phases }] = await Promise.all([
+      const [{ data, error }, { data: phases }, { data: plans }] = await Promise.all([
         supabase
           .from('athletes')
           .select('*')
@@ -49,6 +49,10 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
           .select('athlete_id, phase, name')
           .eq('coach_id', userId)
           .eq('status', 'en_cours'),
+        supabase
+          .from('athlete_payment_plans')
+          .select('athlete_id, payment_status, amount, frequency, is_free')
+          .eq('coach_id', userId),
       ])
 
       if (!error && data) {
@@ -56,8 +60,12 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
         ;(phases || []).forEach((p: { athlete_id: string; phase: string; name: string }) => {
           if (!phaseMap[p.athlete_id]) phaseMap[p.athlete_id] = p
         })
+        const planMap: Record<string, { payment_status: string; amount: number; frequency: string; is_free: boolean }> = {}
+        ;(plans || []).forEach((p: { athlete_id: string; payment_status: string; amount: number; frequency: string; is_free: boolean }) => {
+          planMap[p.athlete_id] = { payment_status: p.payment_status, amount: p.amount, frequency: p.frequency, is_free: p.is_free }
+        })
         setAthletes(
-          (data as Athlete[]).map(a => ({ ...a, _phase: phaseMap[a.id] || null }))
+          (data as Athlete[]).map(a => ({ ...a, _phase: phaseMap[a.id] || null, _payment: planMap[a.id] || null }))
         )
       }
     } catch (err) {

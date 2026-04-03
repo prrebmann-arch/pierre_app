@@ -61,6 +61,8 @@ export interface Athlete {
   created_at: string
   /** Transient: attached from roadmap_phases query */
   _phase?: { athlete_id: string; phase: string; name: string } | null
+  /** Transient: attached from athlete_payment_plans query */
+  _payment?: { payment_status: string; amount: number; frequency: string; is_free: boolean } | null
 }
 
 export interface User {

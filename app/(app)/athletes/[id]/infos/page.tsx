@@ -466,7 +466,21 @@ export default function InfosPage() {
 
   // ── Payment card ──
   function PaymentCard() {
-    if (!paymentPlan) return null
+    if (!paymentPlan) {
+      return (
+        <div style={{ marginTop: 16, background: 'var(--bg2)', border: '1px solid var(--glass-border)', borderRadius: 16, padding: 20 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <i className="fas fa-credit-card" style={{ marginRight: 6 }} />PAIEMENT
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text2)' }}>Aucun plan configure</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#22c55e', background: 'rgba(34,197,94,0.1)', padding: '3px 10px', borderRadius: 6 }}>
+              <i className="fas fa-gift" style={{ marginRight: 4 }} />Gratuit
+            </span>
+          </div>
+        </div>
+      )
+    }
 
     const statusMap: Record<string, { label: string; color: string; icon: string }> = {
       active: { label: 'Actif', color: '#22c55e', icon: 'fa-check-circle' },

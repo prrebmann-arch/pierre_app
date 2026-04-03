@@ -339,6 +339,14 @@ export default function DashboardPage() {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 
+  // Compute MRR from athlete payment plans
+  const activePayingAthletes = athletes.filter(a => a._payment && !a._payment.is_free && a._payment.payment_status === 'active')
+  const mrr = activePayingAthletes.reduce((sum, a) => {
+    const p = a._payment!
+    const monthlyAmount = p.frequency === 'week' ? (p.amount * 4.33) : p.frequency === 'day' ? (p.amount * 30) : p.amount
+    return sum + monthlyAmount
+  }, 0)
+
   const stats: StatCardData[] = [
     {
       id: 'athletes',
@@ -350,19 +358,19 @@ export default function DashboardPage() {
       stripeGradient: 'linear-gradient(90deg,#3b82f6,#60a5fa)',
     },
     {
-      id: 'bilans',
-      value: bilansToReview.length,
-      label: 'Bilans a traiter',
-      icon: 'fa-clipboard-check',
+      id: 'mrr',
+      value: `${(mrr / 100).toFixed(0)}\u20AC`,
+      label: `MRR (${activePayingAthletes.length} actif${activePayingAthletes.length > 1 ? 's' : ''})`,
+      icon: 'fa-euro-sign',
       iconColor: '#22c55e',
       iconBg: 'rgba(34,197,94,0.1)',
       stripeGradient: 'linear-gradient(90deg,#22c55e,#4ade80)',
     },
     {
-      id: 'videos',
-      value: pendingVids.length,
-      label: 'Videos a corriger',
-      icon: 'fa-video',
+      id: 'bilans',
+      value: bilansToReview.length,
+      label: 'Bilans a traiter',
+      icon: 'fa-clipboard-check',
       iconColor: '#f59e0b',
       iconBg: 'rgba(245,158,11,0.1)',
       stripeGradient: 'linear-gradient(90deg,#f59e0b,#fbbf24)',

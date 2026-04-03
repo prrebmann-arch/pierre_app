@@ -5,7 +5,7 @@ import styles from '@/styles/dashboard.module.css'
 
 interface StatCardData {
   id: string
-  value: number
+  value: number | string
   label: string
   icon: string
   iconColor: string
@@ -37,7 +37,12 @@ export default function StatsCards({ stats }: StatsCardsProps) {
   useEffect(() => {
     stats.forEach(s => {
       const el = refs.current.get(s.id)
-      if (el) animateCounter(el, s.value)
+      if (!el) return
+      if (typeof s.value === 'string') {
+        el.textContent = s.value
+      } else {
+        animateCounter(el, s.value)
+      }
     })
   }, [stats])
 
