@@ -75,6 +75,34 @@ interface PaymentRecord {
   created_at: string
 }
 
+interface AthletePaymentPlan {
+  id: string
+  coach_id: string
+  athlete_id: string
+  is_free: boolean
+  amount: number
+  currency: string
+  frequency: string
+  frequency_interval?: number
+  payment_status: string
+  stripe_subscription_id?: string
+  stripe_customer_id?: string
+  engagement_months?: number
+  created_at?: string
+}
+
+interface AthletePaymentHistory {
+  id: string
+  coach_id: string
+  athlete_id: string
+  amount: number
+  currency: string
+  status: string
+  description?: string
+  created_at: string
+  is_platform_payment?: boolean
+}
+
 // ── Constants ──
 const BIZ_DAYS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'] as const
 const BIZ_DAY_LABELS: Record<string, string> = { lundi: 'L', mardi: 'M', mercredi: 'Me', jeudi: 'J', vendredi: 'V', samedi: 'S' }
@@ -261,7 +289,7 @@ export default function BusinessDashboard() {
   const supabase = createClient()
 
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'dashboard' | 'objectives' | 'clients'>('dashboard')
+  const [tab, setTab] = useState<'dashboard' | 'objectives' | 'clients' | 'payments'>('dashboard')
   const [config, setConfig] = useState<BizConfig>(DEFAULT_CONFIG)
   const [allEntries, setAllEntries] = useState<DailyEntry[]>([])
   const [clients, setClients] = useState<BizClient[]>([])
@@ -282,6 +310,11 @@ export default function BusinessDashboard() {
   const [paymentHistory, setPaymentHistory] = useState<PaymentRecord[]>([])
   const [paymentClientName, setPaymentClientName] = useState('')
   const [loadingPayments, setLoadingPayments] = useState(false)
+
+  // Athlete payment data (from Stripe Connect)
+  const [athletePaymentPlans, setAthletePaymentPlans] = useState<AthletePaymentPlan[]>([])
+  const [athletePayments, setAthletePayments] = useState<AthletePaymentHistory[]>([])
+  const [athletes, setAthletes] = useState<Record<string, { prenom: string; nom: string }>>({})
 
   // Client form state
   const [cName, setCName] = useState('')
@@ -309,7 +342,7 @@ export default function BusinessDashboard() {
       supabase.from('project_config').select('*').eq('user_id', user.id).single(),
       supabase.from('daily_entries').select('*').eq('user_id', user.id),
       supabase.from('biz_clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('stripe_customers').select('*').eq('user_id', user.id),
+      supabase.from('stripe_customers').select('*').eq('coach_id', user.id),
     ])
 
     const cfg = cfgRes.data || DEFAULT_CONFIG
@@ -320,6 +353,18 @@ export default function BusinessDashboard() {
     const sMap: Record<string, StripeCustomer> = {}
     ;(stripeRes.data || []).forEach((s: StripeCustomer) => { if (s.athlete_id) sMap[s.athlete_id] = s })
     setStripeData(sMap)
+
+    // Load athlete payment plans + payment history
+    const [plansRes, paymentsRes, athletesRes] = await Promise.all([
+      supabase.from('athlete_payment_plans').select('*').eq('coach_id', user.id),
+      supabase.from('payment_history').select('*').eq('coach_id', user.id).eq('is_platform_payment', false).order('created_at', { ascending: false }).limit(50),
+      supabase.from('athletes').select('id, prenom, nom').eq('coach_id', user.id),
+    ])
+    setAthletePaymentPlans((plansRes.data || []) as AthletePaymentPlan[])
+    setAthletePayments((paymentsRes.data || []) as AthletePaymentHistory[])
+    const aMap: Record<string, { prenom: string; nom: string }> = {}
+    ;(athletesRes.data || []).forEach((a: any) => { aMap[a.id] = { prenom: a.prenom || '', nom: a.nom || '' } })
+    setAthletes(aMap)
 
     const wk = cfg.week_number || 1
     setWeek(wk)
@@ -363,6 +408,18 @@ export default function BusinessDashboard() {
   const aCli = sumField(allEntries, 'clients_online') + sumField(allEntries, 'clients_offline')
   const aMeta = sumField(allEntries, 'meta_ads_budget')
   const aLost = sumField(allEntries, 'clients_lost_online' as keyof DailyEntry) + sumField(allEntries, 'clients_lost_offline' as keyof DailyEntry)
+
+  // Athlete payment plan stats
+  const activePlans = athletePaymentPlans.filter(p => p.payment_status === 'active')
+  const pendingPlans = athletePaymentPlans.filter(p => p.payment_status === 'pending')
+  const stripeMrr = activePlans.reduce((s, p) => {
+    if (p.is_free) return s
+    const amt = p.amount || 0
+    if (p.frequency === 'week') return s + amt * 4
+    if (p.frequency === 'day') return s + amt * 30
+    return s + amt // month or default
+  }, 0)
+  const totalRevenue = athletePayments.filter(p => p.status === 'succeeded').reduce((s, p) => s + (p.amount || 0), 0)
 
   // Probabilities
   const pDms = calcProb(wDms, objectives.dms_target, daysLeft)
@@ -548,6 +605,7 @@ export default function BusinessDashboard() {
   // ── Tabs ──
   const tabs: { id: typeof tab; icon: string; label: string }[] = [
     { id: 'dashboard', icon: 'fas fa-chart-line', label: 'Dashboard' },
+    { id: 'payments', icon: 'fas fa-credit-card', label: 'Paiements' },
     { id: 'objectives', icon: 'fas fa-bullseye', label: 'Objectifs' },
     { id: 'clients', icon: 'fas fa-users', label: 'Clients' },
   ]
@@ -686,6 +744,119 @@ export default function BusinessDashboard() {
           </div>
         </>
       )}
+
+      {/* Payments Tab */}
+      {tab === 'payments' && (() => {
+        const payStatusMap: Record<string, { label: string; color: string }> = {
+          active: { label: 'Actif', color: '#22c55e' },
+          pending: { label: 'En attente', color: '#f59e0b' },
+          past_due: { label: 'Impaye', color: '#ef4444' },
+          canceled: { label: 'Annule', color: '#ef4444' },
+          completed: { label: 'Termine', color: '#6366f1' },
+          free: { label: 'Gratuit', color: '#22c55e' },
+        }
+        return (
+          <>
+            {/* KPI row */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 20 }}>
+              <div className={styles.bizKpi}>
+                <div className={styles.bizKpiLabel}>MRR Stripe</div>
+                <div className={styles.bizKpiValue} style={{ color: 'var(--success)' }}>{(stripeMrr / 100).toLocaleString('fr-FR')}EUR</div>
+                <div className={styles.bizKpiSub}>{activePlans.length} abonnement{activePlans.length > 1 ? 's' : ''} actif{activePlans.length > 1 ? 's' : ''}</div>
+              </div>
+              <div className={styles.bizKpi}>
+                <div className={styles.bizKpiLabel}>Revenu total</div>
+                <div className={styles.bizKpiValue}>{(totalRevenue / 100).toLocaleString('fr-FR')}EUR</div>
+                <div className={styles.bizKpiSub}>{athletePayments.filter(p => p.status === 'succeeded').length} paiement{athletePayments.filter(p => p.status === 'succeeded').length > 1 ? 's' : ''}</div>
+              </div>
+              <div className={styles.bizKpi}>
+                <div className={styles.bizKpiLabel}>En attente</div>
+                <div className={styles.bizKpiValue} style={{ color: '#f59e0b' }}>{pendingPlans.length}</div>
+                <div className={styles.bizKpiSub}>plan{pendingPlans.length > 1 ? 's' : ''} en attente</div>
+              </div>
+              <div className={styles.bizKpi}>
+                <div className={styles.bizKpiLabel}>Total athletes</div>
+                <div className={styles.bizKpiValue}>{athletePaymentPlans.length}</div>
+                <div className={styles.bizKpiSub}>avec un plan de paiement</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              {/* Active subscriptions */}
+              <Card title="Abonnements athletes" headerRight={
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>{athletePaymentPlans.length} plan{athletePaymentPlans.length > 1 ? 's' : ''}</span>
+              }>
+                {athletePaymentPlans.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--text3)', fontSize: 13 }}>
+                    Aucun plan de paiement configure
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                    {athletePaymentPlans.map((plan) => {
+                      const a = athletes[plan.athlete_id]
+                      const name = a ? `${a.prenom} ${a.nom}`.trim() : plan.athlete_id
+                      const st = payStatusMap[plan.payment_status] || payStatusMap.pending
+                      const amtLabel = plan.is_free ? 'Gratuit' :
+                        `${(plan.amount / 100).toFixed(0)}EUR/${plan.frequency === 'month' ? 'mois' : plan.frequency === 'week' ? 'sem' : 'jour'}`
+                      return (
+                        <div key={plan.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{name}</div>
+                            <div style={{ fontSize: 12, color: 'var(--text3)' }}>{amtLabel}</div>
+                          </div>
+                          <span style={{
+                            fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 6,
+                            color: st.color, background: `${st.color}18`,
+                          }}>
+                            {st.label}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
+
+              {/* Payment history */}
+              <Card title="Historique des paiements" headerRight={
+                <span style={{ fontSize: 12, color: 'var(--text3)' }}>{athletePayments.length} paiement{athletePayments.length > 1 ? 's' : ''}</span>
+              }>
+                {athletePayments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: 24, color: 'var(--text3)', fontSize: 13 }}>
+                    Aucun paiement enregistre
+                  </div>
+                ) : (
+                  <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+                    {athletePayments.map((p) => {
+                      const a = athletes[p.athlete_id]
+                      const name = a ? `${a.prenom} ${a.nom}`.trim() : ''
+                      const date = new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+                      const ok = p.status === 'succeeded'
+                      return (
+                        <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border-subtle)' }}>
+                          <div>
+                            <div style={{ fontSize: 13, fontWeight: 600 }}>{(p.amount / 100).toFixed(2)} {(p.currency || 'eur').toUpperCase()}</div>
+                            <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                              {name}{name ? ' — ' : ''}{date}{p.description ? ` — ${p.description}` : ''}
+                            </div>
+                          </div>
+                          <span style={{
+                            fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 4,
+                            color: ok ? '#22c55e' : '#ef4444',
+                            background: ok ? 'rgba(34,197,94,0.13)' : 'rgba(239,68,68,0.13)',
+                          }}>
+                            {ok ? 'Paye' : 'Echoue'}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </Card>
+            </div>
+          </>
+        )
+      })()}
 
       {/* Objectives Tab */}
       {tab === 'objectives' && (
