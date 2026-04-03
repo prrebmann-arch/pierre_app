@@ -986,37 +986,73 @@ export default function NutritionPage() {
                         </button>
                       </td>
                     </tr>
-                    {isExpanded && allVersions.map((v, vi) => (
-                      <tr
-                        key={`ver-${v.id}`}
-                        style={{ cursor: 'pointer', background: vi === 0 ? 'rgba(179,8,8,0.03)' : 'transparent' }}
-                        onClick={() => {
-                          // Find the matching pair (training/rest) for this version date
-                          const pairT = allVersions.find((p) => p.created_at === v.created_at && (p.meal_type === 'training' || p.meal_type === 'entrainement')) || null
-                          const pairR = allVersions.find((p) => p.created_at === v.created_at && (p.meal_type === 'rest' || p.meal_type === 'repos')) || null
-                          viewDiet(pairT, pairR || v)
-                        }}
-                      >
-                        <td style={{ paddingLeft: 28 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <i className="fa-solid fa-code-branch" style={{ fontSize: 10, color: 'var(--text3)' }} />
-                            <span style={{ fontSize: 12, color: 'var(--text2)' }}>
-                              {v.created_at ? new Date(v.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date inconnue'}
-                            </span>
-                            {v.actif && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 6, background: 'var(--primary)', color: '#fff', fontWeight: 700 }}>ACTIF</span>}
-                            <span style={{ fontSize: 10, color: 'var(--text3)' }}>{v.meal_type === 'training' || v.meal_type === 'entrainement' ? 'ON' : 'OFF'}</span>
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'right', fontSize: 12, color: 'var(--text2)' }}>
-                          {v.calories_objectif ? v.calories_objectif.toLocaleString('fr-FR') : '--'}
-                        </td>
-                        <td style={{ textAlign: 'right', fontSize: 10, color: 'var(--text3)' }}>
-                          P:{v.proteines || 0} G:{v.glucides || 0} L:{v.lipides || 0}
-                        </td>
-                        <td />
-                        <td />
-                      </tr>
-                    ))}
+                    {isExpanded && (() => {
+                      // Group versions by created_at date (pair ON/OFF together)
+                      const versionDates = [...new Set(allVersions.map(v => v.created_at || ''))].filter(Boolean).sort((a, b) => b.localeCompare(a))
+                      return versionDates.map((dateStr, vi) => {
+                        const vT = allVersions.find(p => p.created_at === dateStr && (p.meal_type === 'training' || p.meal_type === 'entrainement')) || null
+                        const vR = allVersions.find(p => p.created_at === dateStr && (p.meal_type === 'rest' || p.meal_type === 'repos')) || null
+                        const isCurrentActive = (vT?.actif || vR?.actif)
+                        const vKcalT = vT?.calories_objectif || null
+                        const vKcalR = vR?.calories_objectif || null
+                        const vMacroT = vT ? `P:${vT.proteines || 0} G:${vT.glucides || 0} L:${vT.lipides || 0}` : ''
+                        const vMacroR = vR ? `P:${vR.proteines || 0} G:${vR.glucides || 0} L:${vR.lipides || 0}` : ''
+                        return (
+                          <tr
+                            key={`ver-${vi}`}
+                            style={{ cursor: 'pointer', background: isCurrentActive ? 'rgba(179,8,8,0.03)' : 'transparent' }}
+                            onClick={() => viewDiet(vT, vR)}
+                          >
+                            <td style={{ paddingLeft: 28 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <i className="fa-solid fa-code-branch" style={{ fontSize: 10, color: 'var(--text3)' }} />
+                                <span style={{ fontSize: 12, color: 'var(--text2)' }}>
+                                  {new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                                {isCurrentActive && <span style={{ fontSize: 8, padding: '1px 5px', borderRadius: 6, background: 'var(--primary)', color: '#fff', fontWeight: 700 }}>ACTIF</span>}
+                              </div>
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {vKcalT ? (
+                                <>
+                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{vKcalT.toLocaleString('fr-FR')}</div>
+                                  <div style={{ fontSize: 9, color: 'var(--text3)' }}>{vMacroT}</div>
+                                </>
+                              ) : <span style={{ color: 'var(--text3)' }}>--</span>}
+                            </td>
+                            <td style={{ textAlign: 'right' }}>
+                              {vKcalR ? (
+                                <>
+                                  <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>{vKcalR.toLocaleString('fr-FR')}</div>
+                                  <div style={{ fontSize: 9, color: 'var(--text3)' }}>{vMacroR}</div>
+                                </>
+                              ) : <span style={{ color: 'var(--text3)' }}>--</span>}
+                            </td>
+                            <td onClick={(e) => e.stopPropagation()} style={{ textAlign: 'center' }}>
+                              {!isCurrentActive && (
+                                <button
+                                  className="btn btn-outline btn-sm"
+                                  style={{ fontSize: 10, padding: '2px 8px' }}
+                                  onClick={async () => {
+                                    // Deactivate all versions of this diet
+                                    const allIds = plans.filter(p => (p.nom || 'Diete') === d.name).map(p => p.id)
+                                    await supabase.from('nutrition_plans').update({ actif: false }).in('id', allIds)
+                                    // Reactivate this version
+                                    if (vT) await supabase.from('nutrition_plans').update({ actif: true }).eq('id', vT.id)
+                                    if (vR) await supabase.from('nutrition_plans').update({ actif: true }).eq('id', vR.id)
+                                    toast('Version reactivee', 'success')
+                                    loadPlans()
+                                  }}
+                                >
+                                  Reactiver
+                                </button>
+                              )}
+                            </td>
+                            <td />
+                          </tr>
+                        )
+                      })
+                    })()}
                   </React.Fragment>
                 )
               })}
