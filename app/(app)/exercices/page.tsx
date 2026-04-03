@@ -61,9 +61,9 @@ export default function ExercicesPage() {
   // View mode: list or grid
   const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
     if (typeof window !== 'undefined') {
-      return (localStorage.getItem(VIEW_STORAGE_KEY) as 'list' | 'grid') || 'list'
+      return (localStorage.getItem(VIEW_STORAGE_KEY) as 'list' | 'grid') || 'grid'
     }
-    return 'list'
+    return 'grid'
   })
 
   // Modal state
