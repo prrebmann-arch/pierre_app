@@ -513,9 +513,7 @@ async function handleCreateCheckout(body: Record<string, string>, req: NextReque
       const msPerDay = 1000 * 60 * 60 * 24
       const daysUntilAnchor = Math.max(1, Math.ceil((anchorDate.getTime() - now.getTime()) / msPerDay))
       const daysInPeriod = 30 // approximate month
-      let prorataAmount = Math.round((plan.amount * daysUntilAnchor) / daysInPeriod)
-      // Stripe minimum is 50 cents for EUR — if prorata is less, charge the minimum
-      if (prorataAmount < 50) prorataAmount = 50
+      const prorataAmount = Math.max(1, Math.round((plan.amount * daysUntilAnchor) / daysInPeriod))
 
       // Switch to payment mode (not subscription) — charge prorata now
       params.mode = 'payment'
