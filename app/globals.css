@@ -495,14 +495,14 @@ textarea.form-control {
   background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
   color: var(--text); font-size: 13px; padding: 8px 10px; width: 100%;
   font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.15s;
-  color-scheme: dark; -webkit-appearance: none; appearance: none;
+  -webkit-appearance: none; appearance: none;
 }
 .rm-m-input:focus { border-color: var(--primary); }
 .rm-m-input::placeholder { color: var(--text3); }
 .rm-m-input[type="date"],
 select.rm-m-input {
   background: var(--bg3); color: var(--text); font-size: 13px;
-  color-scheme: dark; cursor: pointer;
+  cursor: pointer;
 }
 select.rm-m-input {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23606068'/%3E%3C/svg%3E");
@@ -574,8 +574,7 @@ select.rm-m-input {
 .nd-tr:last-child td { border-bottom: none; }
 
 /* ===== LIGHT THEME COMPONENT OVERRIDES ===== */
-[data-theme="light"] .sidebar { background: #ffffff; }
-[data-theme="light"] .admin-sidebar { background: #ffffff; }
+/* Sidebar backgrounds handled via var(--glass-bg) in module CSS */
 [data-theme="light"] .modal { background: #ffffff; }
 [data-theme="light"] .notification { background: #ffffff; }
 [data-theme="light"] .auth-box { background: #ffffff; }

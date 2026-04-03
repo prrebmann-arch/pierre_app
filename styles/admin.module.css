@@ -4,7 +4,7 @@
 .adminLayout { display: flex; min-height: 100vh; }
 
 .adminSidebar {
-  width: 240px; background: rgba(12,12,15,0.45);
+  width: 240px; background: var(--glass-bg);
   backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--glass-border);
   display: flex; flex-direction: column; position: fixed;
