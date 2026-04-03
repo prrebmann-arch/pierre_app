@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
+import useSWR from 'swr'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -43,6 +44,26 @@ interface Birthday {
   age: number
 }
 
+interface DashboardData {
+  bilansToReview: BilanToReview[]
+  lateAthletes: LateAthlete[]
+  pendingVids: PendingVideo[]
+  birthdays: Birthday[]
+  recentActivity: ActivityItem[]
+  coachSettings: Record<string, unknown>
+  activePrograms: number
+}
+
+const DASH_CACHE_KEY = 'dashboard_cache'
+
+function getDashCache(): DashboardData | undefined {
+  if (typeof window === 'undefined') return undefined
+  try {
+    const raw = sessionStorage.getItem(DASH_CACHE_KEY)
+    return raw ? JSON.parse(raw) : undefined
+  } catch { return undefined }
+}
+
 function getTimeAgo(date: Date): string {
   const now = new Date()
   const diff = Math.floor((now.getTime() - date.getTime()) / 1000)
@@ -55,236 +76,223 @@ function getTimeAgo(date: Date): string {
   return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
 }
 
+async function fetchDashboardData(userId: string, athletes: Athlete[]): Promise<DashboardData> {
+  const supabase = createClient()
+  const athleteUserIds = athletes.map(a => a.user_id).filter(Boolean) as string[]
+  const athleteIds = athletes.map(a => a.id)
+
+  const [
+    { data: allReports },
+    { data: allPrograms },
+    { data: pendingVideos },
+    { data: settingsRows },
+  ] = await Promise.all([
+    athleteUserIds.length
+      ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, adherence, steps').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(500)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    supabase.from('workout_programs').select('id, nom, athlete_id, actif').eq('coach_id', userId),
+    athleteIds.length
+      ? supabase.from('execution_videos').select('id, athlete_id, exercise_name, created_at').in('athlete_id', athleteIds).eq('status', 'a_traiter').order('created_at', { ascending: false }).limit(50)
+      : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+    supabase.from('coach_settings').select('coach_id, max_videos_per_day').eq('coach_id', userId).limit(1),
+  ])
+
+  // Coach settings
+  let settings = settingsRows?.[0] || null
+  if (!settings) {
+    const { data: created } = await supabase
+      .from('coach_settings')
+      .insert({ coach_id: userId, max_videos_per_day: 3 })
+      .select()
+      .single()
+    settings = created || { max_videos_per_day: 3 }
+  }
+
+  const reports = (allReports || []) as Record<string, unknown>[]
+  const programs = (allPrograms || []) as Record<string, unknown>[]
+  const videos = (pendingVideos || []) as Record<string, unknown>[]
+
+  const today = toDateStr(new Date())
+  const now = new Date()
+
+  // Build lookup
+  const athleteMap: Record<string, Athlete> = {}
+  athletes.forEach(a => {
+    if (a.user_id) athleteMap[a.user_id] = a
+    athleteMap[a.id] = a
+  })
+
+  // Monday of current week
+  const mondayDate = new Date(now)
+  const dayOff = mondayDate.getDay() === 0 ? 6 : mondayDate.getDay() - 1
+  mondayDate.setDate(mondayDate.getDate() - dayOff)
+  const mondayStr = toDateStr(mondayDate)
+
+  const thisWeekReports = reports.filter(
+    r => (r.date as string) >= mondayStr && (r.date as string) <= today
+  )
+
+  // Bilans to review
+  const bilansToReview: BilanToReview[] = []
+  athletes.forEach(a => {
+    if (!a.user_id) return
+    const athleteReports = thisWeekReports.filter(r => r.user_id === a.user_id)
+    if (athleteReports.length > 0) {
+      const lastReport = athleteReports.sort(
+        (x, y) => (y.date as string).localeCompare(x.date as string)
+      )[0]
+      bilansToReview.push({ athlete: a, report: lastReport, count: athleteReports.length })
+    }
+  })
+
+  // Late athletes
+  const lateAthletes: LateAthlete[] = []
+  athletes.forEach(a => {
+    if (!a.user_id) return
+    const freq = a.complete_bilan_frequency || 'weekly'
+    if (freq === 'none') return
+    const intv = a.complete_bilan_interval || 7
+    const day = a.complete_bilan_day ?? 0
+    const anchor = a.complete_bilan_anchor_date
+    const mDay = a.complete_bilan_month_day || 1
+
+    const lastExpected = getLastExpectedBilanDate(freq, intv, day, anchor, mDay)
+    if (!lastExpected) return
+
+    const hasBilan = thisWeekReports.some(
+      r => r.user_id === a.user_id && r.date === lastExpected
+    )
+    if (hasBilan) return
+
+    const lastReport = reports.find(r => r.user_id === a.user_id)
+    const expectedLabel = new Date(lastExpected + 'T00:00:00').toLocaleDateString('fr-FR', {
+      weekday: 'long', day: 'numeric', month: 'short',
+    })
+    lateAthletes.push({
+      athlete: a,
+      expectedDay: expectedLabel,
+      lastDate: lastReport
+        ? new Date((lastReport.date as string) + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
+        : 'jamais',
+    })
+  })
+
+  // Pending videos
+  const pendingVids: PendingVideo[] = videos
+    .map(v => {
+      const athlete = athleteMap[v.athlete_id as string]
+      return athlete
+        ? { id: v.id as string, athlete_id: v.athlete_id as string, exercise_name: v.exercise_name as string | null, created_at: v.created_at as string, athlete }
+        : null
+    })
+    .filter(Boolean) as PendingVideo[]
+
+  // Birthdays
+  const bdays: Birthday[] = []
+  athletes.forEach(a => {
+    if (!a.date_naissance) return
+    const bd = new Date(a.date_naissance + 'T00:00:00')
+    const nextBd = new Date(now.getFullYear(), bd.getMonth(), bd.getDate())
+    if (nextBd < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      nextBd.setFullYear(nextBd.getFullYear() + 1)
+    }
+    const diffDays = Math.ceil(
+      (nextBd.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000
+    )
+    if (diffDays <= 60) {
+      const age = nextBd.getFullYear() - bd.getFullYear()
+      bdays.push({ athlete: a, daysLeft: diffDays, nextBd, age })
+    }
+  })
+  bdays.sort((a, b) => a.daysLeft - b.daysLeft)
+
+  // Recent activity
+  const recentActivity: ActivityItem[] = reports
+    .slice(0, 30)
+    .map(r => {
+      const athlete = athleteMap[r.user_id as string]
+      if (!athlete) return null
+      const items: { icon: string; text: string; color: string }[] = []
+      if (r.weight) items.push({ icon: 'fa-weight', text: `${r.weight} kg`, color: 'var(--text)' })
+      if (r.sessions_executed) items.push({ icon: 'fa-dumbbell', text: r.sessions_executed as string, color: 'var(--primary)' })
+      if (r.session_performance) {
+        const perf = r.session_performance as string
+        items.push({
+          icon: 'fa-chart-line',
+          text: perf,
+          color: perf === 'Progres' ? 'var(--success)' : perf === 'Regression' ? 'var(--danger)' : 'var(--text2)',
+        })
+      }
+      if (!items.length && !r.energy) return null
+      return {
+        athlete,
+        date: r.date as string,
+        items,
+        energy: r.energy as number | null,
+        sleep: r.sleep_quality as string | null,
+        adherence: r.adherence as number | null,
+      }
+    })
+    .filter(Boolean)
+    .slice(0, 20) as ActivityItem[]
+
+  const result: DashboardData = {
+    bilansToReview,
+    lateAthletes,
+    pendingVids,
+    birthdays: bdays,
+    recentActivity,
+    coachSettings: settings as Record<string, unknown>,
+    activePrograms: programs.filter(p => p.actif).length,
+  }
+
+  // Cache for instant load on next visit
+  try {
+    sessionStorage.setItem(DASH_CACHE_KEY, JSON.stringify(result))
+  } catch {
+    // sessionStorage full — ignore
+  }
+
+  return result
+}
+
 export default function DashboardPage() {
   const { user } = useAuth()
   const { athletes, loading: athletesLoading } = useAthleteContext()
   const { toast } = useToast()
   const supabase = createClient()
 
-  const DASH_CACHE_KEY = 'dashboard_cache'
-
-  // Restore cached dashboard data instantly
-  const getCachedDash = () => {
-    if (typeof window === 'undefined') return null
-    try {
-      const raw = sessionStorage.getItem(DASH_CACHE_KEY)
-      return raw ? JSON.parse(raw) : null
-    } catch { return null }
-  }
-  const cached = getCachedDash()
-
-  const [loading, setLoading] = useState(!cached)
-  const [bilansToReview, setBilansToReview] = useState<BilanToReview[]>(cached?.bilansToReview ?? [])
-  const [lateAthletes, setLateAthletes] = useState<LateAthlete[]>(cached?.lateAthletes ?? [])
-  const [pendingVids, setPendingVids] = useState<PendingVideo[]>(cached?.pendingVids ?? [])
-  const [birthdays, setBirthdays] = useState<Birthday[]>(cached?.birthdays ?? [])
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>(cached?.recentActivity ?? [])
-  const [coachSettings, setCoachSettings] = useState<Record<string, unknown>>(cached?.coachSettings ?? {})
-  const [activePrograms, setActivePrograms] = useState(cached?.activePrograms ?? 0)
   const [sendingRappel, setSendingRappel] = useState<Set<string>>(new Set())
   const [sentRappels, setSentRappels] = useState<Set<string>>(new Set())
 
   const mainRef = useRef<HTMLDivElement>(null)
   const activityRef = useRef<HTMLDivElement>(null)
 
-  const loadDashboard = useCallback(async () => {
-    if (!user || athletesLoading) return
+  // Stable key that changes when athletes list changes (forces re-fetch)
+  const athleteIds = athletes.map(a => a.id).join(',')
+  const swrKey = user && !athletesLoading && athletes.length > 0
+    ? `dashboard:${user.id}:${athleteIds}`
+    : null
 
-    // Only show loading spinner if no cached data available
-    if (!sessionStorage.getItem(DASH_CACHE_KEY)) setLoading(true)
-    try {
-    const athleteUserIds = athletes.map(a => a.user_id).filter(Boolean) as string[]
-    const athleteIds = athletes.map(a => a.id)
+  const { data: dashData, isLoading: swrLoading } = useSWR(
+    swrKey,
+    () => fetchDashboardData(user!.id, athletes),
+    {
+      fallbackData: getDashCache(),
+      revalidateOnFocus: false,
+      dedupingInterval: 10000,
+    },
+  )
 
-    const [
-      { data: allReports },
-      { data: allPrograms },
-      { data: pendingVideos },
-      { data: settingsRows },
-    ] = await Promise.all([
-      athleteUserIds.length
-        ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, adherence, steps').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(500)
-        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-      supabase.from('workout_programs').select('id, nom, athlete_id, actif').eq('coach_id', user.id),
-      athleteIds.length
-        ? supabase.from('execution_videos').select('id, athlete_id, exercise_name, created_at').in('athlete_id', athleteIds).eq('status', 'a_traiter').order('created_at', { ascending: false }).limit(50)
-        : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-      supabase.from('coach_settings').select('coach_id, max_videos_per_day').eq('coach_id', user.id).limit(1),
-    ])
+  const loading = athletesLoading || (swrLoading && !dashData)
 
-    // Coach settings
-    let settings = settingsRows?.[0] || null
-    if (!settings) {
-      const { data: created } = await supabase
-        .from('coach_settings')
-        .insert({ coach_id: user.id, max_videos_per_day: 3 })
-        .select()
-        .single()
-      settings = created || { max_videos_per_day: 3 }
-    }
-    setCoachSettings(settings as Record<string, unknown>)
-
-    const reports = (allReports || []) as Record<string, unknown>[]
-    const programs = (allPrograms || []) as Record<string, unknown>[]
-    const videos = (pendingVideos || []) as Record<string, unknown>[]
-
-    const today = toDateStr(new Date())
-    const now = new Date()
-
-    // Active programs count
-    setActivePrograms(programs.filter(p => p.actif).length)
-
-    // Build lookup
-    const athleteMap: Record<string, Athlete> = {}
-    athletes.forEach(a => {
-      if (a.user_id) athleteMap[a.user_id] = a
-      athleteMap[a.id] = a
-    })
-
-    // Monday of current week
-    const mondayDate = new Date(now)
-    const dayOff = mondayDate.getDay() === 0 ? 6 : mondayDate.getDay() - 1
-    mondayDate.setDate(mondayDate.getDate() - dayOff)
-    const mondayStr = toDateStr(mondayDate)
-
-    const thisWeekReports = reports.filter(
-      r => (r.date as string) >= mondayStr && (r.date as string) <= today
-    )
-
-    // Bilans to review
-    const bilans: BilanToReview[] = []
-    athletes.forEach(a => {
-      if (!a.user_id) return
-      const athleteReports = thisWeekReports.filter(r => r.user_id === a.user_id)
-      if (athleteReports.length > 0) {
-        const lastReport = athleteReports.sort(
-          (x, y) => (y.date as string).localeCompare(x.date as string)
-        )[0]
-        bilans.push({ athlete: a, report: lastReport, count: athleteReports.length })
-      }
-    })
-    setBilansToReview(bilans)
-
-    // Late athletes
-    const late: LateAthlete[] = []
-    athletes.forEach(a => {
-      if (!a.user_id) return
-      const freq = a.complete_bilan_frequency || 'weekly'
-      if (freq === 'none') return
-      const intv = a.complete_bilan_interval || 7
-      const day = a.complete_bilan_day ?? 0
-      const anchor = a.complete_bilan_anchor_date
-      const mDay = a.complete_bilan_month_day || 1
-
-      const lastExpected = getLastExpectedBilanDate(freq, intv, day, anchor, mDay)
-      if (!lastExpected) return
-
-      const hasBilan = thisWeekReports.some(
-        r => r.user_id === a.user_id && r.date === lastExpected
-      )
-      if (hasBilan) return
-
-      const lastReport = reports.find(r => r.user_id === a.user_id)
-      const expectedLabel = new Date(lastExpected + 'T00:00:00').toLocaleDateString('fr-FR', {
-        weekday: 'long', day: 'numeric', month: 'short',
-      })
-      late.push({
-        athlete: a,
-        expectedDay: expectedLabel,
-        lastDate: lastReport
-          ? new Date((lastReport.date as string) + 'T00:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })
-          : 'jamais',
-      })
-    })
-    setLateAthletes(late)
-
-    // Pending videos
-    const vids: PendingVideo[] = videos
-      .map(v => {
-        const athlete = athleteMap[v.athlete_id as string]
-        return athlete
-          ? { id: v.id as string, athlete_id: v.athlete_id as string, exercise_name: v.exercise_name as string | null, created_at: v.created_at as string, athlete }
-          : null
-      })
-      .filter(Boolean) as PendingVideo[]
-    setPendingVids(vids)
-
-    // Birthdays
-    const bdays: Birthday[] = []
-    athletes.forEach(a => {
-      if (!a.date_naissance) return
-      const bd = new Date(a.date_naissance + 'T00:00:00')
-      const nextBd = new Date(now.getFullYear(), bd.getMonth(), bd.getDate())
-      if (nextBd < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
-        nextBd.setFullYear(nextBd.getFullYear() + 1)
-      }
-      const diffDays = Math.ceil(
-        (nextBd.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86400000
-      )
-      if (diffDays <= 60) {
-        const age = nextBd.getFullYear() - bd.getFullYear()
-        bdays.push({ athlete: a, daysLeft: diffDays, nextBd, age })
-      }
-    })
-    bdays.sort((a, b) => a.daysLeft - b.daysLeft)
-    setBirthdays(bdays)
-
-    // Recent activity
-    const activity: ActivityItem[] = reports
-      .slice(0, 30)
-      .map(r => {
-        const athlete = athleteMap[r.user_id as string]
-        if (!athlete) return null
-        const items: { icon: string; text: string; color: string }[] = []
-        if (r.weight) items.push({ icon: 'fa-weight', text: `${r.weight} kg`, color: 'var(--text)' })
-        if (r.sessions_executed) items.push({ icon: 'fa-dumbbell', text: r.sessions_executed as string, color: 'var(--primary)' })
-        if (r.session_performance) {
-          const perf = r.session_performance as string
-          items.push({
-            icon: 'fa-chart-line',
-            text: perf,
-            color: perf === 'Progres' ? 'var(--success)' : perf === 'Regression' ? 'var(--danger)' : 'var(--text2)',
-          })
-        }
-        if (!items.length && !r.energy) return null
-        return {
-          athlete,
-          date: r.date as string,
-          items,
-          energy: r.energy as number | null,
-          sleep: r.sleep_quality as string | null,
-          adherence: r.adherence as number | null,
-        }
-      })
-      .filter(Boolean)
-      .slice(0, 20) as ActivityItem[]
-    setRecentActivity(activity)
-
-    // Cache all dashboard data for instant load on next visit
-    try {
-      sessionStorage.setItem(DASH_CACHE_KEY, JSON.stringify({
-        bilansToReview: bilans,
-        lateAthletes: late,
-        pendingVids: vids,
-        birthdays: bdays,
-        recentActivity: activity,
-        coachSettings: settings,
-        activePrograms: programs.filter(p => p.actif).length,
-      }))
-    } catch {
-      // sessionStorage full — ignore
-    }
-    } finally {
-      setLoading(false)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, athletes, athletesLoading])
-
-  useEffect(() => {
-    if (user && !athletesLoading) {
-      loadDashboard()
-    }
-  }, [user, athletesLoading, loadDashboard])
+  const bilansToReview = dashData?.bilansToReview ?? []
+  const lateAthletes = dashData?.lateAthletes ?? []
+  const pendingVids = dashData?.pendingVids ?? []
+  const birthdays = dashData?.birthdays ?? []
+  const recentActivity = dashData?.recentActivity ?? []
+  const coachSettings = dashData?.coachSettings ?? {}
+  const activePrograms = dashData?.activePrograms ?? 0
 
   // Sync activity column height with main column
   useEffect(() => {
@@ -349,7 +357,7 @@ export default function DashboardPage() {
   }, [user, toast])
 
   // ── Loading state ──
-  if (loading || athletesLoading) {
+  if (loading) {
     return (
       <div>
         <Skeleton height={100} borderRadius={16} />
