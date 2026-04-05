@@ -1092,11 +1092,15 @@ export default function NutritionPage() {
                         return <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', marginLeft: 4 }}>=</span>
                       }
 
+                      // Find which version is the "active" one (most recent with a direct active plan)
+                      const activeVersionIdx = versionPairs.findIndex(({ tDirectId: tid, rDirectId: rid }) => {
+                        const tp = tid ? allVersions.find(p => p.id === tid) : null
+                        const rp = rid ? allVersions.find(p => p.id === rid) : null
+                        return !!(tp?.actif || rp?.actif)
+                      })
+
                       return versionPairs.map(({ dayStr, tPlan: vT, rPlan: vR, tInherited, rInherited, tDirectId, rDirectId }, vi) => {
-                        // Check if any DIRECT (non-inherited) plan of this version is active
-                        const tDirectPlan = tDirectId ? allVersions.find(p => p.id === tDirectId) : null
-                        const rDirectPlan = rDirectId ? allVersions.find(p => p.id === rDirectId) : null
-                        const isCurrentActive = !!(tDirectPlan?.actif || rDirectPlan?.actif)
+                        const isCurrentActive = vi === activeVersionIdx
                         const vKcalT = vT?.calories_objectif ?? null
                         const vKcalR = vR?.calories_objectif ?? null
                         const vMacroT = vT ? `P:${vT.proteines || 0} G:${vT.glucides || 0} L:${vT.lipides || 0}` : ''
