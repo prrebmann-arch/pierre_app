@@ -1,3 +1,24 @@
+# Prochaine session — Priorités
+
+## ATHLETE — Bugs critiques
+- [ ] Workout tracking : auto-save quand on quitte/revient en arrière sans cliquer Enregistrer
+- [ ] Workout tracking : valider 1 série ne doit PAS supprimer les autres séries
+- [ ] Supplements : vérifier calcul isDueDate "tous les 2 jours"
+
+## COACH — Bugs
+- [ ] Login "Chargement" première connexion — vérifier après déploiement
+- [ ] Video : tester navigation séances + dates comparatives
+
+## COACH — Optimisation perf INP
+- [ ] /business (2232ms), /athletes/[id]/training (1856ms), /athletes/[id]/roadmap (2376ms)
+- [ ] Lazy-load composants lourds, debounce handlers, useMemo/useCallback
+
+## Features à faire
+- [ ] Meal timing : notifications rappel à chaque repas (Expo local notifications)
+- [ ] Calculateur repas : à tester sur téléphone
+
+---
+
 # Supabase Query Optimization (Full Codebase)
 
 ## select('*') -> select(specific columns)
