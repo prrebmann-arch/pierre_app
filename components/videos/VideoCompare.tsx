@@ -98,6 +98,7 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
   const [loading, setLoading] = useState(true)
   const [allLogs, setAllLogs] = useState<any[]>([])
   const [currentLog, setCurrentLog] = useState<any>(null)
+  const [currentLogIdx, setCurrentLogIdx] = useState(-1) // For navigating logs in simple view
   const [prevLogIdx, setPrevLogIdx] = useState(-1)
   const [sessionName, setSessionName] = useState('')
   const [sessionExs, setSessionExs] = useState<any[]>([])
@@ -205,6 +206,10 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
     const curLog = all.find((l: any) => l.date === video.date) || null
     setCurrentLog(curLog)
 
+    // Find the index of the current log in allLogs for simple-view navigation
+    const curIdx = curLog ? all.findIndex((l: any) => l.id === curLog.id) : -1
+    setCurrentLogIdx(curIdx)
+
     // Find first log with date strictly BEFORE the current video date
     let defaultPrevIdx = -1
     for (let i = 0; i < all.length; i++) {
@@ -222,6 +227,24 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
   useEffect(() => {
     loadTraining()
   }, [loadTraining])
+
+  // Bug 2 fix: When compIdx changes in compare mode, sync prevLogIdx to the comparison video's date
+  useEffect(() => {
+    if (!showCompare || compIdx < 0 || !compVideos[compIdx] || !allLogs.length) return
+    const compDate = compVideos[compIdx].date
+    // Find the log matching the comparison video's date
+    let matchIdx = allLogs.findIndex((l: any) => l.date === compDate)
+    if (matchIdx === -1) {
+      // No exact match — find the first log with date <= compDate
+      for (let i = 0; i < allLogs.length; i++) {
+        if (allLogs[i].date <= compDate) {
+          matchIdx = i
+          break
+        }
+      }
+    }
+    setPrevLogIdx(matchIdx)
+  }, [compIdx, showCompare, compVideos, allLogs])
 
   // ── Edit column helpers ──
   const updateExercise = (idx: number, field: string, value: string) => {
@@ -306,6 +329,14 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
       if (idx < 0 || idx >= allLogs.length) return prev
       return idx
     })
+  }
+
+  // Navigate current log in simple (non-compare) view
+  const navigateCurrentLog = (dir: number) => {
+    const idx = currentLogIdx + dir
+    if (idx < 0 || idx >= allLogs.length) return
+    setCurrentLogIdx(idx)
+    setCurrentLog(allLogs[idx])
   }
 
   if (loading) {
@@ -427,7 +458,7 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
     <div className={styles.vtSection}>
       <div className={styles.vtGrid}>
         <div className={styles.vtComparison}>
-          <div className={styles.vtCompHeaders}>
+          <div className={styles.vtCompHeaders} style={!showCompare ? { gridTemplateColumns: '1fr' } : undefined}>
             {showCompare && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -469,7 +500,31 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
             </div>
             )}
             <div>
-              <div className={styles.vtColTitle}>Seance courante</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className={styles.vtColTitle}>
+                  {showCompare ? 'Seance courante' : 'Historique des seances'}
+                </div>
+                {!showCompare && allLogs.length > 1 && (
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => navigateCurrentLog(-1)}
+                      disabled={currentLogIdx <= 0}
+                      title="Plus recent"
+                    >
+                      <i className="fa-solid fa-chevron-left" />
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      onClick={() => navigateCurrentLog(1)}
+                      disabled={currentLogIdx >= allLogs.length - 1}
+                      title="Plus ancien"
+                    >
+                      <i className="fa-solid fa-chevron-right" />
+                    </button>
+                  </div>
+                )}
+              </div>
               {currentLog ? (
                 <>
                   <div className={styles.vtColSession}>{sessionName}</div>
@@ -479,6 +534,11 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
                       <>
                         &nbsp;&nbsp;<i className="fa-solid fa-clock" /> {fmtDuration(curDur)}
                       </>
+                    )}
+                    {!showCompare && allLogs.length > 1 && currentLogIdx >= 0 && (
+                      <span style={{ marginLeft: 8, opacity: 0.6 }}>
+                        ({currentLogIdx + 1} / {allLogs.length})
+                      </span>
                     )}
                   </div>
                 </>
@@ -512,6 +572,7 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
               <div
                 key={mIdx}
                 className={`${styles.vtCompRow} ${rowHighlight ? styles.vtCompRowActive : ''}`}
+                style={!showCompare ? { gridTemplateColumns: '1fr' } : undefined}
               >
                 {showCompare && (
                 <div>
