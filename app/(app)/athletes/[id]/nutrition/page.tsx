@@ -1065,7 +1065,7 @@ export default function NutritionPage() {
                       }
 
                       return versionPairs.map(({ dayStr, tPlan: vT, rPlan: vR, tInherited, rInherited, tDirectId, rDirectId }, vi) => {
-                        const isCurrentActive = (!tInherited && vT?.actif) || (!rInherited && vR?.actif)
+                        const isCurrentActive = vi === 0 && d.isActive
                         const vKcalT = vT?.calories_objectif ?? null
                         const vKcalR = vR?.calories_objectif ?? null
                         const vMacroT = vT ? `P:${vT.proteines || 0} G:${vT.glucides || 0} L:${vT.lipides || 0}` : ''
