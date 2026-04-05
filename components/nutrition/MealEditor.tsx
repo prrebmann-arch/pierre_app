@@ -40,6 +40,8 @@ interface MealEditorProps {
   macroOnly?: boolean
   /** Initial macro targets (for macro-only mode) */
   initialMacros?: { calories: number; proteines: number; glucides: number; lipides: number }
+  /** Pre-loaded other tab data (ON if editing OFF, or vice versa) */
+  initialOtherTab?: { type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number } } | null
   /** Called after save */
   onSaved: () => void
   /** Called on back */
@@ -79,7 +81,7 @@ function calcMealTotals(foods: FoodItem[]): { kcal: number; p: number; g: number
 
 export default function MealEditor({
   athleteId, planId, planName: initName, mealType: initMealType,
-  initialMeals, macroOnly: initMacroOnly, initialMacros, onSaved, onBack,
+  initialMeals, macroOnly: initMacroOnly, initialMacros, initialOtherTab, onSaved, onBack,
 }: MealEditorProps) {
   const supabase = createClient()
   const { user } = useAuth()
@@ -96,7 +98,13 @@ export default function MealEditor({
   const [foodRefreshKey, setFoodRefreshKey] = useState(0)
 
   // Paired plan: store meals for the other tab so we can save both on submit
-  const [tempMeals, setTempMeals] = useState<Record<string, { meals: MealData[]; macros?: { calories: number; proteines: number; glucides: number; lipides: number } }>>({})
+  // Pre-load from initialOtherTab if provided
+  const [tempMeals, setTempMeals] = useState<Record<string, { meals: MealData[]; macros?: { calories: number; proteines: number; glucides: number; lipides: number } }>>(() => {
+    if (initialOtherTab) {
+      return { [initialOtherTab.type]: { meals: initialOtherTab.meals, macros: initialOtherTab.macros } }
+    }
+    return {}
+  })
 
   // When switching meal type, store current meals and load other tab's meals
   function switchMealType(newType: 'training' | 'rest') {

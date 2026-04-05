@@ -85,6 +85,7 @@ export default function NutritionPage() {
   const [editMeals, setEditMeals] = useState<MealData[]>([{ foods: [] }])
   const [editMacroOnly, setEditMacroOnly] = useState(false)
   const [editMacros, setEditMacros] = useState({ calories: 0, proteines: 0, glucides: 0, lipides: 0 })
+  const [editOtherTab, setEditOtherTab] = useState<{ type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number } } | null>(null)
 
   // Detail view
   const [detailPlan, setDetailPlan] = useState<NutritionPlan | null>(null)
@@ -403,32 +404,53 @@ export default function NutritionPage() {
 
   // Open editor for existing diet
   const editDiet = useCallback(async (tId: string | null, rId: string | null) => {
-    const id = tId || rId
-    if (!id) return
-    const { data: plan } = await supabase.from('nutrition_plans').select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, created_at, macro_only, meal_times').eq('id', id).single()
-    if (!plan) { toast('Plan introuvable', 'error'); return }
+    // Load both ON and OFF plans
+    const idsToLoad = [tId, rId].filter(Boolean) as string[]
+    if (!idsToLoad.length) return
+    const { data: loadedPlans } = await supabase.from('nutrition_plans').select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, created_at, macro_only, meal_times').in('id', idsToLoad)
+    if (!loadedPlans?.length) { toast('Plan introuvable', 'error'); return }
 
-    let meals: MealData[] = []
-    try {
-      const parsed = typeof plan.meals_data === 'string' ? JSON.parse(plan.meals_data) : (plan.meals_data || [])
-      meals = (parsed as any[]).map((m: any) => {
-        if (m && !Array.isArray(m) && m.foods) return { foods: m.foods, pre_workout: m.pre_workout, time: m.time }
-        return { foods: Array.isArray(m) ? m : [] }
-      })
-    } catch { /* empty */ }
-    if (!meals.length) meals = [{ foods: [] }]
+    // Find ON and OFF
+    const tPlan = loadedPlans.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || null
+    const rPlan = loadedPlans.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null
+    const primary = tPlan || rPlan
+    if (!primary) { toast('Plan introuvable', 'error'); return }
 
-    setEditPlanId(plan.id)
-    setEditPlanName(plan.nom || '')
-    setEditMealType((plan.meal_type === 'rest' || plan.meal_type === 'repos') ? 'rest' : 'training')
-    setEditMeals(meals)
-    setEditMacroOnly(plan.macro_only || false)
+    function parseMealsData(plan: any): MealData[] {
+      try {
+        const parsed = typeof plan.meals_data === 'string' ? JSON.parse(plan.meals_data) : (plan.meals_data || [])
+        const m = (parsed as any[]).map((m: any) => {
+          if (m && !Array.isArray(m) && m.foods) return { foods: m.foods, pre_workout: m.pre_workout, time: m.time }
+          return { foods: Array.isArray(m) ? m : [] }
+        })
+        return m.length ? m : [{ foods: [] }]
+      } catch { return [{ foods: [] }] }
+    }
+
+    const primaryMeals = parseMealsData(primary)
+
+    setEditPlanId(primary.id)
+    setEditPlanName(primary.nom || '')
+    setEditMealType((primary.meal_type === 'rest' || primary.meal_type === 'repos') ? 'rest' : 'training')
+    setEditMeals(primaryMeals)
+    setEditMacroOnly(primary.macro_only || false)
     setEditMacros({
-      calories: plan.calories_objectif || 0,
-      proteines: plan.proteines || 0,
-      glucides: plan.glucides || 0,
-      lipides: plan.lipides || 0,
+      calories: primary.calories_objectif || 0,
+      proteines: primary.proteines || 0,
+      glucides: primary.glucides || 0,
+      lipides: primary.lipides || 0,
     })
+
+    // Pre-load the other tab's data into MealEditor's tempMeals
+    const otherPlan = primary === tPlan ? rPlan : tPlan
+    if (otherPlan) {
+      const otherMeals = parseMealsData(otherPlan)
+      const otherType = (otherPlan.meal_type === 'rest' || otherPlan.meal_type === 'repos') ? 'rest' : 'training'
+      setEditOtherTab({ type: otherType, id: otherPlan.id, meals: otherMeals, macros: { calories: otherPlan.calories_objectif || 0, proteines: otherPlan.proteines || 0, glucides: otherPlan.glucides || 0, lipides: otherPlan.lipides || 0 } })
+    } else {
+      setEditOtherTab(null)
+    }
+
     setView('editor')
   }, [supabase, toast])
 
@@ -479,6 +501,7 @@ export default function NutritionPage() {
         initialMeals={editMeals}
         macroOnly={editMacroOnly}
         initialMacros={editMacros}
+        initialOtherTab={editOtherTab}
         onSaved={() => { setView('list'); loadPlans() }}
         onBack={() => setView('list')}
       />
@@ -1070,7 +1093,10 @@ export default function NutritionPage() {
                       }
 
                       return versionPairs.map(({ dayStr, tPlan: vT, rPlan: vR, tInherited, rInherited, tDirectId, rDirectId }, vi) => {
-                        const isCurrentActive = vi === 0 && d.isActive
+                        // Check if any DIRECT (non-inherited) plan of this version is active
+                        const tDirectPlan = tDirectId ? allVersions.find(p => p.id === tDirectId) : null
+                        const rDirectPlan = rDirectId ? allVersions.find(p => p.id === rDirectId) : null
+                        const isCurrentActive = !!(tDirectPlan?.actif || rDirectPlan?.actif)
                         const vKcalT = vT?.calories_objectif ?? null
                         const vKcalR = vR?.calories_objectif ?? null
                         const vMacroT = vT ? `P:${vT.proteines || 0} G:${vT.glucides || 0} L:${vT.lipides || 0}` : ''
