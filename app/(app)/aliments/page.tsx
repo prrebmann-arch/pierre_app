@@ -213,7 +213,7 @@ export default function AlimentsPage() {
                 className={`${styles.srcBtn} ${source === s ? styles.srcBtnActive : ''}`}
                 onClick={() => setSource(s)}
               >
-                {s === 'local' ? 'Ma base' : s === 'off' ? 'Open Food Facts' : 'Les deux'}
+                {s === 'local' ? 'Momentum' : s === 'off' ? 'Open Food Facts' : 'Les deux'}
               </button>
             ))}
           </div>
