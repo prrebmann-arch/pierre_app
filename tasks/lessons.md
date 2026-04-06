@@ -70,6 +70,8 @@
 
 [2026-04-03] | Early return in loadData without setLoading(false) leaves loading=true forever | Bilans page had `if (!selectedAthlete?.user_id) return` before `setLoading(true)`, but `loading` was initialized as `true`. The guard prevented data from loading AND prevented the loading state from being reset. Fix: combine loading and null checks so the UI shows skeleton until data is ready.
 
+[2026-04-03] | Storing structured template variants in JSON column avoids DB migration | When DB columns can't be easily added (no psql access), store structured data variants (e.g. diete with training/rest, jour, repas) inside a JSON column with a discriminator field (template_type). Parse the shape at read time based on the type. Keeps the schema flat and avoids migration friction.
+
 [2026-04-03] | useMemo(() => getPageCache()) blocks render with JSON.parse | useMemo runs during render — if the cached data is large (e.g. 500 workout logs with exercices_completes), JSON.parse blocks the main thread. Use useState(() => getPageCache()) instead — the lazy initializer only runs once at mount, not on re-renders.
 
 [2026-04-03] | Storing heavy data in sessionStorage causes slow page loads | sessionStorage has a ~5MB limit and JSON.parse/stringify on large arrays (workout logs with nested exercises, photo URLs) blocks the main thread. Only cache lightweight reference data (programs, plans, phases). Always reload heavy/expiring data (logs, signed URLs) from the server.

@@ -63,6 +63,7 @@ export default function TemplatesPage() {
   const [nutritionTemplates, setNutritionTemplates] = useState<NutritionTemplate[]>([])
   const [editingNutrition, setEditingNutrition] = useState<string | null>(null)
   const [creatingNutrition, setCreatingNutrition] = useState(false)
+  const [nutritionTemplateType, setNutritionTemplateType] = useState<'diete' | 'jour' | 'repas'>('jour')
 
   // Workflows
   const [workflows, setWorkflows] = useState<Array<Record<string, unknown>>>([])
@@ -154,11 +155,15 @@ export default function TemplatesPage() {
 
   // ── Nutrition handlers ──
   const handleNutritionEdit = (id: string) => {
+    // Resolve the template type from the template being edited
+    const tpl = nutritionTemplates.find((t) => t.id === id)
+    if (tpl) setNutritionTemplateType((tpl.template_type as 'diete' | 'jour' | 'repas') || 'jour')
     setEditingNutrition(id)
     setCreatingNutrition(false)
   }
 
-  const handleNutritionCreate = () => {
+  const handleNutritionCreate = (type: 'diete' | 'jour' | 'repas') => {
+    setNutritionTemplateType(type)
     setEditingNutrition(null)
     setCreatingNutrition(true)
   }
@@ -220,12 +225,12 @@ export default function TemplatesPage() {
     })
   }
 
-  /** Parse nutrition template meals_data into MealEditor's format */
-  function parseNutritionMeals(tpl: NutritionTemplate): MealData[] {
+  /** Parse a flat array of meals into MealData[] */
+  function parseMealsArray(raw: unknown): MealData[] {
     try {
-      const raw = typeof tpl.meals_data === 'string' ? JSON.parse(tpl.meals_data) : (tpl.meals_data || [])
-      if (!Array.isArray(raw) || raw.length === 0) return [{ foods: [] }]
-      return raw.map((meal: unknown) => {
+      const arr = Array.isArray(raw) ? raw : []
+      if (arr.length === 0) return [{ foods: [] }]
+      return arr.map((meal: unknown) => {
         if (Array.isArray(meal)) {
           // Legacy format: array of food items directly
           return {
@@ -255,6 +260,47 @@ export default function TemplatesPage() {
       })
     } catch {
       return [{ foods: [] }]
+    }
+  }
+
+  /** Parse nutrition template meals_data based on template_type */
+  function parseNutritionTemplate(tpl: NutritionTemplate): {
+    meals: MealData[]
+    otherTab: { type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number } } | null
+    macroOnly: boolean
+  } {
+    try {
+      const raw = typeof tpl.meals_data === 'string' ? JSON.parse(tpl.meals_data) : (tpl.meals_data || [])
+      const tplType = (tpl.template_type || 'jour') as 'diete' | 'jour' | 'repas'
+
+      if (tplType === 'diete' && raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        // Full diet: { training: { meals: [...], macros: {...} }, rest: { meals: [...], macros: {...} } }
+        const trainingData = raw.training || { meals: [], macros: { calories: 0, proteines: 0, glucides: 0, lipides: 0 } }
+        const restData = raw.rest || { meals: [], macros: { calories: 0, proteines: 0, glucides: 0, lipides: 0 } }
+        const trainingMeals = parseMealsArray(trainingData.meals)
+        const restMeals = parseMealsArray(restData.meals)
+        return {
+          meals: trainingMeals,
+          otherTab: {
+            type: 'rest',
+            id: tpl.id,
+            meals: restMeals,
+            macros: restData.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 },
+          },
+          macroOnly: !!trainingData.macro_only,
+        }
+      }
+
+      // jour or repas: flat array
+      const meals = parseMealsArray(raw)
+      const hasMeals = meals.some((m) => m.foods.length > 0)
+      return {
+        meals,
+        otherTab: null,
+        macroOnly: !hasMeals && !!(tpl.calories_objectif),
+      }
+    } catch {
+      return { meals: [{ foods: [] }], otherTab: null, macroOnly: false }
     }
   }
 
@@ -290,23 +336,24 @@ export default function TemplatesPage() {
   // ── Nutrition editor view (MealEditor in template mode) ──
   if (activeTab === 'nutrition' && (editingNutrition || creatingNutrition)) {
     const tpl = editedNutritionTemplate
-    const meals = tpl ? parseNutritionMeals(tpl) : [{ foods: [] }]
-    const hasMeals = meals.some((m) => m.foods.length > 0)
+    const parsed = tpl ? parseNutritionTemplate(tpl) : { meals: [{ foods: [] }], otherTab: null, macroOnly: false }
 
     return (
       <div>
         <h1 className="page-title">Templates</h1>
         <MealEditor
           templateMode
+          templateType={nutritionTemplateType}
           templateId={tpl?.id || null}
           templateCategory={tpl?.category || ''}
           existingCategories={existingNutritionCategories}
           planId={null}
           planName={tpl?.nom || ''}
           mealType="training"
-          initialMeals={meals}
-          macroOnly={!hasMeals && !!(tpl?.calories_objectif)}
+          initialMeals={parsed.meals}
+          macroOnly={parsed.macroOnly}
           initialMacros={tpl ? { calories: tpl.calories_objectif || 0, proteines: tpl.proteines || 0, glucides: tpl.glucides || 0, lipides: tpl.lipides || 0 } : undefined}
+          initialOtherTab={parsed.otherTab}
           onSaved={handleNutritionSaved}
           onBack={handleNutritionCancel}
         />

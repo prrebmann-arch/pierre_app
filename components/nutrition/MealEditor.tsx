@@ -54,6 +54,8 @@ interface MealEditorProps {
   templateCategory?: string
   /** Existing template categories */
   existingCategories?: string[]
+  /** Template type: 'diete' (ON+OFF), 'jour' (single day), 'repas' (single meal) */
+  templateType?: 'diete' | 'jour' | 'repas'
 }
 
 /** Local aliment DB cache */
@@ -91,6 +93,7 @@ export default function MealEditor({
   athleteId, planId, planName: initName, mealType: initMealType,
   initialMeals, macroOnly: initMacroOnly, initialMacros, initialOtherTab, onSaved, onBack,
   templateMode = false, templateId = null, templateCategory: initCategory = '', existingCategories: initExistingCategories = [],
+  templateType,
 }: MealEditorProps) {
   const supabase = createClient()
   const { user } = useAuth()
@@ -256,14 +259,72 @@ export default function MealEditor({
     try {
       if (templateMode) {
         // ── TEMPLATE MODE: save to nutrition_templates ──
+        let tplMealsPayload: any
+        let tplCalories = finalTotals.calories
+        let tplProteines = finalTotals.proteines
+        let tplGlucides = finalTotals.glucides
+        let tplLipides = finalTotals.lipides
+
+        if (templateType === 'diete') {
+          // Full diet: store both ON and OFF in meals_data as { training: {...}, rest: {...} }
+          const currentTab = {
+            meals: mealsData,
+            macros: finalTotals,
+            macro_only: isMacroOnly || false,
+          }
+          const otherType = mealType === 'training' ? 'rest' : 'training'
+          const otherTemp = tempMeals[otherType]
+
+          let otherTab: any = { meals: [], macros: { calories: 0, proteines: 0, glucides: 0, lipides: 0 }, macro_only: false }
+          if (otherTemp?.meals?.length) {
+            const otherMealsData = otherTemp.meals.map((m) => {
+              const foods = m.foods.map((f) => {
+                const macros = calcFoodMacros(f)
+                return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
+              })
+              const obj: any = { foods }
+              if (m.pre_workout) obj.pre_workout = true
+              if (m.time) obj.time = m.time
+              return obj
+            })
+            const otherTotals = otherMealsData.reduce(
+              (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
+                (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
+                return acc
+              },
+              { kcal: 0, p: 0, g: 0, l: 0 },
+            )
+            otherTab = {
+              meals: otherMealsData,
+              macros: { calories: Math.round(otherTotals.kcal), proteines: Math.round(otherTotals.p), glucides: Math.round(otherTotals.g), lipides: Math.round(otherTotals.l) },
+              macro_only: !!otherTemp.macros,
+            }
+          }
+
+          tplMealsPayload = {
+            [mealType]: currentTab,
+            [otherType]: otherTab,
+          }
+          // Use training day macros for the summary columns
+          const trainingData = mealType === 'training' ? currentTab : otherTab
+          tplCalories = trainingData.macros.calories
+          tplProteines = trainingData.macros.proteines
+          tplGlucides = trainingData.macros.glucides
+          tplLipides = trainingData.macros.lipides
+        } else {
+          // jour or repas: flat array of meals
+          tplMealsPayload = mealsData
+        }
+
         const tplPayload = {
           nom: planName.trim(),
           category: tplCategory || null,
-          calories_objectif: finalTotals.calories,
-          proteines: finalTotals.proteines,
-          glucides: finalTotals.glucides,
-          lipides: finalTotals.lipides,
-          meals_data: JSON.stringify(mealsData),
+          template_type: templateType || 'jour',
+          calories_objectif: tplCalories,
+          proteines: tplProteines,
+          glucides: tplGlucides,
+          lipides: tplLipides,
+          meals_data: JSON.stringify(tplMealsPayload),
           coach_id: user.id,
         }
 
@@ -372,7 +433,8 @@ export default function MealEditor({
               ? (templateId ? `Modifier template` : `Nouveau template`)
               : (planId ? `Modifier — ${planName}` : `Nouveau plan`)}
           </div>
-          {!templateMode && (
+          {/* ON/OFF tabs: show for athlete mode OR diete template */}
+          {(!templateMode || templateType === 'diete') && (
             <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
               <button
                 className={`athlete-tab-btn ${mealType === 'training' ? 'active' : ''}`}
@@ -387,6 +449,18 @@ export default function MealEditor({
                 <i className="fa-solid fa-bed" /> Jour OFF
               </button>
             </div>
+          )}
+          {/* Single day label for jour template */}
+          {templateMode && templateType === 'jour' && (
+            <span style={{ marginLeft: 12, fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>
+              <i className="fa-solid fa-calendar-day" /> Journee type
+            </span>
+          )}
+          {/* Single meal label for repas template */}
+          {templateMode && templateType === 'repas' && (
+            <span style={{ marginLeft: 12, fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>
+              <i className="fa-solid fa-drumstick-bite" /> Repas unique
+            </span>
           )}
           {templateMode && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 12 }}>
@@ -616,11 +690,14 @@ export default function MealEditor({
               )
             })}
 
-            <div className={styles.mealsFooter}>
-              <button className="btn btn-outline" onClick={addMeal}>
-                <i className="fa-solid fa-plus" /> Repas
-              </button>
-            </div>
+            {/* Hide add-meal button for repas template (single meal only) */}
+            {!(templateMode && templateType === 'repas') && (
+              <div className={styles.mealsFooter}>
+                <button className="btn btn-outline" onClick={addMeal}>
+                  <i className="fa-solid fa-plus" /> Repas
+                </button>
+              </div>
+            )}
           </div>
         )}
 

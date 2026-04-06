@@ -9,6 +9,19 @@
 - [x] templates/page.tsx: utilise ProgramEditor et MealEditor au lieu de TrainingTemplateEditor et editeur inline
 - [x] Build passe (0 erreurs dans les fichiers modifies, 51 routes)
 
+## COACH — 3 niveaux de granularite templates nutrition (2026-04-03)
+- [x] MealEditor: ajout prop templateType ('diete' | 'jour' | 'repas')
+- [x] MealEditor: diete -> affiche onglets ON/OFF, sauvegarde training+rest dans meals_data JSON
+- [x] MealEditor: jour -> un seul onglet (pas de tabs ON/OFF)
+- [x] MealEditor: repas -> un seul repas (bouton "+ Repas" masque)
+- [x] MealEditor: save template_type dans nutrition_templates
+- [x] NutritionTemplatesList: sous-onglets Diete/Jour/Repas avec filtrage par template_type
+- [x] NutritionTemplatesList: type badge + subtitle adapte par type
+- [x] NutritionTemplatesList: onCreate passe le type au parent
+- [x] templates/page.tsx: parseNutritionTemplate gere le format diete (training/rest) + legacy
+- [x] templates/page.tsx: passe templateType + initialOtherTab a MealEditor
+- [x] Build passe (0 erreurs dans les fichiers modifies)
+
 ---
 
 ## ATHLETE — Bugs critiques
