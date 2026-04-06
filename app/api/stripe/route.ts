@@ -87,17 +87,29 @@ export async function POST(req: NextRequest) {
       // Try athlete auth first (mobile), fall back to coach auth (web)
       const { user } = await verifyAuth(req)
       const supabase = getSupabaseAdmin()
+      let authorized = false
       if (body?.athleteId) {
+        // Check if caller is the athlete
         const { data: athlete } = await supabase
           .from('athletes')
           .select('id')
           .eq('user_id', user.id)
           .eq('id', body.athleteId)
           .maybeSingle()
-        if (!athlete) return errorJson('Forbidden: not your athlete profile', 403)
-      } else {
-        await verifyCoach(req, body, 'coachId', req.nextUrl.searchParams)
+        if (athlete) authorized = true
       }
+      if (!authorized && body?.coachId) {
+        // Fallback: check if caller is the coach
+        if (user.id === body.coachId) authorized = true
+      }
+      if (!authorized) {
+        // Last fallback: try verifyCoach
+        try {
+          await verifyCoach(req, body, 'coachId', req.nextUrl.searchParams)
+          authorized = true
+        } catch { /* not authorized */ }
+      }
+      if (!authorized) return errorJson('Forbidden', 403)
     } else {
       await verifyCoach(req, body, 'coachId', req.nextUrl.searchParams)
     }
