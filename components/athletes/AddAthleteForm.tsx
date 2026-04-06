@@ -283,8 +283,9 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
             body: JSON.stringify({ athleteId: insertedAthlete.id, coachId }),
           })
           const result = await resp.json()
+          console.log('[AddAthlete] Checkout result:', result)
           if (result.url) paymentLink = result.url
-        } catch { /* checkout link generation failed — continue without it */ }
+        } catch (e) { console.error('[AddAthlete] Checkout link error:', e) }
       }
 
       let msg = `Bienvenue dans l'app de coaching ! \n\nVoici vos identifiants:\n\nEmail: ${trimEmail}\nMot de passe: ${tempPassword}\n\nConnectez-vous pour voir vos seances!`
