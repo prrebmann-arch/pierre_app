@@ -356,7 +356,8 @@ export default function TrainingPage() {
 
   // Open template picker: fetch coach's training templates
   const openTemplatePicker = useCallback(async () => {
-    if (!user?.id) return
+    const coachId = user?.id
+    if (!coachId) { console.warn('[Training] No user.id for template picker'); return }
     setShowTemplatePicker(true)
     setLoadingTemplates(true)
     try {
