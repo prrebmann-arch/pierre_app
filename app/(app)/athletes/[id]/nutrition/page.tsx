@@ -422,7 +422,7 @@ export default function NutritionPage() {
     try {
       const { data } = await supabase
         .from('nutrition_templates')
-        .select('id, nom, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, macro_only')
+        .select('id, nom, template_type, calories_objectif, proteines, glucides, lipides, meals_data, category')
         .eq('coach_id', user.id)
         .order('created_at', { ascending: false })
         .limit(100)
