@@ -337,6 +337,8 @@ export default function MealEditor({
         if (error) { toast('Erreur: ' + error.message, 'error'); setSaving(false); return }
 
         toast(templateId ? 'Template modifie' : 'Template cree', 'success')
+        onSaved()
+        return
       } else {
         // ── ATHLETE MODE: save to nutrition_plans ──
         const today = new Date().toISOString().split('T')[0]

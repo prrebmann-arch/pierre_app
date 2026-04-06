@@ -358,6 +358,8 @@ export default function ProgramEditor({
         if (error) throw error
 
         toast(templateId ? 'Template modifie' : 'Template cree')
+        onSaved()
+        return
       } else {
         // ── ATHLETE MODE: save to workout_programs + workout_sessions ──
         let pid = programId
