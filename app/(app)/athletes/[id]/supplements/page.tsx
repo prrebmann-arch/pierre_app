@@ -66,6 +66,7 @@ export default function SupplementsPage() {
   const [unlocked, setUnlocked] = useState(cached?.unlocked ?? false)
   const [logs, setLogs] = useState<any[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   // Form state
@@ -160,6 +161,70 @@ export default function SupplementsPage() {
   function resetForm() {
     setFormNom(''); setFormMarque(''); setFormDosage(''); setFormUnite('mg')
     setFormFreq('1x/jour'); setFormMoment(''); setFormLien(''); setFormNotes(''); setFormConcentration('')
+  }
+
+  function openEditModal(a: any) {
+    const s = a.supplements || {}
+    setEditingId(a.id)
+    setFormNom(s.nom || '')
+    setFormMarque(s.marque || '')
+    setFormDosage(a.dosage || '')
+    setFormUnite(a.unite || 'mg')
+    setFormFreq(a.frequence || '1x/jour')
+    setFormMoment(a.moment_prise || '')
+    setFormLien(s.lien_achat || '')
+    setFormNotes(a.notes || '')
+    setFormConcentration(a.concentration_mg_ml ? String(a.concentration_mg_ml) : '')
+    setShowAddModal(true)
+  }
+
+  async function saveEditSupplement() {
+    if (!editingId) return
+    if (!formDosage.trim()) { toast('Dosage obligatoire', 'error'); return }
+    setSaving(true)
+
+    const intervalMap: Record<string, number> = {
+      '1x/jour': 1, '2x/jour': 1, '3x/jour': 1,
+      'tous les 2 jours': 2, 'tous les 3 jours': 3,
+      '2x/semaine': 3.5, '3x/semaine': 2.333, '1x/semaine': 7, 'au besoin': 0,
+    }
+
+    // Get old values for history
+    const oldAssignment = assignments.find((a: any) => a.id === editingId)
+
+    // Update assignment
+    const { error } = await supabase.from('athlete_supplements').update({
+      dosage: formDosage.trim(),
+      unite: formUnite,
+      frequence: formFreq,
+      intervalle_jours: intervalMap[formFreq] || 1,
+      moment_prise: formMoment.trim() || null,
+      concentration_mg_ml: parseFloat(formConcentration) || null,
+      notes: formNotes.trim() || null,
+    }).eq('id', editingId)
+
+    if (error) { toast('Erreur modification', 'error'); setSaving(false); return }
+
+    // Log dosage change in history
+    if (oldAssignment && (oldAssignment.dosage !== formDosage.trim() || oldAssignment.unite !== formUnite || oldAssignment.frequence !== formFreq)) {
+      await supabase.from('supplement_dosage_history').insert({
+        athlete_supplement_id: editingId,
+        ancien_dosage: oldAssignment.dosage,
+        nouveau_dosage: formDosage.trim(),
+        ancienne_unite: oldAssignment.unite,
+        nouvelle_unite: formUnite,
+        ancienne_frequence: oldAssignment.frequence,
+        nouvelle_frequence: formFreq,
+        changed_by: user?.id,
+      }).catch(() => { /* table might not exist yet */ })
+    }
+
+    setSaving(false)
+    toast('Supplement modifie', 'success')
+    setShowAddModal(false)
+    setEditingId(null)
+    resetForm()
+    loadData()
   }
 
   async function removeAssignment(id: string) {
@@ -425,6 +490,9 @@ export default function SupplementsPage() {
                 )}
 
                 <div className={styles.suppCardFooter}>
+                  <button className="btn btn-outline btn-sm" onClick={() => openEditModal(a)}>
+                    <i className="fas fa-pen" /> Modifier
+                  </button>
                   <button className="btn btn-outline btn-sm" style={{ color: 'var(--danger)' }} onClick={() => removeAssignment(a.id)}>
                     <i className="fas fa-trash" />
                   </button>
@@ -436,7 +504,7 @@ export default function SupplementsPage() {
       )}
 
       {/* Add supplement modal */}
-      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title={`Ajouter un ${tab === 'complement' ? 'complement' : 'supplement'}`}>
+      <Modal isOpen={showAddModal} onClose={() => { setShowAddModal(false); setEditingId(null); resetForm() }} title={editingId ? 'Modifier le supplement' : `Ajouter un ${tab === 'complement' ? 'complement' : 'supplement'}`}>
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
           <input type="text" className="form-control" placeholder="Nom du produit *" value={formNom} onChange={(e) => setFormNom(e.target.value)} />
           <input type="text" className="form-control" placeholder="Marque" value={formMarque} onChange={(e) => setFormMarque(e.target.value)} />
@@ -457,7 +525,7 @@ export default function SupplementsPage() {
           <textarea className="form-control" placeholder="Notes" rows={2} value={formNotes} onChange={(e) => setFormNotes(e.target.value)} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
             <button className="btn btn-outline" onClick={() => setShowAddModal(false)}>Annuler</button>
-            <button className="btn btn-red" onClick={saveNewSupplement} disabled={saving}>
+            <button className="btn btn-red" onClick={editingId ? saveEditSupplement : saveNewSupplement} disabled={saving}>
               {saving ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-plus" style={{ marginRight: 4 }} />Ajouter</>}
             </button>
           </div>
