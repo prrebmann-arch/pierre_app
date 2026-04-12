@@ -88,7 +88,7 @@ async function fetchDashboardData(userId: string, athletes: Athlete[]): Promise<
     { data: settingsRows },
   ] = await Promise.all([
     athleteUserIds.length
-      ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, adherence, steps').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(500)
+      ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, adherence, steps').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(100)
       : Promise.resolve({ data: [] as Record<string, unknown>[] }),
     supabase.from('workout_programs').select('id, nom, athlete_id, actif').eq('coach_id', userId),
     athleteIds.length

@@ -341,7 +341,7 @@ export default function BusinessDashboard() {
     // Single parallel batch for all independent queries (was 2 sequential batches)
     const [cfgRes, entriesRes, clientsRes, stripeRes, plansRes, paymentsRes, athletesRes] = await Promise.all([
       supabase.from('project_config').select('user_id, target_name, target_mrr, target_deadline, week_number, start_followers').eq('user_id', user.id).single(),
-      supabase.from('daily_entries').select('id, user_id, week_number, day_name, dms, rdvs, rdvs_attended, clients_online, clients_offline, clients_lost_online, clients_lost_offline, reels, followers, meta_ads_budget').eq('user_id', user.id).limit(500),
+      supabase.from('daily_entries').select('id, user_id, week_number, day_name, dms, rdvs, rdvs_attended, clients_online, clients_offline, clients_lost_online, clients_lost_offline, reels, followers, meta_ads_budget').eq('user_id', user.id).limit(100),
       supabase.from('biz_clients').select('id, user_id, name, email, price, client_type, billing_day, start_date, status, archived_at, archive_reason, created_at').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200),
       supabase.from('stripe_customers').select('id, coach_id, athlete_id, stripe_customer_id').eq('coach_id', user.id).limit(200),
       supabase.from('athlete_payment_plans').select('id, athlete_id, coach_id, payment_status, amount, frequency, is_free').eq('coach_id', user.id).limit(200),

@@ -157,6 +157,17 @@
 - [x] Remaining .limit() added to all Supabase SELECT queries without limits (25+ queries)
 - [x] Build passes
 
+## Supabase Data Transfer Reduction (2026-04-03)
+- [x] DashboardPage: daily_reports .limit(500) -> .limit(100)
+- [x] Bilans page: daily_reports .limit(200) -> .limit(60), workout_logs .limit(100) -> .limit(50)
+- [x] Nutrition page: nutrition_logs .limit(200) -> .limit(60) (both queries)
+- [x] Training page: workout_logs .limit(100) -> .limit(50)
+- [x] BusinessDashboard: daily_entries .limit(500) -> .limit(100)
+- [x] AthleteContext: removed 6 bilan_* columns from select (bilan_frequency, bilan_interval, bilan_day, bilan_anchor_date, bilan_month_day, bilan_notif_time) — only used in infos page which has its own query
+- [ ] Bilans page general_notes: KEPT — used in BilanAccordion render (line 588, 698)
+- [ ] Nutrition meals_data: KEPT — used in viewDiet detail view (in-memory plans); removing would require new fetch code in viewDiet
+- [x] TypeScript check passes (0 new errors)
+
 ---
 
 # Performance Optimization - Server Components & Lazy Loading

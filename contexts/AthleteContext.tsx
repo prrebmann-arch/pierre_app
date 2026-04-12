@@ -34,7 +34,7 @@ async function fetchAthletesData(userId: string): Promise<Athlete[]> {
   const [{ data, error }, { data: phases }, { data: plans }] = await Promise.all([
     supabase
       .from('athletes')
-      .select('id, user_id, coach_id, prenom, nom, email, avatar_url, date_naissance, genre, objectif, poids_actuel, poids_objectif, access_mode, pas_journalier, water_goal_ml, complete_bilan_frequency, complete_bilan_interval, complete_bilan_day, complete_bilan_anchor_date, complete_bilan_month_day, complete_bilan_notif_time, bilan_frequency, bilan_interval, bilan_day, bilan_anchor_date, bilan_month_day, bilan_notif_time, created_at')
+      .select('id, user_id, coach_id, prenom, nom, email, avatar_url, date_naissance, genre, objectif, poids_actuel, poids_objectif, access_mode, pas_journalier, water_goal_ml, complete_bilan_frequency, complete_bilan_interval, complete_bilan_day, complete_bilan_anchor_date, complete_bilan_month_day, complete_bilan_notif_time, created_at')
       .eq('coach_id', userId)
       .order('created_at', { ascending: false }),
     supabase

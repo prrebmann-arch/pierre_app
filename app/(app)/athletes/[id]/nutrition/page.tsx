@@ -187,8 +187,8 @@ export default function NutritionPage() {
 
     // Try both id and user_id as the athlete app may use either
     const [{ data: logsByUser }, { data: logsByAthlete }] = await Promise.all([
-      supabase.from('nutrition_logs').select('id, athlete_id, date, plan_id, meals_log').eq('athlete_id', ath.user_id).gte('date', fromDate).order('date', { ascending: false }).limit(200),
-      supabase.from('nutrition_logs').select('id, athlete_id, date, plan_id, meals_log').eq('athlete_id', ath.id).gte('date', fromDate).order('date', { ascending: false }).limit(200),
+      supabase.from('nutrition_logs').select('id, athlete_id, date, plan_id, meals_log').eq('athlete_id', ath.user_id).gte('date', fromDate).order('date', { ascending: false }).limit(60),
+      supabase.from('nutrition_logs').select('id, athlete_id, date, plan_id, meals_log').eq('athlete_id', ath.id).gte('date', fromDate).order('date', { ascending: false }).limit(60),
     ])
     const logs = ((logsByUser?.length ? logsByUser : logsByAthlete) || []) as NutritionLog[]
     setNutriLogs(logs)
