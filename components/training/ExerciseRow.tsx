@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createClient } from '@/lib/supabase/client'
 import SetRow, { type SetData } from './SetRow'
 import styles from '@/styles/training.module.css'
 
@@ -17,6 +18,7 @@ interface ExerciseRowProps {
   exercise: ExerciseData
   onMove: (idx: number, dir: number) => void
   onRemove: (idx: number) => void
+  onReplace: (exIdx: number, id: string, nom: string, muscle: string) => void
   onSetChange: (exIdx: number, setIdx: number, field: string, value: string) => void
   onAddSet: (exIdx: number) => void
   onRemoveSet: (exIdx: number, setIdx: number) => void
@@ -26,11 +28,38 @@ interface ExerciseRowProps {
   onToggleMaxRep: (exIdx: number, setIdx: number, isMax: boolean) => void
 }
 
+interface ExerciseDB {
+  id: string
+  nom: string
+  muscle_principal: string | null
+}
+
+// Module-level cache shared across all ExerciseRow instances
+let exercisesCache: ExerciseDB[] | null = null
+let exercisesCachePromise: Promise<ExerciseDB[]> | null = null
+
+async function fetchExercises(): Promise<ExerciseDB[]> {
+  if (exercisesCache) return exercisesCache
+  if (exercisesCachePromise) return exercisesCachePromise
+  const supabase = createClient()
+  exercisesCachePromise = (async () => {
+    const { data } = await supabase
+      .from('exercices')
+      .select('id, nom, muscle_principal')
+      .order('nom')
+      .limit(500)
+    exercisesCache = data || []
+    return exercisesCache
+  })()
+  return exercisesCachePromise
+}
+
 export default function ExerciseRow({
   index,
   exercise,
   onMove,
   onRemove,
+  onReplace,
   onSetChange,
   onAddSet,
   onRemoveSet,
@@ -40,17 +69,45 @@ export default function ExerciseRow({
   onToggleMaxRep,
 }: ExerciseRowProps) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const [swapOpen, setSwapOpen] = useState(false)
+  const [swapSearch, setSwapSearch] = useState('')
+  const [allExercises, setAllExercises] = useState<ExerciseDB[]>([])
   const menuRef = useRef<HTMLDivElement>(null)
+  const swapRef = useRef<HTMLDivElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false)
       }
+      if (swapRef.current && !swapRef.current.contains(e.target as Node)) {
+        setSwapOpen(false)
+      }
     }
     document.addEventListener('click', handleClick)
     return () => document.removeEventListener('click', handleClick)
   }, [])
+
+  const openSwap = useCallback(() => {
+    setSwapOpen(true)
+    setSwapSearch('')
+    fetchExercises().then(setAllExercises)
+    setTimeout(() => searchInputRef.current?.focus(), 50)
+  }, [])
+
+  const handleSelect = useCallback((ex: ExerciseDB) => {
+    onReplace(index, ex.id, ex.nom, ex.muscle_principal || '')
+    setSwapOpen(false)
+  }, [index, onReplace])
+
+  const query = swapSearch.toLowerCase()
+  const swapResults = allExercises
+    .filter((ex) => {
+      if (!query) return true
+      return ex.nom.toLowerCase().includes(query) || (ex.muscle_principal || '').toLowerCase().includes(query)
+    })
+    .slice(0, 20)
 
   const superBadge = exercise.superset_id ? (
     <span className={styles.tpSupersetBadge}>SS {exercise.superset_id}</span>
@@ -64,7 +121,48 @@ export default function ExerciseRow({
     >
       <div className={styles.trExerciseHeader}>
         <span className={styles.trExerciseNum}>{index + 1}.</span>
-        <span className={styles.trExerciseName}>{exercise.nom}</span>
+        <div className={styles.trExNameWrap} ref={swapRef}>
+          <span
+            className={`${styles.trExerciseName} ${styles.trExerciseNameClickable}`}
+            onClick={(e) => { e.stopPropagation(); openSwap() }}
+            title="Cliquer pour changer d'exercice"
+          >
+            {exercise.nom}
+            <i className={`fa-solid fa-pen ${styles.trExSwapIcon}`} />
+          </span>
+          {swapOpen && (
+            <div className={styles.trExSwapDropdown}>
+              <div className={styles.trExSwapSearchWrap}>
+                <i className={`fa-solid fa-search ${styles.trExSwapSearchIcon}`} />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  value={swapSearch}
+                  onChange={(e) => setSwapSearch(e.target.value)}
+                  placeholder="Rechercher un exercice..."
+                  className={styles.trExSwapSearchInput}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <div className={styles.trExSwapResults}>
+                {swapResults.length > 0 ? swapResults.map((ex) => (
+                  <div
+                    key={ex.id}
+                    className={styles.trExSwapItem}
+                    onClick={(e) => { e.stopPropagation(); handleSelect(ex) }}
+                  >
+                    <span className={styles.trExSwapItemName}>{ex.nom}</span>
+                    {ex.muscle_principal && (
+                      <span className={styles.trExSwapItemMuscle}>{ex.muscle_principal}</span>
+                    )}
+                  </div>
+                )) : (
+                  <div className={styles.trExSwapEmpty}>Aucun resultat</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
         {superBadge}
         {exercise.muscle_principal && (
           <span className={styles.trExerciseMuscleChip}>{exercise.muscle_principal}</span>

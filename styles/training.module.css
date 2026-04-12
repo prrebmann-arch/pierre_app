@@ -94,6 +94,7 @@
   padding: 0 8px;
 }
 .trSessionTab {
+  display: flex; align-items: center; gap: 4px;
   padding: 12px 20px;
   text-align: center;
   cursor: pointer;
@@ -588,6 +589,51 @@
 .tvSetRow td:first-child { text-align: left; color: var(--text3); font-weight: 700; font-size: 11px; }
 .tvSetDrop td { color: var(--warning); }
 .tvSetRp td { color: #8b5cf6; }
+
+/* Session tab arrows */
+.trSessionTabArrow {
+  background: none; border: none; color: var(--text3); cursor: pointer;
+  padding: 2px 4px; font-size: 9px; opacity: 0; transition: opacity 0.15s, color 0.15s;
+  border-radius: 4px; line-height: 1;
+}
+.trSessionTab:hover .trSessionTabArrow { opacity: 0.7; }
+.trSessionTabArrow:hover { opacity: 1 !important; color: var(--primary); background: var(--bg4); }
+
+/* Exercise name swap dropdown */
+.trExNameWrap { position: relative; flex: 1; min-width: 0; }
+.trExerciseNameClickable { cursor: pointer; transition: color 0.15s; }
+.trExerciseNameClickable:hover { color: var(--primary); }
+.trExSwapIcon { font-size: 10px; margin-left: 6px; opacity: 0; transition: opacity 0.15s; color: var(--text3); }
+.trExerciseNameClickable:hover .trExSwapIcon { opacity: 1; }
+
+.trExSwapDropdown {
+  position: absolute; top: 100%; left: 0; z-index: 100;
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: var(--shadow-elevated); width: 320px; margin-top: 4px;
+  overflow: hidden;
+}
+.trExSwapSearchWrap {
+  padding: 8px 10px; border-bottom: 1px solid var(--border-subtle); position: relative;
+}
+.trExSwapSearchIcon {
+  position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
+  color: var(--text3); font-size: 11px; pointer-events: none;
+}
+.trExSwapSearchInput {
+  width: 100%; padding: 8px 10px 8px 30px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 7px;
+  color: var(--text); font-size: 12px; font-family: inherit;
+}
+.trExSwapSearchInput:focus { outline: none; border-color: var(--primary); }
+.trExSwapResults { max-height: 200px; overflow-y: auto; padding: 4px 0; }
+.trExSwapItem {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; cursor: pointer; transition: background 0.15s; font-size: 13px;
+}
+.trExSwapItem:hover { background: var(--bg4); }
+.trExSwapItemName { color: var(--text); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.trExSwapItemMuscle { color: var(--text3); font-size: 11px; flex-shrink: 0; }
+.trExSwapEmpty { padding: 20px; text-align: center; color: var(--text3); font-size: 12px; }
 
 /* Empty exercise drop zone */
 .trEmptyZone {

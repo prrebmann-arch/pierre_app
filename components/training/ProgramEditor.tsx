@@ -296,6 +296,34 @@ export default function ProgramEditor({
     }))
   }, [activeSession])
 
+  const replaceExercise = useCallback((exIdx: number, id: string, nom: string, muscle: string) => {
+    setSessions((prev) => prev.map((s, i) => {
+      if (i !== activeSession) return s
+      const exercises = s.exercises.map((ex, ei) => {
+        if (ei !== exIdx) return ex
+        return { ...ex, nom, exercice_id: id, muscle_principal: muscle }
+      })
+      return { ...s, exercises }
+    }))
+  }, [activeSession])
+
+  const moveSession = useCallback((idx: number, dir: number) => {
+    setSessions((prev) => {
+      const newIdx = idx + dir
+      if (newIdx < 0 || newIdx >= prev.length) return prev
+      const arr = [...prev]
+      ;[arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]]
+      return arr
+    })
+    setActiveSession((prev) => {
+      const newIdx = idx + dir
+      if (newIdx < 0 || newIdx >= sessions.length) return prev
+      if (prev === idx) return newIdx
+      if (prev === newIdx) return idx
+      return prev
+    })
+  }, [sessions.length])
+
   // -- Category helpers (template mode) --
   const confirmNewCategory = () => {
     if (newCategory.trim()) {
@@ -561,13 +589,31 @@ export default function ProgramEditor({
         {sessions.map((s, i) => {
           const label = s.nom || `Seance ${i + 1}`
           return (
-            <button
+            <div
               key={i}
               className={`${styles.trSessionTab} ${i === activeSession ? styles.trSessionTabActive : ''}`}
               onClick={() => setActiveSession(i)}
             >
-              {label}
-            </button>
+              {i > 0 && (
+                <button
+                  className={styles.trSessionTabArrow}
+                  onClick={(e) => { e.stopPropagation(); moveSession(i, -1) }}
+                  title="Deplacer a gauche"
+                >
+                  <i className="fa-solid fa-chevron-left" />
+                </button>
+              )}
+              <span>{label}</span>
+              {i < sessions.length - 1 && (
+                <button
+                  className={styles.trSessionTabArrow}
+                  onClick={(e) => { e.stopPropagation(); moveSession(i, 1) }}
+                  title="Deplacer a droite"
+                >
+                  <i className="fa-solid fa-chevron-right" />
+                </button>
+              )}
+            </div>
           )
         })}
         <button className={styles.trSessionTabAdd} onClick={addSession} title="Ajouter une seance">
@@ -612,6 +658,7 @@ export default function ProgramEditor({
             onDeleteSession={removeSession}
             onMoveExercise={moveExercise}
             onRemoveExercise={removeExercise}
+            onReplaceExercise={replaceExercise}
             onSetChange={onSetChange}
             onAddSet={addSet}
             onRemoveSet={removeSet}

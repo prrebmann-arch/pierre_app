@@ -37,6 +37,7 @@ interface SessionTabProps {
   onDeleteSession: () => void
   onMoveExercise: (idx: number, dir: number) => void
   onRemoveExercise: (idx: number) => void
+  onReplaceExercise: (exIdx: number, id: string, nom: string, muscle: string) => void
   onSetChange: (exIdx: number, setIdx: number, field: string, value: string) => void
   onAddSet: (exIdx: number) => void
   onRemoveSet: (exIdx: number, setIdx: number) => void
@@ -53,6 +54,7 @@ export default function SessionTab({
   onDeleteSession,
   onMoveExercise,
   onRemoveExercise,
+  onReplaceExercise,
   onSetChange,
   onAddSet,
   onRemoveSet,
@@ -115,6 +117,7 @@ export default function SessionTab({
               exercise={ex}
               onMove={onMoveExercise}
               onRemove={onRemoveExercise}
+              onReplace={onReplaceExercise}
               onSetChange={onSetChange}
               onAddSet={onAddSet}
               onRemoveSet={onRemoveSet}
