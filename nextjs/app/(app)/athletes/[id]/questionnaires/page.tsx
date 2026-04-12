@@ -52,11 +52,20 @@ export default function QuestionnairesPage() {
   const loadData = useCallback(async () => {
     setLoading(true)
 
-    const { data: assigns } = await supabase
-      .from('questionnaire_assignments')
-      .select('*, questionnaire_templates(titre)')
-      .eq('athlete_id', params.id)
-      .order('sent_at', { ascending: false })
+    const [{ data: assigns }, { data: tpls }] = await Promise.all([
+      supabase
+        .from('questionnaire_assignments')
+        .select('*, questionnaire_templates(titre)')
+        .eq('athlete_id', params.id)
+        .order('sent_at', { ascending: false })
+        .limit(100),
+      supabase
+        .from('questionnaire_templates')
+        .select('id, titre, questions')
+        .eq('coach_id', user?.id)
+        .order('titre')
+        .limit(100),
+    ])
 
     const completedIds = (assigns || []).filter((a: any) => a.status === 'completed').map((a: any) => a.id)
     const rmap: Record<string, any> = {}
@@ -67,12 +76,6 @@ export default function QuestionnairesPage() {
         .in('assignment_id', completedIds)
       ;(responses || []).forEach((r: any) => { rmap[r.assignment_id] = r })
     }
-
-    const { data: tpls } = await supabase
-      .from('questionnaire_templates')
-      .select('id, titre, questions')
-      .eq('coach_id', user?.id)
-      .order('titre')
 
     setAssignments(assigns || [])
     setResponsesMap(rmap)

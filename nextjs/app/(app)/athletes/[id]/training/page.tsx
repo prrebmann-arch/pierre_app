@@ -202,7 +202,7 @@ export default function TrainingPage() {
     setLoading(true)
     const [athleteRes, programsRes, logsRes] = await Promise.all([
       supabase.from('athletes').select('cardio_config, pas_journalier').eq('id', athleteId).single(),
-      supabase.from('workout_programs').select('*, workout_sessions(*)').eq('athlete_id', athleteId).order('created_at', { ascending: false }),
+      supabase.from('workout_programs').select('*, workout_sessions(*)').eq('athlete_id', athleteId).order('created_at', { ascending: false }).limit(20),
       supabase.from('workout_logs').select('*').eq('athlete_id', athleteId).order('date', { ascending: false }).limit(500),
     ])
     setAthleteCardio({

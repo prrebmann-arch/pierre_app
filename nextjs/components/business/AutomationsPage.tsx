@@ -68,6 +68,7 @@ export default function AutomationsPage() {
       .select('*, automation_messages(*)')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+      .limit(100)
     setAutomations((data || []) as Automation[])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps

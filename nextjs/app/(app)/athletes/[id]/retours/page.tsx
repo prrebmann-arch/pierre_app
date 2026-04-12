@@ -34,6 +34,7 @@ export default function RetoursPage() {
       .select('*')
       .eq('athlete_id', params.id)
       .order('created_at', { ascending: false })
+      .limit(100)
     setRetours(data || [])
     setLoading(false)
   }, [params.id, supabase])

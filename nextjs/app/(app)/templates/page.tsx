@@ -64,6 +64,7 @@ export default function TemplatesPage() {
         .select('*')
         .eq('coach_id', coach.id)
         .order('created_at', { ascending: false })
+        .limit(100)
       setTrainingTemplates((data || []) as TrainingTemplate[])
     } else if (activeTab === 'nutrition') {
       const { data } = await supabase
@@ -71,6 +72,7 @@ export default function TemplatesPage() {
         .select('*')
         .eq('coach_id', coach.id)
         .order('created_at', { ascending: false })
+        .limit(100)
       setNutritionTemplates(data || [])
     } else if (activeTab === 'workflow') {
       const { data } = await supabase
@@ -78,6 +80,7 @@ export default function TemplatesPage() {
         .select('*')
         .eq('coach_id', coach.id)
         .order('created_at', { ascending: false })
+        .limit(100)
       setWorkflows(data || [])
     } else if (activeTab === 'questionnaires') {
       const { data } = await supabase
@@ -85,6 +88,7 @@ export default function TemplatesPage() {
         .select('*')
         .eq('coach_id', coach.id)
         .order('created_at', { ascending: false })
+        .limit(100)
       setQuestionnaireTemplates(data || [])
     }
 

@@ -93,7 +93,7 @@ export default function DashboardPage() {
       athleteUserIds.length
         ? supabase.from('daily_reports').select('*').in('user_id', athleteUserIds).order('date', { ascending: false }).limit(500)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-      supabase.from('workout_programs').select('id, nom, athlete_id, actif').eq('coach_id', user.id),
+      supabase.from('workout_programs').select('id, nom, athlete_id, actif').eq('coach_id', user.id).limit(500),
       athleteIds.length
         ? supabase.from('execution_videos').select('id, athlete_id, exercise_name, created_at').in('athlete_id', athleteIds).eq('status', 'a_traiter').order('created_at', { ascending: false }).limit(50)
         : Promise.resolve({ data: [] as Record<string, unknown>[] }),

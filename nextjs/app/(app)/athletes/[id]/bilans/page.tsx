@@ -129,11 +129,11 @@ export default function BilansPage() {
     setLoading(true)
 
     const [bilansRes, progRes, nutriRes, phasesRes, wlogsRes] = await Promise.all([
-      supabase.from('daily_reports').select('*').eq('user_id', selectedAthlete.user_id).order('date', { ascending: false }),
-      supabase.from('programming_weeks').select('*').eq('athlete_id', selectedAthlete.id).order('week_date'),
-      supabase.from('nutrition_plans').select('*').eq('athlete_id', selectedAthlete.id),
-      supabase.from('roadmap_phases').select('*').eq('athlete_id', selectedAthlete.id).order('start_date'),
-      supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }),
+      supabase.from('daily_reports').select('*').eq('user_id', selectedAthlete.user_id).order('date', { ascending: false }).limit(200),
+      supabase.from('programming_weeks').select('*').eq('athlete_id', selectedAthlete.id).order('week_date').limit(200),
+      supabase.from('nutrition_plans').select('*').eq('athlete_id', selectedAthlete.id).limit(50),
+      supabase.from('roadmap_phases').select('*').eq('athlete_id', selectedAthlete.id).order('start_date').limit(50),
+      supabase.from('workout_logs').select('id, date, session_id, session_name, titre, type, started_at, finished_at, exercices_completes').eq('athlete_id', selectedAthlete.id).order('date', { ascending: false }).limit(200),
     ])
 
     const bilanData = (bilansRes.data || []) as DailyReport[]

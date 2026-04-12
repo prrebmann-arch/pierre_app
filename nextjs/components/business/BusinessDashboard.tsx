@@ -306,9 +306,9 @@ export default function BusinessDashboard() {
     setLoading(true)
     const [cfgRes, entriesRes, clientsRes, stripeRes] = await Promise.all([
       supabase.from('project_config').select('*').eq('user_id', user.id).single(),
-      supabase.from('daily_entries').select('*').eq('user_id', user.id),
-      supabase.from('biz_clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('stripe_customers').select('*').eq('user_id', user.id),
+      supabase.from('daily_entries').select('*').eq('user_id', user.id).limit(500),
+      supabase.from('biz_clients').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200),
+      supabase.from('stripe_customers').select('*').eq('user_id', user.id).limit(200),
     ])
 
     const cfg = cfgRes.data || DEFAULT_CONFIG

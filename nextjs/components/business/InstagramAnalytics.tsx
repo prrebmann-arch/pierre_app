@@ -208,11 +208,11 @@ export default function InstagramAnalytics() {
     try {
       const [acctRes, reelsRes, pillarsRes, snapshotsRes, goalsRes, storiesRes] = await Promise.all([
         supabase.from('ig_accounts').select('*').eq('user_id', user.id).single(),
-        supabase.from('ig_reels').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
-        supabase.from('ig_content_pillars').select('*').eq('user_id', user.id).order('name'),
-        supabase.from('ig_snapshots').select('*').eq('user_id', user.id).order('snapshot_date', { ascending: true }),
-        supabase.from('ig_goals').select('*').eq('user_id', user.id),
-        supabase.from('ig_stories').select('*').eq('user_id', user.id).order('published_at', { ascending: false }),
+        supabase.from('ig_reels').select('*').eq('user_id', user.id).order('published_at', { ascending: false }).limit(200),
+        supabase.from('ig_content_pillars').select('*').eq('user_id', user.id).order('name').limit(50),
+        supabase.from('ig_snapshots').select('*').eq('user_id', user.id).order('snapshot_date', { ascending: true }).limit(200),
+        supabase.from('ig_goals').select('*').eq('user_id', user.id).limit(50),
+        supabase.from('ig_stories').select('*').eq('user_id', user.id).order('published_at', { ascending: false }).limit(200),
       ])
       const acct = acctRes.data as IgAccount | null
       setAccount(acct)

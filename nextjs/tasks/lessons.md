@@ -21,3 +21,5 @@
 [2026-03-31] | setState during render via setTimeout is an anti-pattern | Use useEffect + useRef for initialization logic instead of setTimeout inside the render body. The setTimeout approach causes unnecessary re-renders and can lead to stale state.
 
 [2026-03-31] | Login redirect race condition with React state | Never rely on setTimeout to wait for React state updates after async calls. Instead, return the data from the async function and use it directly for redirect logic.
+
+[2026-04-03] | Performance optimization broke site with React hydration errors | Adding useMemo/useCallback/React.memo to existing components causes "rendered more hooks than previous render" errors. sessionStorage caching with JSON.parse/stringify blocks the main thread. SAFE optimizations are: .limit() on Supabase queries, optimizePackageImports in next.config, loading.tsx files, and parallelizing independent queries with Promise.all. Never touch hooks, contexts, or component logic for perf.

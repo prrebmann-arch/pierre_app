@@ -118,7 +118,7 @@ export default function MealEditor({
   // Load aliments cache
   useEffect(() => {
     async function load() {
-      const { data } = await supabase.from('aliments_db').select('*').order('nom', { ascending: true })
+      const { data } = await supabase.from('aliments_db').select('*').order('nom', { ascending: true }).limit(500)
       alimentsCache = (data || []) as Aliment[]
     }
     load()

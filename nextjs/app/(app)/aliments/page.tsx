@@ -53,6 +53,7 @@ export default function AlimentsPage() {
       .from('aliments_db')
       .select('*')
       .order('nom', { ascending: true })
+      .limit(500)
     if (error) { toast('Erreur chargement aliments', 'error'); return }
     setAliments((data || []) as Aliment[])
     setLoading(false)

@@ -48,6 +48,7 @@ export default function FoodSearch({ onSelect, refreshKey }: FoodSearchProps) {
       .from('aliments_db')
       .select('*')
       .order('nom', { ascending: true })
+      .limit(500)
     setLocalAliments((data || []).map((a: any) => ({ ...a, source: 'local' as const })))
   }, [user, supabase])
 

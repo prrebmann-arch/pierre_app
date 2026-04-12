@@ -70,7 +70,7 @@ export default function LeadsPipeline() {
   const loadLeads = useCallback(async () => {
     if (!user) return
     setLoading(true)
-    const { data } = await supabase.from('leads').select('*').eq('user_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('leads').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(200)
     setLeads((data || []) as Lead[])
     setLoading(false)
   // eslint-disable-next-line react-hooks/exhaustive-deps

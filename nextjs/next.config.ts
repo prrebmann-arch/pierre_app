@@ -1,6 +1,9 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  experimental: {
+    optimizePackageImports: ['chart.js', 'react-chartjs-2', '@fortawesome/fontawesome-free'],
+  },
   async headers() {
     return [
       {

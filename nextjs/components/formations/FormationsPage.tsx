@@ -88,8 +88,8 @@ export default function FormationsPage() {
     if (!user) return
     setLoading(true)
     const [fRes, mRes] = await Promise.all([
-      supabase.from('formations').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }),
-      supabase.from('formation_members').select('formation_id, athlete_id'),
+      supabase.from('formations').select('*').eq('coach_id', user.id).order('created_at', { ascending: false }).limit(100),
+      supabase.from('formation_members').select('formation_id, athlete_id').limit(500),
     ])
     setFormations(fRes.data || [])
     const counts: Record<string, number> = {}
