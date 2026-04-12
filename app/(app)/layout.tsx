@@ -37,6 +37,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, timedOut, router, isReturning])
 
+  // Safari unloads pages when switching apps — force reload on return if stuck
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && !user && !loading) {
+        // Page came back but no user and not loading = stuck state
+        window.location.reload()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [user, loading])
+
   // Prefetch the most common routes for instant navigation
   useEffect(() => {
     router.prefetch('/dashboard')
