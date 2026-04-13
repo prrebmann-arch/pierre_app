@@ -442,7 +442,7 @@ export default function ProgramEditor({
           const { error } = await supabase
             .from('workout_sessions')
             .insert({
-              nom: s.nom,
+              nom: s.nom || `Seance ${i + 1}`,
               jour: s.jour || null,
               program_id: pid,
               exercices: JSON.stringify(exs),
