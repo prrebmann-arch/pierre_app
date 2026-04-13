@@ -1,9 +1,9 @@
-'use client'
+export const dynamic = 'force-dynamic'
 
-import dynamic from 'next/dynamic'
+import nextDynamic from 'next/dynamic'
 import Skeleton from '@/components/ui/Skeleton'
 
-const InstagramAnalytics = dynamic(
+const InstagramAnalytics = nextDynamic(
   () => import('@/components/business/InstagramAnalytics'),
   {
     ssr: false,
