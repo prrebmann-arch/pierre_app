@@ -10,20 +10,22 @@ export function createClient() {
       {
         global: {
           fetch: (url, options = {}) => {
-            // Auto-abort any Supabase request that takes more than 10s
-            // This prevents Safari frozen-tab promises from hanging forever
+            // 30s timeout — prevents Safari frozen-tab promises from hanging forever
+            // without cutting legitimate slow requests (old value was 10s, too aggressive)
             const controller = new AbortController()
-            const timeout = setTimeout(() => controller.abort(), 10000)
-
-            // Merge with existing signal if any
-            const existingSignal = options.signal
-            if (existingSignal) {
-              existingSignal.addEventListener('abort', () => controller.abort())
-            }
-
-            return fetch(url, { ...options, signal: controller.signal }).finally(() => {
-              clearTimeout(timeout)
-            })
+            const timeout = setTimeout(() => controller.abort(), 30000)
+            return fetch(url, { ...options, signal: controller.signal })
+              .catch((err) => {
+                // Convert AbortError to empty response instead of crashing
+                if (err.name === 'AbortError') {
+                  return new Response(JSON.stringify({ data: null, error: 'Request timeout' }), {
+                    status: 408,
+                    headers: { 'Content-Type': 'application/json' },
+                  })
+                }
+                throw err
+              })
+              .finally(() => clearTimeout(timeout))
           },
         },
       }

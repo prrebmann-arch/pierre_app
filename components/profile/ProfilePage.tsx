@@ -76,7 +76,7 @@ export default function ProfilePage() {
     } finally {
       setLoading(false)
     }
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadInvoices()

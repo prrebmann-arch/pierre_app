@@ -86,8 +86,8 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     () => fetchAthletesData(userId!),
     {
       fallbackData: getSessionCache(),
-      revalidateOnFocus: true,
-      dedupingInterval: 5000,
+      revalidateOnFocus: false,
+      dedupingInterval: 30000,
     },
   )
 

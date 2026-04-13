@@ -37,7 +37,7 @@ export function useRefetchOnResume(refetch: () => void, isLoading: boolean) {
     const timer = setTimeout(() => {
       retriedRef.current = true
       refetch()
-    }, 12000)
+    }, 20000)
     return () => clearTimeout(timer)
   }, [isLoading, refetch])
 }

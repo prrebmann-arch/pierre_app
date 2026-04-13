@@ -7,8 +7,15 @@ import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Tabs from '@/components/ui/Tabs'
 import Skeleton from '@/components/ui/Skeleton'
 import TrainingTemplatesList from '@/components/templates/TrainingTemplatesList'
-import ProgramEditor from '@/components/training/ProgramEditor'
-import MealEditor, { type MealData } from '@/components/nutrition/MealEditor'
+import dynamic from 'next/dynamic'
+import type { MealData } from '@/components/nutrition/MealEditor'
+
+const ProgramEditor = dynamic(() => import('@/components/training/ProgramEditor'), {
+  loading: () => <Skeleton height={400} borderRadius={12} />,
+})
+const MealEditor = dynamic(() => import('@/components/nutrition/MealEditor'), {
+  loading: () => <Skeleton height={400} borderRadius={12} />,
+})
 import NutritionTemplatesList from '@/components/templates/NutritionTemplatesList'
 import WorkflowsList from '@/components/templates/WorkflowsList'
 import QuestionnaireTemplatesList from '@/components/templates/QuestionnaireTemplatesList'

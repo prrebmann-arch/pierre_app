@@ -368,10 +368,13 @@ export default function BusinessDashboard() {
     const wk = cfg.week_number || 1
     setWeek(wk)
 
-    const objRes = await supabase.from('weekly_objectives').select('id, user_id, start_week, dms_target, rdvs_target, clients_target, reels_target, followers_target').eq('user_id', user.id).lte('start_week', wk).order('start_week', { ascending: false }).limit(1).single()
-    const obj = objRes.data || DEFAULT_OBJ
-    setObjectives(obj as WeeklyObjectives)
-    setEditObj(obj as WeeklyObjectives)
+    // Fire objectives query without blocking — data above is enough to render
+    supabase.from('weekly_objectives').select('id, user_id, start_week, dms_target, rdvs_target, clients_target, reels_target, followers_target').eq('user_id', user.id).lte('start_week', wk).order('start_week', { ascending: false }).limit(1).single()
+      .then(({ data }) => {
+        const obj = data || DEFAULT_OBJ
+        setObjectives(obj as WeeklyObjectives)
+        setEditObj(obj as WeeklyObjectives)
+      })
 
     // Auto-detect day
     const today = new Date().getDay()
