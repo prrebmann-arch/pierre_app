@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { toDateStr, getPageCache, setPageCache } from '@/lib/utils'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { DEFAULT_STEPS_GOAL, DEFAULT_WATER_GOAL, PROG_PHASES, MS_PER_DAY } from '@/lib/constants'
 import type { ProgPhaseKey } from '@/lib/constants'
 import dynamic from 'next/dynamic'
@@ -81,6 +82,8 @@ export default function ApercuPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useRefetchOnResume(loadData, loading)
 
   if (loading) {
     return (

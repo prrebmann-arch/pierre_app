@@ -10,6 +10,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { toDateStr, isBilanDate, getLastExpectedBilanDate, getNextBilanDate } from '@/lib/utils'
 import { notifyAthlete } from '@/lib/push'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import styles from '@/styles/bilans.module.css'
@@ -284,6 +285,8 @@ export default function BilansOverview() {
   useEffect(() => {
     if (!athletesLoading && athletes.length) fetchReports()
   }, [athletesLoading, athletes, fetchReports])
+
+  useRefetchOnResume(fetchReports, loading)
 
   const today = toDateStr(new Date())
 

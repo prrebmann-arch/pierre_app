@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { notifyAthlete } from '@/lib/push'
 import { getPageCache, setPageCache } from '@/lib/utils'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import CardioSection from '@/components/training/CardioSection'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -248,6 +249,8 @@ export default function TrainingPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useRefetchOnResume(loadData, loading)
 
   // Push browser history state when entering sub-views, so back button returns to list
   useEffect(() => {

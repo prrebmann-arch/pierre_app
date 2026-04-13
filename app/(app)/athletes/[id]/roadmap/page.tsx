@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { toDateStr, getPageCache, setPageCache } from '@/lib/utils'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { PROG_PHASES, type ProgPhaseKey } from '@/lib/constants'
 import dynamic from 'next/dynamic'
 import type { RoadmapPhase } from '@/components/roadmap/RoadmapTimeline'
@@ -96,6 +97,8 @@ export default function RoadmapPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  useRefetchOnResume(loadData, loading)
 
   const syncProgrammingWeeks = useCallback(async () => {
     if (!user) return

@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { loadStripe, type Stripe as StripeJS } from '@stripe/stripe-js'
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { useAuth } from '@/contexts/AuthContext'
@@ -60,25 +61,28 @@ export default function ProfilePage() {
   const [importedIndexes, setImportedIndexes] = useState<Set<number>>(new Set())
 
   // Load invoices
-  useEffect(() => {
+  const loadInvoices = useCallback(async () => {
     if (!user) return
-    const load = async () => {
-      try {
-        const { data } = await supabase
-          .from('platform_invoices')
-          .select('id, coach_id, amount, status, month, year, stripe_invoice_id, created_at')
-          .eq('coach_id', user.id)
-          .order('created_at', { ascending: false })
-          .limit(12)
-        setInvoices((data as PlatformInvoice[]) || [])
-      } catch (err) {
-        // load error
-      } finally {
-        setLoading(false)
-      }
+    try {
+      const { data } = await supabase
+        .from('platform_invoices')
+        .select('id, coach_id, amount, status, month, year, stripe_invoice_id, created_at')
+        .eq('coach_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(12)
+      setInvoices((data as PlatformInvoice[]) || [])
+    } catch (err) {
+      // load error
+    } finally {
+      setLoading(false)
     }
-    load()
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    loadInvoices()
+  }, [loadInvoices])
+
+  useRefetchOnResume(loadInvoices, loading)
 
   const authFetch = useCallback(
     async (url: string, opts: RequestInit = {}) => {

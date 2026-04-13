@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Modal from '@/components/ui/Modal'
 import styles from '@/styles/aliments.module.css'
 
@@ -111,6 +112,8 @@ export default function AlimentsPage() {
   }, [toast]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadAliments() }, [loadAliments])
+
+  useRefetchOnResume(loadAliments, loading)
 
   // OFF debounced search
   useEffect(() => {

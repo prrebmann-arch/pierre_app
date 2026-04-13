@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { getPageCache, setPageCache } from '@/lib/utils'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { DEFAULT_STEPS_GOAL, DEFAULT_WATER_GOAL, DEFAULT_NOTIF_TIME, JOURS_SEMAINE } from '@/lib/constants'
 import Skeleton from '@/components/ui/Skeleton'
 import styles from '@/styles/athlete-tabs.module.css'
@@ -130,6 +131,8 @@ export default function InfosPage() {
   useEffect(() => {
     if (params.id) loadAthlete()
   }, [params.id, loadAthlete])
+
+  useRefetchOnResume(loadAthlete, loading)
 
   if (loading) return <Skeleton height={400} borderRadius={16} />
   if (!athlete) return <div className="empty-state"><p>Athlete introuvable</p></div>

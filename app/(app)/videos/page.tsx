@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { MAX_VIDEOS_LOAD } from '@/lib/constants'
 import VideosGrid, { type VideoItem } from '@/components/videos/VideosGrid'
 import dynamic from 'next/dynamic'
@@ -67,6 +68,8 @@ export default function VideosPage() {
   useEffect(() => {
     loadVideos()
   }, [loadVideos])
+
+  useRefetchOnResume(loadVideos, loading)
 
   const filtered = useMemo(() => {
     let list = videos

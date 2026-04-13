@@ -9,6 +9,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { notifyAthlete } from '@/lib/push'
 import { getPageCache, setPageCache } from '@/lib/utils'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import BilanAccordion from '@/components/bilans/BilanAccordion'
 import PhotoCompare from '@/components/bilans/PhotoCompare'
 import EmptyState from '@/components/ui/EmptyState'
@@ -256,6 +257,8 @@ export default function BilansPage() {
   }, [athleteId, athleteUserId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadData() }, [loadData])
+
+  useRefetchOnResume(loadData, loading)
 
   const handleDelete = useCallback(async (bilanId: string, date: string) => {
     if (!confirm(`Supprimer le bilan du ${date} ?`)) return

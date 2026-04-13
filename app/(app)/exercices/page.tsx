@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
 import FormGroup from '@/components/ui/FormGroup'
@@ -106,6 +107,8 @@ export default function ExercicesPage() {
   useEffect(() => {
     loadExercices()
   }, [loadExercices])
+
+  useRefetchOnResume(loadExercices, loading)
 
   const handleSearchChange = useCallback((value: string) => {
     setSearch(value)

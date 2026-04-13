@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { createClient } from '@/lib/supabase/client'
 import { MS_PER_DAY } from '@/lib/constants'
 import Card from '@/components/ui/Card'
@@ -383,6 +384,8 @@ export default function BusinessDashboard() {
   }, [user])
 
   useEffect(() => { loadAll() }, [loadAll])
+
+  useRefetchOnResume(loadAll, loading)
 
   // Derived data
   const weekEntries = useMemo(() => allEntries.filter(e => e.week_number === week), [allEntries, week])

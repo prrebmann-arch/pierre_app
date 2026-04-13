@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { createClient } from '@/lib/supabase/client'
 import Button from '@/components/ui/Button'
 import Modal from '@/components/ui/Modal'
@@ -104,6 +105,8 @@ export default function FormationsPage() {
   }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadFormations() }, [loadFormations])
+
+  useRefetchOnResume(loadFormations, loading)
 
   // ── Load athletes (for modals) ──
   const loadAthletes = useCallback(async () => {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -296,7 +297,7 @@ export default function DashboardPage() {
     ? `dashboard:${user.id}:${athleteIds}`
     : null
 
-  const { data: dashData, isLoading: swrLoading } = useSWR(
+  const { data: dashData, isLoading: swrLoading, mutate: mutateDash } = useSWR(
     swrKey,
     () => fetchDashboardData(user!.id, athletes),
     {
@@ -307,6 +308,8 @@ export default function DashboardPage() {
   )
 
   const loading = athletesLoading || (swrLoading && !dashData)
+
+  useRefetchOnResume(mutateDash, loading)
 
   const bilansToReview = dashData?.bilansToReview ?? []
   const lateAthletes = dashData?.lateAthletes ?? []

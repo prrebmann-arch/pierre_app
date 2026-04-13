@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Tabs from '@/components/ui/Tabs'
 import Skeleton from '@/components/ui/Skeleton'
 import TrainingTemplatesList from '@/components/templates/TrainingTemplatesList'
@@ -116,6 +117,9 @@ export default function TemplatesPage() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Re-fetch if Safari froze the JS while loading
+  useRefetchOnResume(loadData, loading)
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab)

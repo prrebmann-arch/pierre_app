@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
 import { getPageCache, setPageCache } from '@/lib/utils'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Toggle from '@/components/ui/Toggle'
 import Skeleton from '@/components/ui/Skeleton'
 import { type MealData } from '@/components/nutrition/MealEditor'
@@ -161,6 +162,8 @@ export default function NutritionPage() {
   }, [athleteId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { loadPlans() }, [loadPlans])
+
+  useRefetchOnResume(loadPlans, loading)
 
   // Push browser history state when entering sub-views
   useEffect(() => {

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { getPageCache, setPageCache } from '@/lib/utils'
+import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Toggle from '@/components/ui/Toggle'
 import Modal from '@/components/ui/Modal'
 import EmptyState from '@/components/ui/EmptyState'
@@ -220,6 +221,8 @@ export default function SupplementsPage() {
   useEffect(() => {
     if (params.id) loadData()
   }, [params.id, loadData])
+
+  useRefetchOnResume(loadData, loading)
 
   async function toggleUnlock(on: boolean) {
     const { error } = await supabase.from('athletes').update({ supplementation_unlocked: on }).eq('id', params.id)
