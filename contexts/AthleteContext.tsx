@@ -36,16 +36,19 @@ async function fetchAthletesData(userId: string): Promise<Athlete[]> {
       .from('athletes')
       .select('id, user_id, coach_id, prenom, nom, email, avatar_url, date_naissance, genre, objectif, poids_actuel, poids_objectif, access_mode, pas_journalier, water_goal_ml, complete_bilan_frequency, complete_bilan_interval, complete_bilan_day, complete_bilan_anchor_date, complete_bilan_month_day, complete_bilan_notif_time, created_at')
       .eq('coach_id', userId)
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(200),
     supabase
       .from('roadmap_phases')
       .select('athlete_id, phase, name')
       .eq('coach_id', userId)
-      .eq('status', 'en_cours'),
+      .eq('status', 'en_cours')
+      .limit(200),
     supabase
       .from('athlete_payment_plans')
       .select('athlete_id, payment_status, amount, frequency, is_free')
-      .eq('coach_id', userId),
+      .eq('coach_id', userId)
+      .limit(200),
   ])
 
   if (error) throw error
@@ -83,7 +86,7 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     () => fetchAthletesData(userId!),
     {
       fallbackData: getSessionCache(),
-      revalidateOnFocus: false,
+      revalidateOnFocus: true,
       dedupingInterval: 5000,
     },
   )

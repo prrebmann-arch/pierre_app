@@ -68,11 +68,12 @@ export default function RoadmapPage() {
           .select('id, athlete_id, coach_id, phase, name, start_date, end_date, position, status, programme_id, nutrition_id, description')
           .eq('athlete_id', athleteId)
           .order('position')
-          .order('start_date'),
+          .order('start_date')
+          .limit(50),
         supabase.from('workout_programs').select('id,nom').eq('athlete_id', athleteId).limit(50),
         supabase.from('nutrition_plans').select('id,nom').eq('athlete_id', athleteId).limit(50),
         userId
-          ? supabase.from('daily_reports').select('date,weight').eq('user_id', userId).limit(500)
+          ? supabase.from('daily_reports').select('date,weight').eq('user_id', userId).limit(120)
           : Promise.resolve({ data: [] }),
       ])
 
