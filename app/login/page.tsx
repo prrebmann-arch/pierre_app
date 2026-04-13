@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, useRef, FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import type { CoachProfile } from '@/lib/types'
@@ -23,6 +23,34 @@ export default function LoginPage() {
     router.prefetch('/admin')
     router.prefetch('/setup-payment')
   }, [router])
+
+  // Safety timeout: if login takes more than 15s, reset the button
+  useEffect(() => {
+    if (!loading) return
+    const timer = setTimeout(() => {
+      setLoading(false)
+      setError('La connexion a pris trop de temps. Veuillez reessayer.')
+    }, 15000)
+    return () => clearTimeout(timer)
+  }, [loading])
+
+  // Safari freezes JS when switching apps — reload on return so pending auth doesn't hang
+  const hiddenAtRef = useRef<number | null>(null)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now()
+      } else if (document.visibilityState === 'visible' && hiddenAtRef.current) {
+        const hiddenFor = Date.now() - hiddenAtRef.current
+        hiddenAtRef.current = null
+        if (hiddenFor > 3000) {
+          window.location.reload()
+        }
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
 
   const redirect = (email: string, coachProfile: CoachProfile | null) => {
     if (email === 'rebmannpierre1@gmail.com') {
