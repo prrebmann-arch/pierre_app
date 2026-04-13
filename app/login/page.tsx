@@ -24,13 +24,14 @@ export default function LoginPage() {
     router.prefetch('/setup-payment')
   }, [router])
 
-  // Safety timeout: if login takes more than 15s, reset the button
+  // Safety timeout: if login takes more than 45s, reset the button
+  // (Safari freezes setTimeout when app is hidden, so this can fire early on return)
   useEffect(() => {
     if (!loading) return
     const timer = setTimeout(() => {
       setLoading(false)
       setError('La connexion a pris trop de temps. Veuillez reessayer.')
-    }, 15000)
+    }, 45000)
     return () => clearTimeout(timer)
   }, [loading])
 
