@@ -100,22 +100,23 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
       setMarkTreated(vid.status === 'traite')
       setExistingAudioUrl(vid.coach_audio_url || null)
 
-      const { data: ath } = await supabase
-        .from('athletes')
-        .select('id, prenom, nom, user_id')
-        .eq('id', vid.athlete_id)
-        .single()
-      setAthlete(ath || null)
-
       // Previous videos of same exercise for comparison
-      const { data: prevVids } = await supabase
-        .from('execution_videos')
-        .select('id, video_url, thumbnail_url, date, serie_number')
-        .eq('athlete_id', vid.athlete_id)
-        .eq('exercise_name', vid.exercise_name)
-        .neq('id', vid.id)
-        .order('date', { ascending: true })
-        .limit(50)
+      const [{ data: ath }, { data: prevVids }] = await Promise.all([
+        supabase
+          .from('athletes')
+          .select('id, prenom, nom, user_id')
+          .eq('id', vid.athlete_id)
+          .single(),
+        supabase
+          .from('execution_videos')
+          .select('id, video_url, thumbnail_url, date, serie_number')
+          .eq('athlete_id', vid.athlete_id)
+          .eq('exercise_name', vid.exercise_name)
+          .neq('id', vid.id)
+          .order('date', { ascending: true })
+          .limit(50),
+      ])
+      setAthlete(ath || null)
 
       const sorted = (prevVids || []) as CompVideo[]
       setCompVideos(sorted)

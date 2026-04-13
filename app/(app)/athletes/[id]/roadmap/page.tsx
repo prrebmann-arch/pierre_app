@@ -8,9 +8,10 @@ import { useToast } from '@/contexts/ToastContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { toDateStr, getPageCache, setPageCache } from '@/lib/utils'
 import { PROG_PHASES, type ProgPhaseKey } from '@/lib/constants'
-import RoadmapTimeline from '@/components/roadmap/RoadmapTimeline'
+import dynamic from 'next/dynamic'
 import type { RoadmapPhase } from '@/components/roadmap/RoadmapTimeline'
-import RoadmapCalendar from '@/components/roadmap/RoadmapCalendar'
+const RoadmapTimeline = dynamic(() => import('@/components/roadmap/RoadmapTimeline'), { ssr: false })
+const RoadmapCalendar = dynamic(() => import('@/components/roadmap/RoadmapCalendar'), { ssr: false })
 import PhaseModal, { type PhaseFormData } from '@/components/roadmap/PhaseModal'
 import styles from '@/styles/roadmap.module.css'
 

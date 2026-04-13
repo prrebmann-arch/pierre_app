@@ -4,23 +4,15 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { createClient } from '@/lib/supabase/client'
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Tooltip,
-  Legend,
-} from 'chart.js'
-import { Line, Bar, Doughnut } from 'react-chartjs-2'
+import dynamic from 'next/dynamic'
+import type { Chart as ChartJS } from 'chart.js'
 import Modal from '@/components/ui/Modal'
 import Skeleton from '@/components/ui/Skeleton'
 import styles from '@/styles/instagram.module.css'
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend)
+const Line = dynamic(() => import('react-chartjs-2').then(mod => mod.Line), { ssr: false })
+const Bar = dynamic(() => import('react-chartjs-2').then(mod => mod.Bar), { ssr: false })
+const Doughnut = dynamic(() => import('react-chartjs-2').then(mod => mod.Doughnut), { ssr: false })
 
 // ── Types ──
 interface IgAccount {
@@ -154,6 +146,13 @@ export default function InstagramAnalytics() {
   const growthChartRef = useRef<ChartJS<'line'>>(null)
   const formatChartRef = useRef<ChartJS<'bar'>>(null)
   const pillarsChartRef = useRef<ChartJS<'doughnut'>>(null)
+
+  // ── Register chart.js modules lazily ──
+  useEffect(() => {
+    import('chart.js').then(({ Chart, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend }) => {
+      Chart.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Tooltip, Legend)
+    })
+  }, [])
 
   // ── OAuth callback check ──
   useEffect(() => {

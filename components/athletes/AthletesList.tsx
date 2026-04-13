@@ -2,6 +2,7 @@
 
 import { useState, useMemo, memo } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -53,7 +54,7 @@ const AthleteCard = memo(function AthleteCard({ athlete, href }: { athlete: Athl
       <div className={styles.cardTopBar} style={topBarStyle} />
       <div className={styles.cardHead}>
         {athlete.avatar_url ? (
-          <img src={athlete.avatar_url} alt="" className={styles.cardAvatar} />
+          <Image src={athlete.avatar_url} alt="" width={40} height={40} style={{ borderRadius: '50%', objectFit: 'cover' }} className={styles.cardAvatar} />
         ) : (
           <div className={styles.cardAvatarFallback}>{initials}</div>
         )}
