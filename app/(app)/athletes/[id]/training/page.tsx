@@ -1000,7 +1000,7 @@ function TemplatePicker({
 
   return (
     <div className="modal-overlay open" onClick={onClose}>
-      <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 540, maxHeight: '80vh', display: 'flex', flexDirection: 'column', padding: 0 }}>
         <div className="modal-header">
           <h3 className="modal-title">Choisir un template</h3>
           <button className="modal-close" onClick={onClose}>
