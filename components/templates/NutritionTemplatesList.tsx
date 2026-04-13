@@ -90,6 +90,12 @@ export default function NutritionTemplatesList({ templates, onRefresh, onEdit, o
     })
   }, [groups])
 
+  const mealCounts = useMemo(() => {
+    const map = new Map<string, number>()
+    templates.forEach((t) => map.set(t.id, mealCount(t)))
+    return map
+  }, [templates])
+
   const toggleCategory = (cat: string) => {
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }))
   }
@@ -173,7 +179,7 @@ export default function NutritionTemplatesList({ templates, onRefresh, onEdit, o
               {!isCollapsed && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(300px,1fr))', gap: 8 }}>
                   {items.map((t) => {
-                    const mc = mealCount(t)
+                    const mc = mealCounts.get(t.id) ?? 0
                     const tplType = (t.template_type || 'jour') as SubTab
                     const subtitle = tplType === 'diete'
                       ? `${t.calories_objectif || 0} kcal (ON) · ${mc} repas total`

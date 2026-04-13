@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -199,6 +199,11 @@ export default function WorkflowsList({ workflows, onRefresh }: Props) {
     )
   }
 
+  const parsedWorkflows = useMemo(
+    () => workflows.map((wf) => ({ ...wf, parsedSteps: parseSteps(wf.steps) })),
+    [workflows]
+  )
+
   // List view
   return (
     <div>
@@ -211,8 +216,8 @@ export default function WorkflowsList({ workflows, onRefresh }: Props) {
       {workflows.length === 0 ? (
         <EmptyState icon="fas fa-route" message="Aucun workflow" />
       ) : (
-        workflows.map((wf) => {
-          const steps = parseSteps(wf.steps)
+        parsedWorkflows.map((wf) => {
+          const steps = wf.parsedSteps
           return (
             <div key={wf.id} className="card" style={{ marginBottom: 16 }}>
               <div className="card-header">

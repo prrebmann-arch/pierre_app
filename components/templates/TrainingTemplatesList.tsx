@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import Button from '@/components/ui/Button'
 import EmptyState from '@/components/ui/EmptyState'
 
@@ -174,7 +174,7 @@ export default function TrainingTemplatesList({ templates, onEdit, onCreate, onD
   )
 }
 
-function TrainingTemplateCard({
+const TrainingTemplateCard = memo(function TrainingTemplateCard({
   template,
   onEdit,
   onDelete,
@@ -185,18 +185,19 @@ function TrainingTemplateCard({
 }) {
   const [hovered, setHovered] = useState(false)
 
-  const sd = template.sessions_data ?? []
-  let totalEx = 0
-  let totalSeries = 0
-  sd.forEach((s) => {
-    const exs = parseSessionExercises(s)
-    exs.forEach((ex) => {
-      totalEx++
-      totalSeries += parseInt(String(ex.series)) || 0
+  const { totalEx, totalSeries, sessionTags } = useMemo(() => {
+    const sd = template.sessions_data ?? []
+    let ex = 0
+    let series = 0
+    sd.forEach((s) => {
+      const exs = parseSessionExercises(s)
+      exs.forEach((e) => {
+        ex++
+        series += parseInt(String(e.series)) || 0
+      })
     })
-  })
-
-  const sessionTags = sd.map((s) => s.nom || 'Seance')
+    return { totalEx: ex, totalSeries: series, sessionTags: sd.map((s) => s.nom || 'Seance') }
+  }, [template.sessions_data])
 
   return (
     <div
@@ -303,7 +304,7 @@ function TrainingTemplateCard({
       }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <i className="fas fa-calendar-day" style={{ fontSize: 10, color: 'var(--primary)', opacity: 0.7 }} />
-          <span><strong style={{ color: 'var(--text2)', fontWeight: 600 }}>{sd.length}</strong> seance{sd.length > 1 ? 's' : ''}</span>
+          <span><strong style={{ color: 'var(--text2)', fontWeight: 600 }}>{sessionTags.length}</strong> seance{sessionTags.length > 1 ? 's' : ''}</span>
         </span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <i className="fas fa-dumbbell" style={{ fontSize: 10, color: 'var(--primary)', opacity: 0.7 }} />
@@ -346,4 +347,4 @@ function TrainingTemplateCard({
       )}
     </div>
   )
-}
+})

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import Tabs from '@/components/ui/Tabs'
@@ -194,8 +194,14 @@ export default function TemplatesPage() {
     ? nutritionTemplates.find((t) => t.id === editingNutrition)
     : null
 
-  const existingTrainingCategories = [...new Set(trainingTemplates.map((t) => t.category).filter(Boolean))] as string[]
-  const existingNutritionCategories = [...new Set(nutritionTemplates.map((t) => t.category).filter(Boolean))] as string[]
+  const existingTrainingCategories = useMemo(
+    () => [...new Set(trainingTemplates.map((t) => t.category).filter(Boolean))] as string[],
+    [trainingTemplates]
+  )
+  const existingNutritionCategories = useMemo(
+    () => [...new Set(nutritionTemplates.map((t) => t.category).filter(Boolean))] as string[],
+    [nutritionTemplates]
+  )
 
   /** Parse training template sessions_data into ProgramEditor's format */
   function parseEditorSessions(tpl: TrainingTemplate) {
