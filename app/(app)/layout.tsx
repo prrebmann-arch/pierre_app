@@ -44,7 +44,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, loading, timedOut, router, isReturning, settled])
 
   // Safari freezes JS when switching apps — pending Supabase promises never resolve
-  // On return, force reload if page was hidden for more than 30 seconds
+  // On return, force reload if page was hidden for more than 1 second
   const hiddenAtRef = useRef<number | null>(null)
   useEffect(() => {
     const handleVisibility = () => {
@@ -53,8 +53,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       } else if (document.visibilityState === 'visible' && hiddenAtRef.current) {
         const hiddenFor = Date.now() - hiddenAtRef.current
         hiddenAtRef.current = null
-        // If hidden for more than 30s, Safari likely froze JS — reload
-        if (hiddenFor > 30000) {
+        // If hidden for more than 1s, Safari likely froze JS — reload
+        // (reload is fast: cached assets + instant auth from localStorage)
+        if (hiddenFor > 1000) {
           window.location.reload()
         }
       }

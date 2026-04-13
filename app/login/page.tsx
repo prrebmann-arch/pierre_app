@@ -43,7 +43,7 @@ export default function LoginPage() {
       } else if (document.visibilityState === 'visible' && hiddenAtRef.current) {
         const hiddenFor = Date.now() - hiddenAtRef.current
         hiddenAtRef.current = null
-        if (hiddenFor > 3000) {
+        if (hiddenFor > 1000) {
           window.location.reload()
         }
       }
