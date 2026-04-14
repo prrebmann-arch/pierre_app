@@ -11,6 +11,7 @@ import { getPageCache, setPageCache } from '@/lib/utils'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import BilanAccordion from '@/components/bilans/BilanAccordion'
+import BilanProgressView from '@/components/bilans/BilanProgressView'
 import PhotoCompare from '@/components/bilans/PhotoCompare'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
@@ -213,6 +214,9 @@ export default function BilansPage() {
   const [photoType, setPhotoType] = useState<PhotoType>('front')
   const [photoDate, setPhotoDate] = useState('')
 
+  // View mode
+  const [viewMode, setViewMode] = useState<'table' | 'progress'>('table')
+
   // Bilan traite popup state
   const [bilanTraiteOpen, setBilanTraiteOpen] = useState(false)
 
@@ -349,20 +353,51 @@ export default function BilansPage() {
     )
   }
 
+  const handleLoadPhotos = useCallback(() => {
+    if (!photosLoaded) loadPhotosForBilans(bilans)
+  }, [photosLoaded, bilans, loadPhotosForBilans])
+
   return (
     <>
-      <BilanAccordion
-        bilans={bilans}
-        allWLogs={allWLogs}
-        progWeeks={progWeeks}
-        nutriPlans={nutriPlans}
-        roadmapPhases={roadmapPhases}
-        athlete={selectedAthlete}
-        photoHistory={photoHistory}
-        onDeleteBilan={handleDelete}
-        onOpenPhoto={handleOpenPhoto}
-        onOpenBilanTraite={() => setBilanTraiteOpen(true)}
-      />
+      {/* View toggle */}
+      <div className={styles.bpToggle}>
+        <button
+          className={`${styles.bpToggleBtn} ${viewMode === 'table' ? styles.bpToggleBtnActive : ''}`}
+          onClick={() => setViewMode('table')}
+        >
+          <i className="fas fa-table-list" />
+          Tableau
+        </button>
+        <button
+          className={`${styles.bpToggleBtn} ${viewMode === 'progress' ? styles.bpToggleBtnActive : ''}`}
+          onClick={() => setViewMode('progress')}
+        >
+          <i className="fas fa-chart-line" />
+          Progression
+        </button>
+      </div>
+
+      {viewMode === 'progress' ? (
+        <BilanProgressView
+          bilans={bilans}
+          photoHistory={photoHistory}
+          onOpenPhoto={handleOpenPhoto}
+          onLoadPhotos={handleLoadPhotos}
+        />
+      ) : (
+        <BilanAccordion
+          bilans={bilans}
+          allWLogs={allWLogs}
+          progWeeks={progWeeks}
+          nutriPlans={nutriPlans}
+          roadmapPhases={roadmapPhases}
+          athlete={selectedAthlete}
+          photoHistory={photoHistory}
+          onDeleteBilan={handleDelete}
+          onOpenPhoto={handleOpenPhoto}
+          onOpenBilanTraite={() => setBilanTraiteOpen(true)}
+        />
+      )}
 
       <PhotoCompare
         isOpen={photoOpen}

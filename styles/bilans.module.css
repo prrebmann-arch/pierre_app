@@ -544,3 +544,126 @@
 }
 .btMicBtn:hover { border-color: var(--primary); color: var(--text); }
 .btMicBtn i { font-size: 13px; }
+
+/* ===== BILAN PROGRESS VIEW (.bp-*) ===== */
+
+/* Toggle */
+.bpToggle {
+  display: flex; gap: 0; margin-bottom: 16px;
+  background: var(--bg2); border-radius: 10px; padding: 3px;
+  border: 1px solid var(--border); width: fit-content;
+}
+.bpToggleBtn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 8px 20px; border-radius: 8px; border: none;
+  background: transparent; color: var(--text3);
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  font-family: 'Inter', sans-serif; transition: all 0.15s;
+}
+.bpToggleBtn:hover { color: var(--text2); }
+.bpToggleBtnActive {
+  background: var(--bg3); color: var(--text);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+/* Container */
+.bpContainer {
+  display: flex; flex-direction: column; gap: 12px;
+}
+
+/* Chart cards */
+.bpChartCard {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: var(--radius); overflow: hidden;
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+}
+.bpChartHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+.bpChartTitle {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.bpChartValues {
+  display: flex; align-items: baseline; gap: 10px;
+}
+.bpChartCurrent {
+  font-size: 20px; font-weight: 800; color: var(--text);
+}
+.bpChartDelta {
+  font-size: 13px; font-weight: 700;
+}
+.bpSvg {
+  width: 100%; height: auto;
+  padding: 0 12px 8px;
+}
+.bpEmpty {
+  text-align: center; color: var(--text3); font-size: 12px;
+  padding: 24px 16px;
+}
+
+/* Photo timeline */
+.bpPhotoScroll {
+  display: flex; gap: 14px; overflow-x: auto;
+  padding: 6px 16px 14px;
+  scrollbar-width: thin;
+}
+.bpPhotoScroll::-webkit-scrollbar { height: 4px; }
+.bpPhotoScroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.bpPhotoGroup {
+  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.bpPhotoDate {
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  letter-spacing: 0.3px;
+}
+.bpPhotoRow {
+  display: flex; gap: 4px;
+}
+.bpPhotoThumb {
+  width: 62px; height: 92px; border-radius: 6px; overflow: hidden;
+  background: var(--bg3); cursor: pointer; position: relative;
+  border: 1px solid var(--border); transition: all 0.15s;
+}
+.bpPhotoThumb:hover {
+  border-color: var(--primary); transform: scale(1.03);
+}
+.bpPhotoThumb img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.bpPhotoPlaceholder {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.bpPhotoLabel {
+  position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+  font-size: 8px; font-weight: 700; color: rgba(255,255,255,0.7);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Weekly averages table */
+.bpWeeksTable {
+  padding: 0 16px 12px;
+}
+.bpWeekRow {
+  display: grid;
+  grid-template-columns: 160px repeat(6, 1fr) 60px;
+  gap: 0; padding: 8px 0; align-items: center;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.bpWeekDate {
+  font-size: 11px; font-weight: 600; color: var(--text2);
+  white-space: nowrap;
+}
+.bpWeekCell {
+  text-align: center; font-size: 12px; color: var(--text2);
+}
+
+@media (max-width: 768px) {
+  .bpWeekRow { grid-template-columns: 120px repeat(6, 1fr) 50px; }
+  .bpPhotoThumb { width: 50px; height: 75px; }
+  .bpChartCurrent { font-size: 16px; }
+}
