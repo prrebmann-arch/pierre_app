@@ -568,7 +568,6 @@
   border: 1px solid var(--border);
 }
 
-/* Container */
 .bpContainer { display: flex; flex-direction: column; gap: 16px; }
 
 /* ─── Hero Strip ─── */
@@ -580,15 +579,25 @@
 .bpHeroCard {
   background: var(--bg2); border: 1px solid var(--glass-border);
   border-radius: 20px; padding: 18px 20px; position: relative; overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.bpHeroCard::before {
+  content: ''; position: absolute; inset: -1px; border-radius: 20px;
+  background: conic-gradient(from 0deg, transparent, rgba(179,8,8,0.3), transparent, rgba(59,130,246,0.2), transparent);
+  opacity: 0; transition: opacity 0.4s; z-index: 0;
+  animation: bpGlowSpin 6s linear infinite;
+}
+.bpHeroCard:hover::before { opacity: 1; }
 .bpHeroCard:hover {
-  border-color: rgba(255,255,255,0.15);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+.bpHeroCard > * { position: relative; z-index: 1; }
+@keyframes bpGlowSpin {
+  to { transform: rotate(360deg); }
 }
 .bpHeroBar {
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  position: absolute; top: 0; left: 0; right: 0; height: 3px; z-index: 2;
 }
 .bpHeroIcon {
   width: 36px; height: 36px; border-radius: 10px;
@@ -602,9 +611,7 @@
 .bpHeroUnit {
   font-size: 12px; font-weight: 400; color: var(--text3); margin-left: 3px;
 }
-.bpHeroDelta {
-  font-size: 11px; font-weight: 700; margin-top: 2px;
-}
+.bpHeroDelta { font-size: 11px; font-weight: 700; margin-top: 2px; }
 .bpHeroLabel {
   font-size: 11px; font-weight: 600; color: var(--text3); margin-top: 6px;
   text-transform: uppercase; letter-spacing: 0.5px;
@@ -617,7 +624,6 @@
   transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .bpSection:hover { border-color: rgba(255,255,255,0.15); }
-
 .bpSectionHeader {
   display: flex; align-items: center; justify-content: space-between;
   padding: 20px 24px 10px;
@@ -628,74 +634,69 @@
 }
 .bpSectionTitleIcon {
   width: 30px; height: 30px; border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 13px;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
 }
 .bpSectionBadge {
   font-size: 11px; font-weight: 600; color: var(--text3);
   background: var(--bg3); padding: 4px 10px; border-radius: 6px;
 }
-
 .bpEmpty {
   text-align: center; color: var(--text3); font-size: 13px;
   padding: 32px 24px; font-style: italic;
 }
 
-/* ─── Photo Timeline ─── */
-.bpPhotoScroll {
-  display: flex; gap: 16px; overflow-x: auto;
-  padding: 6px 24px 20px;
-  scroll-behavior: smooth;
-  scrollbar-width: thin;
+/* ─── Photo Timeline Grid ─── */
+.bpPhotoGrid {
+  display: flex; flex-direction: column; gap: 0;
+  padding: 0 24px 20px;
 }
-.bpPhotoScroll::-webkit-scrollbar { height: 3px; }
-.bpPhotoScroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-
-.bpPhotoCard {
-  flex-shrink: 0; min-width: 340px;
-  background: var(--bg3); border: 1px solid var(--glass-border);
-  border-radius: 14px; overflow: hidden;
+.bpPhotoRow {
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.bpPhotoRow:last-child { border-bottom: none; }
+.bpPhotoRowLeft {
+  width: 130px; flex-shrink: 0;
+}
+.bpPhotoRowDate {
+  font-size: 13px; font-weight: 700; color: var(--text);
+  margin-bottom: 2px;
+}
+.bpPhotoRowBadge {
+  display: inline-block; font-size: 9px; font-weight: 800; letter-spacing: 0.8px;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 4px;
+}
+.bpPhotoRowBadgeFirst {
+  background: rgba(255,255,255,0.08); color: var(--text3);
+}
+.bpPhotoRowBadgeLast {
+  background: rgba(34,197,94,0.15); color: var(--success);
+}
+.bpPhotoRowImages {
+  display: flex; gap: 8px; flex: 1;
+}
+.bpPhotoImgWrap {
+  width: 140px; height: 210px; border-radius: 12px; overflow: hidden;
+  position: relative; cursor: pointer; flex-shrink: 0;
+  border: 1px solid rgba(255,255,255,0.06);
   transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.bpPhotoCard:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255,255,255,0.18);
-  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
+.bpPhotoImgWrap:hover {
+  transform: scale(1.04);
+  border-color: rgba(179,8,8,0.4);
+  box-shadow: 0 0 20px rgba(179,8,8,0.15), 0 8px 24px rgba(0,0,0,0.4);
+  filter: brightness(1.08);
 }
-.bpPhotoCardFirst { border-left: 3px solid var(--text3); }
-.bpPhotoCardLast { border-left: 3px solid var(--success); }
-
-.bpPhotoCardHeader {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px 8px;
-}
-.bpPhotoCardDate {
-  font-size: 13px; font-weight: 700; color: var(--text);
-}
-.bpPhotoCardBadge {
-  font-size: 10px; font-weight: 700; color: var(--text3);
-  background: var(--bg4); padding: 3px 8px; border-radius: 5px;
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-
-.bpPhotoCardGrid {
-  display: flex; gap: 6px; padding: 0 12px 12px; justify-content: center;
-}
-.bpPhotoImg {
-  width: 100px; height: 150px; border-radius: 8px; overflow: hidden;
-  position: relative; cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.bpPhotoImg:hover { transform: scale(1.03); filter: brightness(1.05); }
-.bpPhotoImg img {
+.bpPhotoImgWrap img {
   width: 100%; height: 100%; object-fit: cover; display: block;
 }
 .bpPhotoOverlay {
   position: absolute; bottom: 0; left: 0; right: 0;
-  background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
-  text-align: center; padding: 3px 0;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  text-align: center; padding: 4px 0;
   font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.85);
-  letter-spacing: 1px; text-transform: uppercase;
+  letter-spacing: 1.2px; text-transform: uppercase;
 }
 .bpPhotoPlaceholder {
   width: 100%; height: 100%; background: var(--bg4);
@@ -704,8 +705,7 @@
 
 /* ─── Weight Chart ─── */
 .bpChartWrap {
-  position: relative; cursor: crosshair;
-  padding: 4px 24px 8px;
+  position: relative; cursor: crosshair; padding: 4px 24px 8px;
 }
 .bpSvg { width: 100%; height: auto; display: block; }
 .bpChartValues { display: flex; align-items: baseline; gap: 12px; }
@@ -714,11 +714,9 @@
 }
 .bpChartUnit { font-size: 11px; font-weight: 400; color: var(--text3); }
 .bpChartDelta { font-size: 13px; font-weight: 700; }
-
 .bpCrosshair {
   position: absolute; top: 4px; bottom: 8px; width: 1px;
-  background: rgba(255,255,255,0.2);
-  pointer-events: none; display: none;
+  background: rgba(255,255,255,0.25); pointer-events: none; display: none;
 }
 .bpTooltip {
   position: absolute; top: 0;
@@ -727,73 +725,96 @@
   border-radius: 6px; white-space: nowrap;
   pointer-events: none; display: none;
   transform: translateX(-50%);
-  box-shadow: 0 2px 8px rgba(179,8,8,0.4);
+  box-shadow: 0 2px 12px rgba(179,8,8,0.5);
 }
-
-/* Weight stats row */
 .bpWeightStats {
   display: flex; gap: 12px; padding: 4px 24px 16px;
 }
 .bpWeightStatPill {
   font-size: 11px; color: var(--text3);
-  background: rgba(255,255,255,0.04); border-radius: 6px;
-  padding: 4px 10px;
+  background: rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 10px;
+  display: flex; align-items: center; gap: 4px;
 }
-.bpWeightStatPill strong {
-  font-weight: 700; color: var(--text2); margin-left: 2px;
-}
+.bpWeightStatPill strong { font-weight: 700; color: var(--text2); }
+.bpWeightStatPill i { font-size: 9px; }
 
 /* ─── Mensurations wrapper ─── */
 .bpMensWrap { padding: 4px 16px 16px; }
 
-/* ─── Metric Sparklines Grid ─── */
-.bpMetricsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
-  padding: 6px 20px 16px;
-}
-.bpMetricCard {
-  background: var(--glass-bg); border: 1px solid var(--glass-border);
-  border-radius: 12px; padding: 14px 16px 10px; overflow: hidden;
-  transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.bpMetricCard:hover { border-color: rgba(255,255,255,0.15); }
-
-.bpMetricHeader {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
-}
-.bpMetricIcon {
-  width: 24px; height: 24px; border-radius: 6px;
+/* ─── Radar Chart ─── */
+.bpRadarWrap {
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; flex-shrink: 0;
+  padding: 16px 24px 20px;
 }
-.bpMetricLabel {
-  font-size: 12px; font-weight: 600; color: var(--text2);
+.bpRadarSvg { max-width: 380px; width: 100%; }
+.bpRadarLegend {
+  display: flex; gap: 16px; justify-content: center;
+  padding: 0 24px 16px;
 }
-.bpMetricValues {
-  margin-left: auto; display: flex; align-items: baseline; gap: 8px;
+.bpRadarLegendItem {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600; color: var(--text3);
 }
-.bpMetricCurrent {
-  font-size: 18px; font-weight: 700; color: var(--text);
+.bpRadarLegendDot {
+  width: 10px; height: 10px; border-radius: 3px;
 }
-.bpMetricDelta {
-  font-size: 11px; font-weight: 700;
+
+/* ─── Heatmap ─── */
+.bpHeatmapWrap {
+  padding: 8px 24px 20px; overflow-x: auto;
 }
-.bpMetricChartWrap {
-  position: relative; cursor: crosshair; margin-top: 2px;
+.bpHeatmapTable {
+  display: flex; flex-direction: column; gap: 3px;
+  min-width: fit-content;
 }
-.bpMetricCrosshair {
-  position: absolute; top: 0; bottom: 0; width: 1px;
-  background: rgba(255,255,255,0.2);
-  pointer-events: none; display: none;
+.bpHeatmapRow {
+  display: flex; align-items: center; gap: 3px;
 }
-.bpMetricTooltip {
-  position: absolute; top: -4px;
-  font-size: 10px; font-weight: 700; padding: 3px 8px; color: #fff;
-  border-radius: 5px; white-space: nowrap;
-  pointer-events: none; display: none;
-  transform: translateX(-50%);
+.bpHeatmapLabel {
+  width: 80px; flex-shrink: 0;
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  text-transform: uppercase; letter-spacing: 0.3px;
+  text-align: right; padding-right: 8px;
+}
+.bpHeatmapCell {
+  width: 14px; height: 14px; border-radius: 3px;
+  background: rgba(255,255,255,0.04);
+  transition: all 0.15s;
+  cursor: default; position: relative;
+}
+.bpHeatmapCell:hover {
+  transform: scale(1.6); z-index: 10;
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
+}
+.bpHeatGood { background: rgba(34,197,94,0.6); }
+.bpHeatOk { background: rgba(245,158,11,0.5); }
+.bpHeatBad { background: rgba(239,68,68,0.5); }
+.bpHeatEmpty { background: rgba(255,255,255,0.03); }
+
+.bpHeatmapTooltip {
+  position: fixed; z-index: 9999;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 11px; font-weight: 600;
+  padding: 4px 10px; border-radius: 6px; white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.bpHeatmapDayHeaders {
+  display: flex; gap: 3px; padding-left: 88px; margin-bottom: 2px;
+}
+.bpHeatmapDayHeader {
+  width: 14px; text-align: center;
+  font-size: 8px; font-weight: 700; color: var(--text3);
+  letter-spacing: 0;
+}
+
+.bpHeatmapLegend {
+  display: flex; gap: 8px; align-items: center; justify-content: flex-end;
+  padding: 8px 0 0; font-size: 10px; color: var(--text3);
+}
+.bpHeatmapLegendBox {
+  width: 10px; height: 10px; border-radius: 2px;
 }
 
 /* ─── Responsive ─── */
@@ -801,19 +822,22 @@
   .bpHeroStrip { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
   .bpHeroValue { font-size: 22px; }
   .bpSectionHeader { padding: 16px 18px 8px; }
-  .bpPhotoScroll { padding: 4px 18px 16px; gap: 12px; }
-  .bpPhotoCard { min-width: 280px; }
-  .bpPhotoImg { width: 80px; height: 120px; }
+  .bpPhotoGrid { padding: 0 18px 16px; }
+  .bpPhotoImgWrap { width: 110px; height: 165px; }
+  .bpPhotoRowLeft { width: 100px; }
   .bpChartWrap { padding: 4px 18px 8px; }
   .bpWeightStats { padding: 4px 18px 14px; }
-  .bpMetricsGrid { grid-template-columns: 1fr 1fr; padding: 4px 14px 14px; }
+  .bpRadarSvg { max-width: 300px; }
+  .bpHeatmapWrap { padding: 8px 18px 16px; }
 }
 @media (max-width: 600px) {
   .bpHeroStrip { grid-template-columns: 1fr 1fr; gap: 8px; }
   .bpHeroCard { padding: 14px 16px; }
   .bpHeroValue { font-size: 20px; }
-  .bpPhotoCard { min-width: 240px; }
-  .bpPhotoImg { width: 66px; height: 100px; }
-  .bpMetricsGrid { grid-template-columns: 1fr; }
-  .bpMetricCurrent { font-size: 16px; }
+  .bpPhotoRow { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .bpPhotoRowLeft { width: auto; }
+  .bpPhotoImgWrap { width: 100px; height: 150px; }
+  .bpRadarSvg { max-width: 260px; }
+  .bpHeatmapCell { width: 11px; height: 11px; }
+  .bpHeatmapLabel { width: 60px; font-size: 9px; }
 }
