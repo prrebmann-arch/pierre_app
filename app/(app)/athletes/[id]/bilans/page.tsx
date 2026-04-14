@@ -336,6 +336,10 @@ export default function BilansPage() {
     }
   }, [photosLoaded, bilans, loadPhotosForBilans])
 
+  const handleLoadPhotos = useCallback(() => {
+    if (!photosLoaded) loadPhotosForBilans(bilans)
+  }, [photosLoaded, bilans, loadPhotosForBilans])
+
   if (!selectedAthlete || loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -352,10 +356,6 @@ export default function BilansPage() {
       />
     )
   }
-
-  const handleLoadPhotos = useCallback(() => {
-    if (!photosLoaded) loadPhotosForBilans(bilans)
-  }, [photosLoaded, bilans, loadPhotosForBilans])
 
   return (
     <>
