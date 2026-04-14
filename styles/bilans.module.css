@@ -559,7 +559,7 @@
   background: transparent; color: var(--text3);
   font-size: 13px; font-weight: 600; cursor: pointer;
   font-family: 'Inter', sans-serif;
-  transition: all var(--transition-fast);
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .bpToggleBtn:hover { color: var(--text2); background: rgba(255,255,255,0.03); }
 .bpToggleBtnActive {
@@ -569,39 +569,73 @@
 }
 
 /* Container */
-.bpContainer {
-  display: flex; flex-direction: column; gap: 16px;
+.bpContainer { display: flex; flex-direction: column; gap: 16px; }
+
+/* ─── Hero Strip ─── */
+.bpHeroStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 10px;
+}
+.bpHeroCard {
+  background: var(--bg2); border: 1px solid var(--glass-border);
+  border-radius: 20px; padding: 18px 20px; position: relative; overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bpHeroCard:hover {
+  border-color: rgba(255,255,255,0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.bpHeroBar {
+  position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.bpHeroIcon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; margin-bottom: 10px;
+}
+.bpHeroValue {
+  font-size: 26px; font-weight: 800; color: var(--text);
+  letter-spacing: -0.03em; line-height: 1.1;
+}
+.bpHeroUnit {
+  font-size: 12px; font-weight: 400; color: var(--text3); margin-left: 3px;
+}
+.bpHeroDelta {
+  font-size: 11px; font-weight: 700; margin-top: 2px;
+}
+.bpHeroLabel {
+  font-size: 11px; font-weight: 600; color: var(--text3); margin-top: 6px;
+  text-transform: uppercase; letter-spacing: 0.5px;
 }
 
-/* Section cards */
+/* ─── Section cards ─── */
 .bpSection {
-  background: var(--bg2);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  transition: border-color var(--transition-fast);
+  background: var(--bg2); border: 1px solid var(--glass-border);
+  border-radius: 20px; overflow: hidden;
+  transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .bpSection:hover { border-color: rgba(255,255,255,0.15); }
 
 .bpSectionHeader {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px 12px;
+  padding: 20px 24px 10px;
 }
 .bpSectionTitle {
   display: flex; align-items: center; gap: 10px;
   font-size: 15px; font-weight: 700; color: var(--text);
 }
 .bpSectionTitleIcon {
-  width: 28px; height: 28px; border-radius: 8px;
+  width: 30px; height: 30px; border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
+  font-size: 13px;
 }
 .bpSectionBadge {
   font-size: 11px; font-weight: 600; color: var(--text3);
   background: var(--bg3); padding: 4px 10px; border-radius: 6px;
 }
 
-/* Empty state */
 .bpEmpty {
   text-align: center; color: var(--text3); font-size: 13px;
   padding: 32px 24px; font-style: italic;
@@ -609,81 +643,80 @@
 
 /* ─── Photo Timeline ─── */
 .bpPhotoScroll {
-  display: flex; gap: 20px; overflow-x: auto;
-  padding: 4px 24px 20px;
-  scrollbar-width: thin;
+  display: flex; gap: 16px; overflow-x: auto;
+  padding: 6px 24px 20px;
   scroll-behavior: smooth;
+  scrollbar-width: thin;
 }
 .bpPhotoScroll::-webkit-scrollbar { height: 3px; }
 .bpPhotoScroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.bpPhotoScroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.15); }
 
-.bpPhotoGroup {
-  flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 8px;
+.bpPhotoCard {
+  flex-shrink: 0; min-width: 340px;
+  background: var(--bg3); border: 1px solid var(--glass-border);
+  border-radius: 14px; overflow: hidden;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.bpPhotoDate {
-  font-size: 11px; font-weight: 700; color: var(--text2);
-  letter-spacing: 0.3px; white-space: nowrap;
+.bpPhotoCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255,255,255,0.18);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.5);
 }
-.bpPhotoRow {
-  display: flex; gap: 6px;
+.bpPhotoCardFirst { border-left: 3px solid var(--text3); }
+.bpPhotoCardLast { border-left: 3px solid var(--success); }
+
+.bpPhotoCardHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px 8px;
 }
-.bpPhotoThumb {
-  width: 80px; height: 120px; border-radius: 10px; overflow: hidden;
-  background: var(--bg3); cursor: pointer; position: relative;
-  border: 1px solid var(--border);
-  transition: all var(--transition-fast);
+.bpPhotoCardDate {
+  font-size: 13px; font-weight: 700; color: var(--text);
 }
-.bpPhotoThumb:hover {
-  border-color: var(--primary);
-  transform: translateY(-3px) scale(1.02);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(179,8,8,0.3);
+.bpPhotoCardBadge {
+  font-size: 10px; font-weight: 700; color: var(--text3);
+  background: var(--bg4); padding: 3px 8px; border-radius: 5px;
+  text-transform: uppercase; letter-spacing: 0.5px;
 }
-.bpPhotoThumb img {
+
+.bpPhotoCardGrid {
+  display: flex; gap: 6px; padding: 0 12px 12px; justify-content: center;
+}
+.bpPhotoImg {
+  width: 100px; height: 150px; border-radius: 8px; overflow: hidden;
+  position: relative; cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.bpPhotoImg:hover { transform: scale(1.03); filter: brightness(1.05); }
+.bpPhotoImg img {
   width: 100%; height: 100%; object-fit: cover; display: block;
-  transition: opacity var(--transition-fast);
 }
-.bpPhotoThumb:hover img { opacity: 0.9; }
+.bpPhotoOverlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  text-align: center; padding: 3px 0;
+  font-size: 9px; font-weight: 800; color: rgba(255,255,255,0.85);
+  letter-spacing: 1px; text-transform: uppercase;
+}
 .bpPhotoPlaceholder {
-  width: 100%; height: 100%;
+  width: 100%; height: 100%; background: var(--bg4);
   display: flex; align-items: center; justify-content: center;
-  background: var(--bg4);
-}
-.bpPhotoLabel {
-  position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
-  font-size: 9px; font-weight: 700; color: rgba(255,255,255,0.8);
-  text-transform: uppercase; letter-spacing: 0.8px;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
-  background: rgba(0,0,0,0.4); padding: 1px 6px; border-radius: 4px;
-}
-
-/* Photo group dividers */
-.bpPhotoGroup + .bpPhotoGroup {
-  padding-left: 20px;
-  border-left: 1px solid var(--border-subtle);
 }
 
 /* ─── Weight Chart ─── */
 .bpChartWrap {
   position: relative; cursor: crosshair;
-  padding: 4px 24px 16px;
+  padding: 4px 24px 8px;
 }
-.bpSvg {
-  width: 100%; height: auto; display: block;
-}
-.bpChartValues {
-  display: flex; align-items: baseline; gap: 12px;
-}
+.bpSvg { width: 100%; height: auto; display: block; }
+.bpChartValues { display: flex; align-items: baseline; gap: 12px; }
 .bpChartCurrent {
-  font-size: 24px; font-weight: 800; color: var(--text);
-  letter-spacing: -0.5px;
+  font-size: 24px; font-weight: 800; color: var(--text); letter-spacing: -0.5px;
 }
-.bpChartDelta {
-  font-size: 13px; font-weight: 700;
-}
-/* Crosshair & tooltip for weight chart */
+.bpChartUnit { font-size: 11px; font-weight: 400; color: var(--text3); }
+.bpChartDelta { font-size: 13px; font-weight: 700; }
+
 .bpCrosshair {
-  position: absolute; top: 4px; bottom: 16px; width: 1px;
+  position: absolute; top: 4px; bottom: 8px; width: 1px;
   background: rgba(255,255,255,0.2);
   pointer-events: none; display: none;
 }
@@ -697,72 +730,90 @@
   box-shadow: 0 2px 8px rgba(179,8,8,0.4);
 }
 
+/* Weight stats row */
+.bpWeightStats {
+  display: flex; gap: 12px; padding: 4px 24px 16px;
+}
+.bpWeightStatPill {
+  font-size: 11px; color: var(--text3);
+  background: rgba(255,255,255,0.04); border-radius: 6px;
+  padding: 4px 10px;
+}
+.bpWeightStatPill strong {
+  font-weight: 700; color: var(--text2); margin-left: 2px;
+}
+
 /* ─── Mensurations wrapper ─── */
-.bpMensWrap {
-  padding: 4px 16px 16px;
-}
+.bpMensWrap { padding: 4px 16px 16px; }
 
-/* ─── Weekly Averages ─── */
-.bpWeeksGrid {
-  display: flex; flex-direction: column; gap: 2px;
-  padding: 4px 20px 16px;
-}
-
-/* Week row as a mini card */
-.bpWeekRow {
+/* ─── Metric Sparklines Grid ─── */
+.bpMetricsGrid {
   display: grid;
-  grid-template-columns: 150px repeat(6, 1fr) 70px;
-  gap: 0; padding: 10px 12px; align-items: center;
-  border-radius: 8px;
-  transition: background var(--transition-fast);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 10px;
+  padding: 6px 20px 16px;
 }
-.bpWeekRow:hover { background: rgba(255,255,255,0.03); }
-
-/* Header row */
-.bpWeekRowHeader {
-  padding: 6px 12px 10px;
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: 2px;
+.bpMetricCard {
+  background: var(--glass-bg); border: 1px solid var(--glass-border);
+  border-radius: 12px; padding: 14px 16px 10px; overflow: hidden;
+  transition: border-color 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.bpWeekRowHeader:hover { background: transparent; }
+.bpMetricCard:hover { border-color: rgba(255,255,255,0.15); }
 
-.bpWeekDate {
+.bpMetricHeader {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
+}
+.bpMetricIcon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; flex-shrink: 0;
+}
+.bpMetricLabel {
   font-size: 12px; font-weight: 600; color: var(--text2);
-  white-space: nowrap;
 }
-.bpWeekCell {
-  text-align: center; font-size: 13px; color: var(--text2);
+.bpMetricValues {
+  margin-left: auto; display: flex; align-items: baseline; gap: 8px;
 }
-.bpWeekCellHeader {
-  font-size: 9px; font-weight: 700; color: var(--text3);
-  text-transform: uppercase; letter-spacing: 0.5px;
-  text-align: center;
+.bpMetricCurrent {
+  font-size: 18px; font-weight: 700; color: var(--text);
 }
-
-/* Color-coded value pill */
-.bpWeekPill {
-  display: inline-flex; align-items: center; justify-content: center;
-  padding: 3px 8px; border-radius: 5px;
-  font-size: 12px; font-weight: 700;
-  min-width: 36px;
+.bpMetricDelta {
+  font-size: 11px; font-weight: 700;
 }
-.bpPillGood { background: rgba(34,197,94,0.12); color: var(--success); }
-.bpPillOk { background: rgba(245,158,11,0.12); color: var(--warning); }
-.bpPillBad { background: rgba(239,68,68,0.12); color: var(--danger); }
+.bpMetricChartWrap {
+  position: relative; cursor: crosshair; margin-top: 2px;
+}
+.bpMetricCrosshair {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(255,255,255,0.2);
+  pointer-events: none; display: none;
+}
+.bpMetricTooltip {
+  position: absolute; top: -4px;
+  font-size: 10px; font-weight: 700; padding: 3px 8px; color: #fff;
+  border-radius: 5px; white-space: nowrap;
+  pointer-events: none; display: none;
+  transform: translateX(-50%);
+}
 
 /* ─── Responsive ─── */
 @media (max-width: 900px) {
-  .bpSectionHeader { padding: 16px 18px 10px; }
-  .bpPhotoScroll { padding: 4px 18px 16px; gap: 14px; }
-  .bpPhotoThumb { width: 66px; height: 100px; }
-  .bpChartWrap { padding: 4px 18px 12px; }
-  .bpChartCurrent { font-size: 20px; }
-  .bpWeekRow { grid-template-columns: 120px repeat(6, 1fr) 55px; }
-  .bpWeeksGrid { padding: 4px 14px 14px; }
+  .bpHeroStrip { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .bpHeroValue { font-size: 22px; }
+  .bpSectionHeader { padding: 16px 18px 8px; }
+  .bpPhotoScroll { padding: 4px 18px 16px; gap: 12px; }
+  .bpPhotoCard { min-width: 280px; }
+  .bpPhotoImg { width: 80px; height: 120px; }
+  .bpChartWrap { padding: 4px 18px 8px; }
+  .bpWeightStats { padding: 4px 18px 14px; }
+  .bpMetricsGrid { grid-template-columns: 1fr 1fr; padding: 4px 14px 14px; }
 }
 @media (max-width: 600px) {
-  .bpWeekRow { grid-template-columns: 100px repeat(6, 1fr) 45px; padding: 8px 8px; }
-  .bpWeekPill { font-size: 11px; padding: 2px 5px; min-width: 28px; }
-  .bpPhotoThumb { width: 54px; height: 82px; border-radius: 8px; }
-  .bpPhotoGroup + .bpPhotoGroup { padding-left: 14px; }
+  .bpHeroStrip { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .bpHeroCard { padding: 14px 16px; }
+  .bpHeroValue { font-size: 20px; }
+  .bpPhotoCard { min-width: 240px; }
+  .bpPhotoImg { width: 66px; height: 100px; }
+  .bpMetricsGrid { grid-template-columns: 1fr; }
+  .bpMetricCurrent { font-size: 16px; }
 }
