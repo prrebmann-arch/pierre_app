@@ -17,17 +17,7 @@ interface AthleteContextType {
 
 const AthleteContext = createContext<AthleteContextType | undefined>(undefined)
 
-const CACHE_KEY = 'athletes_cache'
-
-function getSessionCache(): Athlete[] | undefined {
-  if (typeof window === 'undefined') return undefined
-  try {
-    const cached = sessionStorage.getItem(CACHE_KEY)
-    return cached ? (JSON.parse(cached) as Athlete[]) : undefined
-  } catch {
-    return undefined
-  }
-}
+// sessionStorage cache removed — JSON.parse of 200+ athletes was blocking the main thread for 2-5s
 
 async function fetchAthletesData(userId: string): Promise<Athlete[]> {
   const supabase = createClient()
@@ -65,13 +55,6 @@ async function fetchAthletesData(userId: string): Promise<Athlete[]> {
 
   const fresh = (data as Athlete[]).map(a => ({ ...a, _phase: phaseMap[a.id] || null, _payment: planMap[a.id] || null }))
 
-  // Keep sessionStorage in sync for instant load on next visit
-  try {
-    sessionStorage.setItem(CACHE_KEY, JSON.stringify(fresh))
-  } catch {
-    // sessionStorage full — ignore
-  }
-
   return fresh
 }
 
@@ -85,7 +68,7 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     userId ? `athletes:${userId}` : null,
     () => fetchAthletesData(userId!),
     {
-      fallbackData: getSessionCache(),
+      fallbackData: undefined,
       revalidateOnFocus: false,
       dedupingInterval: 30000,
     },
@@ -98,10 +81,7 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     await mutate()
   }, [mutate])
 
-  // Clean up on logout
-  if (!userId && typeof window !== 'undefined') {
-    try { sessionStorage.removeItem(CACHE_KEY) } catch { /* */ }
-  }
+  // SWR in-memory cache handles cleanup automatically on key change
 
   const athleteList = athletes ?? []
 

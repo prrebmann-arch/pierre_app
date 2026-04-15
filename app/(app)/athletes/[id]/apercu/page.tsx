@@ -52,7 +52,7 @@ export default function ApercuPage() {
 
       const [reportsRes, phasesRes, progsRes, nutriRes, trackRes] = await Promise.all([
         userId
-          ? supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, steps, adherence').eq('user_id', userId).order('date', { ascending: false }).limit(60)
+          ? (() => { const d = new Date(); d.setDate(d.getDate() - 30); return supabase.from('daily_reports').select('user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, steps, adherence').eq('user_id', userId).gte('date', d.toISOString().slice(0, 10)).order('date', { ascending: false }).limit(30) })()
           : Promise.resolve({ data: [] }),
         supabase.from('roadmap_phases').select('id, athlete_id, phase, name, end_date, status, position').eq('athlete_id', params.id).eq('status', 'en_cours').order('position').limit(1),
         supabase.from('workout_programs').select('id, nom, actif, workout_sessions(id, nom, exercices)').eq('athlete_id', params.id).eq('actif', true).limit(1),

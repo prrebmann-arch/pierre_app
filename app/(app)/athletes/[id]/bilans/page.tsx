@@ -17,6 +17,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import type { DailyReport } from '@/components/bilans/BilanAccordion'
 import type { PhotoType, PhotoEntry } from '@/components/bilans/PhotoCompare'
+import type { Athlete } from '@/lib/types'
 import styles from '@/styles/bilans.module.css'
 
 // ── Bilan Traite Popup (inline, same as overview) ──
@@ -340,7 +341,7 @@ export default function BilansPage() {
     if (!photosLoaded) loadPhotosForBilans(bilans)
   }, [photosLoaded, bilans, loadPhotosForBilans])
 
-  if (!selectedAthlete || loading) {
+  if (loading || (!athlete && !bilans.length)) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {[1, 2, 3].map(i => <Skeleton key={i} height={120} />)}
@@ -348,7 +349,7 @@ export default function BilansPage() {
     )
   }
 
-  if (!bilans.length) {
+  if (!bilans.length && !loading) {
     return (
       <EmptyState
         icon="fa-solid fa-chart-line"
@@ -391,7 +392,7 @@ export default function BilansPage() {
           progWeeks={progWeeks}
           nutriPlans={nutriPlans}
           roadmapPhases={roadmapPhases}
-          athlete={selectedAthlete}
+          athlete={(athlete || selectedAthlete) as Athlete}
           photoHistory={photoHistory}
           onDeleteBilan={handleDelete}
           onOpenPhoto={handleOpenPhoto}
@@ -407,11 +408,11 @@ export default function BilansPage() {
         photoHistory={photoHistory}
       />
 
-      {bilanTraiteOpen && selectedAthlete.user_id && (
+      {bilanTraiteOpen && (athlete || selectedAthlete)?.user_id && (
         <BilanTraitePopupInline
-          userId={selectedAthlete.user_id}
-          prenom={selectedAthlete.prenom}
-          athleteId={selectedAthlete.id}
+          userId={(athlete || selectedAthlete)!.user_id!}
+          prenom={(athlete || selectedAthlete)!.prenom}
+          athleteId={(athlete || selectedAthlete)!.id}
           onClose={() => setBilanTraiteOpen(false)}
         />
       )}
