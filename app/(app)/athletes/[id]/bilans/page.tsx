@@ -232,7 +232,7 @@ export default function BilansPage() {
     if (!bilans.length) setLoading(true)
     try {
       const [bilansRes, progRes, nutriRes, phasesRes, wlogsRes] = await Promise.all([
-        supabase.from('daily_reports').select('id, user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, steps, adherence, stress, soreness, general_notes, belly_measurement, hip_measurement, thigh_measurement, photo_front, photo_side, photo_back').eq('user_id', userId).order('date', { ascending: false }).limit(60),
+        supabase.from('daily_reports').select('id, user_id, date, weight, sessions_executed, session_performance, energy, sleep_quality, steps, adherence, stress, soreness, session_enjoyment, cardio_minutes, bedtime, wakeup, sick_signs, positive_week, negative_week, general_notes, belly_measurement, hip_measurement, thigh_measurement, photo_front, photo_side, photo_back').eq('user_id', userId).order('date', { ascending: false }).limit(60),
         supabase.from('programming_weeks').select('week_date, phase').eq('athlete_id', athleteId).order('week_date').limit(200),
         supabase.from('nutrition_plans').select('id, valid_from, meal_type, nom, calories_objectif, proteines, glucides, lipides, created_at').eq('athlete_id', athleteId).limit(50),
         supabase.from('roadmap_phases').select('phase, name, start_date, end_date').eq('athlete_id', athleteId).order('start_date').limit(50),
