@@ -56,16 +56,15 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Initialize from cache synchronously — no network wait
-  const cachedUser = useRef(getCachedUser())
-  const cachedCoach = useRef(getCachedCoach())
-  const hasCachedSession = useRef(cachedUser.current !== null && hasSupabaseSession())
-
-  const [user, setUser] = useState<User | null>(cachedUser.current)
-  const [coach, setCoach] = useState<CoachProfile | null>(cachedCoach.current)
+  // Initial state MUST match on server and client to avoid hydration mismatches.
+  // localStorage is only available on the client — reading it during initial
+  // render produces different HTML on SSR (null) vs client (cached user),
+  // triggering React error #418 and leaving the UI stuck in a broken state.
+  // We populate from localStorage inside useEffect instead (post-hydration).
+  const [user, setUser] = useState<User | null>(null)
+  const [coach, setCoach] = useState<CoachProfile | null>(null)
   const [accessToken, setAccessToken] = useState<string | null>(null)
-  // If we have cached data, loading is already false — UI renders instantly
-  const [loading, setLoading] = useState(!hasCachedSession.current)
+  const [loading, setLoading] = useState(true)
   const initRef = useRef(false)
   // Prevents onAuthStateChange from interfering during explicit signIn/signUp
   const signingInRef = useRef(false)
@@ -109,6 +108,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (initRef.current) return
     initRef.current = true
+
+    // Populate from localStorage immediately after hydration (safe — client only)
+    const cachedU = getCachedUser()
+    const cachedC = getCachedCoach()
+    const hasSess = cachedU !== null && hasSupabaseSession()
+    if (cachedU) setUser(cachedU)
+    if (cachedC) setCoach(cachedC)
+    if (hasSess) setLoading(false)
 
     const init = async () => {
       try {
@@ -158,7 +165,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    // Wake recovery: on EVERY tab return, make a real network call (getUser
+    // hits /auth/v1/user) to verify the Supabase connection is alive. Even a
+    // 1-second tab switch can leave HTTP/2 connections in a half-dead state
+    // on Safari. We always ping — if it succeeds, dispatch 'coach:wake' so
+    // pages can refetch; if it times out at 3s, reload the page.
+    let hiddenSince: number | null = null
+    let wakeInFlight = false
+    const handleVisibility = async () => {
+      if (document.visibilityState === 'hidden') {
+        hiddenSince = Date.now()
+        return
+      }
+      // visible
+      const wasHidden = hiddenSince !== null
+      hiddenSince = null
+      if (!wasHidden) return // initial load, not a return
+      if (wakeInFlight) return
+      wakeInFlight = true
+      try {
+        const ping = supabase.auth.getUser().then(() => true)
+        const timeout = new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('wake-timeout')), 3000))
+        await Promise.race([ping, timeout])
+        window.dispatchEvent(new CustomEvent('coach:wake'))
+      } catch {
+        if (typeof window !== 'undefined') window.location.reload()
+      } finally {
+        wakeInFlight = false
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+
+    return () => {
+      subscription.unsubscribe()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
