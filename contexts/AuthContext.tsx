@@ -165,11 +165,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    // Wake recovery: on EVERY tab return, make a real network call (getUser
-    // hits /auth/v1/user) to verify the Supabase connection is alive. Even a
-    // 1-second tab switch can leave HTTP/2 connections in a half-dead state
-    // on Safari. We always ping — if it succeeds, dispatch 'coach:wake' so
-    // pages can refetch; if it times out at 3s, reload the page.
+    // Wake recovery: on tab return, verify the Supabase connection with a
+    // plain fetch to the REST endpoint. We avoid the SDK's auth methods here
+    // because they go through a mutex that can deadlock when a component
+    // unmounts mid-request (user navigates before the auth call completes),
+    // adding 5s of orphaned-lock wait to every subsequent query. Plain fetch
+    // is fire-and-forget and doesn't touch the auth state machine.
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     let hiddenSince: number | null = null
     let wakeInFlight = false
     const handleVisibility = async () => {
@@ -177,16 +180,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hiddenSince = Date.now()
         return
       }
-      // visible
       const wasHidden = hiddenSince !== null
       hiddenSince = null
-      if (!wasHidden) return // initial load, not a return
-      if (wakeInFlight) return
+      if (!wasHidden || wakeInFlight) return
       wakeInFlight = true
       try {
-        const ping = supabase.auth.getUser().then(() => true)
-        const timeout = new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('wake-timeout')), 3000))
-        await Promise.race([ping, timeout])
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 3000)
+        await fetch(`${supabaseUrl}/rest/v1/`, {
+          method: 'HEAD',
+          headers: { apikey: supabaseKey },
+          signal: controller.signal,
+        }).finally(() => clearTimeout(timer))
         window.dispatchEvent(new CustomEvent('coach:wake'))
       } catch {
         if (typeof window !== 'undefined') window.location.reload()
