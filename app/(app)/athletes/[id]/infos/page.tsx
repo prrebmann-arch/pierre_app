@@ -187,7 +187,11 @@ export default function InfosPage() {
       }
     }
     const { error } = await supabase.from('athletes').update(updateData).eq('id', a.id)
-    if (error) { toast('Erreur lors de la sauvegarde', 'error'); return }
+    if (error) {
+      console.error('[saveEdit] supabase error:', error, 'payload:', updateData)
+      toast(`Erreur: ${error.message}`, 'error')
+      return
+    }
     toast('Informations sauvegardees', 'success')
     setEditingCard(null)
     loadAthlete()
