@@ -1,5 +1,22 @@
 import { MS_PER_DAY } from './constants'
 
+// ===== PROMISE HELPERS =====
+
+/**
+ * Wrap a promise with a timeout. Rejects with a timeout error if the promise
+ * doesn't resolve within `ms`. Used to prevent Supabase queries from hanging
+ * indefinitely after Safari tab suspension leaves connections stale.
+ */
+export function withTimeout<T>(promise: Promise<T>, ms: number, label = 'operation'): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`Timeout: ${label} exceeded ${ms}ms`)), ms)
+    promise.then(
+      (v) => { clearTimeout(t); resolve(v) },
+      (e) => { clearTimeout(t); reject(e) },
+    )
+  })
+}
+
 // ===== SESSION CACHE =====
 
 /** Read from sessionStorage cache (DISABLED — caused 10-30s freezes from JSON.parse) */

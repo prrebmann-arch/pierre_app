@@ -59,13 +59,13 @@ export default function ExercicesPage() {
   const [muscleFilter, setMuscleFilter] = useState('')
   const searchTimeout = useRef<NodeJS.Timeout | null>(null)
 
-  // View mode: list or grid
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem(VIEW_STORAGE_KEY) as 'list' | 'grid') || 'grid'
-    }
-    return 'grid'
-  })
+  // View mode: list or grid. Start with 'grid' on SSR+client (identical) then
+  // restore from localStorage after mount to avoid hydration mismatch.
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid')
+  useEffect(() => {
+    const saved = localStorage.getItem(VIEW_STORAGE_KEY) as 'list' | 'grid' | null
+    if (saved === 'list' || saved === 'grid') setViewMode(saved)
+  }, [])
 
   // Modal state
   const [modalOpen, setModalOpen] = useState(false)
