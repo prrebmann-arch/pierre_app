@@ -165,39 +165,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    // Wake recovery: on tab return, verify the Supabase connection with a
-    // plain fetch to the REST endpoint. We avoid the SDK's auth methods here
-    // because they go through a mutex that can deadlock when a component
-    // unmounts mid-request (user navigates before the auth call completes),
-    // adding 5s of orphaned-lock wait to every subsequent query. Plain fetch
-    // is fire-and-forget and doesn't touch the auth state machine.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    // Wake signal: on tab return, dispatch 'coach:wake' so pages that use
+    // useRefetchOnResume can refetch if they choose. We do NOT ping Supabase
+    // proactively here anymore — that caused two problems:
+    //  1) supabase.auth.getUser() acquires the gotrue auth lock which can
+    //     orphan on navigation-during-request (5s deadlock on every query)
+    //  2) plain fetch HEAD can fail on some networks/CORS and we used to
+    //     reload the page on failure, creating visible loading loops
+    // The watchdog in useRefetchOnResume handles the case where queries
+    // legitimately hang (e.g., dead HTTP/2 connection) by reloading after
+    // 10s of stuck loading.
     let hiddenSince: number | null = null
-    let wakeInFlight = false
-    const handleVisibility = async () => {
+    const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
         hiddenSince = Date.now()
         return
       }
       const wasHidden = hiddenSince !== null
       hiddenSince = null
-      if (!wasHidden || wakeInFlight) return
-      wakeInFlight = true
-      try {
-        const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 3000)
-        await fetch(`${supabaseUrl}/rest/v1/`, {
-          method: 'HEAD',
-          headers: { apikey: supabaseKey },
-          signal: controller.signal,
-        }).finally(() => clearTimeout(timer))
-        window.dispatchEvent(new CustomEvent('coach:wake'))
-      } catch {
-        if (typeof window !== 'undefined') window.location.reload()
-      } finally {
-        wakeInFlight = false
-      }
+      if (!wasHidden) return
+      window.dispatchEvent(new CustomEvent('coach:wake'))
     }
     document.addEventListener('visibilitychange', handleVisibility)
 
