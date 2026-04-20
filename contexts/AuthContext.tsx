@@ -158,11 +158,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    // Wake recovery: when tab returns after being hidden, ping Supabase to
-    // validate the session and re-establish the HTTP connection. Safari
-    // suspends background tabs aggressively, leaving connections in a half-dead
-    // state that makes subsequent queries hang indefinitely.
+    // Wake recovery: when tab returns after being hidden >3s, ping Supabase
+    // with a 5s timeout to validate the session and revive the HTTP/2
+    // connection. Only AFTER this completes do we dispatch `coach:wake` so
+    // pages can safely refetch. If getSession hangs (dead connection that
+    // browser hasn't declared dead yet), we reload as last resort.
     let hiddenAt: number | null = null
+    let wakeInFlight = false
     const handleVisibility = async () => {
       if (document.visibilityState === 'hidden') {
         hiddenAt = Date.now()
@@ -171,14 +173,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const duration = hiddenAt ? Date.now() - hiddenAt : 0
       hiddenAt = null
       if (duration < 3000) return
+      if (wakeInFlight) return
+      wakeInFlight = true
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          setAccessToken(session.access_token)
-        }
+        const sessionCheck = supabase.auth.getSession().then(({ data }) => data.session)
+        const timeout = new Promise<null>((_, reject) => setTimeout(() => reject(new Error('wake-timeout')), 5000))
+        const session = await Promise.race([sessionCheck, timeout])
+        if (session?.user) setAccessToken(session.access_token)
+        // Signal pages that it's safe to refetch now that the connection is healthy
+        window.dispatchEvent(new CustomEvent('coach:wake'))
       } catch {
-        // getSession failed — connection truly dead, force a reload as last resort
         if (typeof window !== 'undefined') window.location.reload()
+      } finally {
+        wakeInFlight = false
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
