@@ -16,8 +16,8 @@ import { useEffect, useRef } from 'react'
  *    skeleton if the refetch itself also hangs.
  */
 
-const LOADING_RETRY_MS = 8000
-const LOADING_WATCHDOG_MS = 20000
+const LOADING_RETRY_MS = 6000
+const LOADING_WATCHDOG_MS = 10000
 
 export function useRefetchOnResume(refetch: () => void, isLoading: boolean) {
   const loadingRef = useRef(isLoading)

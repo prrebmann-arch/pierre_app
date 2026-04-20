@@ -165,27 +165,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    // Wake recovery: when tab returns after being hidden >3s, make a real
-    // network call (getUser hits /auth/v1/user) to verify the Supabase
-    // connection is alive. getSession is useless here — it returns from
-    // localStorage without network. If the network call times out at 4s, we
-    // reload (connection is truly dead). On success, dispatch 'coach:wake'
-    // so pages can safely refetch.
-    let hiddenAt: number | null = null
+    // Wake recovery: on EVERY tab return, make a real network call (getUser
+    // hits /auth/v1/user) to verify the Supabase connection is alive. Even a
+    // 1-second tab switch can leave HTTP/2 connections in a half-dead state
+    // on Safari. We always ping — if it succeeds, dispatch 'coach:wake' so
+    // pages can refetch; if it times out at 3s, reload the page.
+    let hiddenSince: number | null = null
     let wakeInFlight = false
     const handleVisibility = async () => {
       if (document.visibilityState === 'hidden') {
-        hiddenAt = Date.now()
+        hiddenSince = Date.now()
         return
       }
-      const duration = hiddenAt ? Date.now() - hiddenAt : 0
-      hiddenAt = null
-      if (duration < 3000) return
+      // visible
+      const wasHidden = hiddenSince !== null
+      hiddenSince = null
+      if (!wasHidden) return // initial load, not a return
       if (wakeInFlight) return
       wakeInFlight = true
       try {
         const ping = supabase.auth.getUser().then(() => true)
-        const timeout = new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('wake-timeout')), 4000))
+        const timeout = new Promise<boolean>((_, reject) => setTimeout(() => reject(new Error('wake-timeout')), 3000))
         await Promise.race([ping, timeout])
         window.dispatchEvent(new CustomEvent('coach:wake'))
       } catch {
