@@ -18,12 +18,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [settled, setSettled] = useState(false)
   useEffect(() => { setSettled(true) }, [])
 
-  // Check if returning from external redirect (Stripe, etc.)
-  const isReturning = typeof window !== 'undefined' && (
-    window.location.search.includes('connect=') ||
-    window.location.search.includes('setup=') ||
-    window.location.search.includes('payment=')
-  )
+  // Check if returning from external redirect (Stripe, etc.).
+  // Must be computed after mount — reading window.location during render
+  // causes SSR (undefined) vs client divergence = hydration mismatch.
+  const [isReturning, setIsReturning] = useState(false)
+  useEffect(() => {
+    const s = window.location.search
+    setIsReturning(s.includes('connect=') || s.includes('setup=') || s.includes('payment='))
+  }, [])
 
   // Safety timeout: if loading takes more than 8s, stop waiting
   useEffect(() => {
