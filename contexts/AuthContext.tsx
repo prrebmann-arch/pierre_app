@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     init()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: string, session: { user?: { id: string; email?: string }; access_token: string } | null) => {
         // Skip if signIn/signUp is handling state updates directly
         if (signingInRef.current) return
         if (session?.user) {
@@ -165,38 +165,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     )
 
-    // Wake recovery: on tab return, verify the Supabase connection with a
-    // plain fetch to the REST endpoint. We avoid the SDK's auth methods here
-    // because they go through a mutex that can deadlock when a component
-    // unmounts mid-request (user navigates before the auth call completes),
-    // adding 5s of orphaned-lock wait to every subsequent query. Plain fetch
-    // is fire-and-forget and doesn't touch the auth state machine.
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    let hiddenSince: number | null = null
-    let wakeInFlight = false
-    const handleVisibility = async () => {
+    // Tab visibility handler — THE official Supabase fix for Safari tab
+    // freezing and orphaned auth locks. See:
+    //   https://supabase.com/docs/reference/javascript/auth-startautorefresh
+    //
+    // Root cause: @supabase/auth-js auto-refreshes the JWT on a timer. Safari
+    // throttles / freezes background-tab fetch calls. If the refresh fires
+    // while the tab is hidden, its fetch can be frozen mid-flight while
+    // holding the navigator.locks-based auth mutex. When the tab wakes up,
+    // every subsequent Supabase call queues behind that orphan lock for 5s
+    // (the library's internal timeout) — the "skeleton stuck on tab switch"
+    // bug.
+    //
+    // Fix: stop the auto-refresh timer when the tab is hidden; restart it on
+    // return. No await, no getSession, no blocking call inside the handler.
+    // We also dispatch 'coach:wake' so useRefetchOnResume consumers can
+    // refetch their data if they want.
+    const handleVisibility = () => {
       if (document.visibilityState === 'hidden') {
-        hiddenSince = Date.now()
-        return
-      }
-      const wasHidden = hiddenSince !== null
-      hiddenSince = null
-      if (!wasHidden || wakeInFlight) return
-      wakeInFlight = true
-      try {
-        const controller = new AbortController()
-        const timer = setTimeout(() => controller.abort(), 3000)
-        await fetch(`${supabaseUrl}/rest/v1/`, {
-          method: 'HEAD',
-          headers: { apikey: supabaseKey },
-          signal: controller.signal,
-        }).finally(() => clearTimeout(timer))
+        supabase.auth.stopAutoRefresh()
+      } else {
+        supabase.auth.startAutoRefresh()
         window.dispatchEvent(new CustomEvent('coach:wake'))
-      } catch {
-        if (typeof window !== 'undefined') window.location.reload()
-      } finally {
-        wakeInFlight = false
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
