@@ -172,6 +172,12 @@ export default function InfosPage() {
 
   async function saveEdit(card: string) {
     const updateData = { ...formData }
+    // Normalize empty strings to null. Postgres rejects '' for DATE columns
+    // (date_naissance) with 22007 "invalid input syntax for type date", which
+    // silently breaks the whole UPDATE even if only other fields changed.
+    for (const k of Object.keys(updateData)) {
+      if (updateData[k] === '') updateData[k] = null
+    }
     if (card === 'personal') {
       const todayStr = new Date().toISOString().split('T')[0]
       // Set anchor dates if frequency changed
@@ -187,7 +193,11 @@ export default function InfosPage() {
       }
     }
     const { error } = await supabase.from('athletes').update(updateData).eq('id', a.id)
-    if (error) { toast('Erreur lors de la sauvegarde', 'error'); return }
+    if (error) {
+      console.error('[saveEdit] supabase error:', error, 'payload:', updateData)
+      toast(`Erreur: ${error.message}`, 'error')
+      return
+    }
     toast('Informations sauvegardees', 'success')
     setEditingCard(null)
     loadAthlete()
