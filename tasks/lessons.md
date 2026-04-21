@@ -47,3 +47,7 @@
 [2026-04-20] | Supabase client MUST be module-scope singleton | Si createClient() est appelé dans le body d'un component et retourne un nouveau client à chaque fois, chaque render crée un holder du lock auth sans libérer le précédent = orphan garanti. Pattern correct : `let client = null; export function createClient() { if (!client) client = createBrowserClient(...); return client }`. Notre code l'a déjà mais c'est fragile, à garder en tête.
 
 [2026-04-20] | Les erreurs "Fetch API cannot load ... due to access control checks" sur preview Vercel = SSO, pas CORS | Pattern spécifique aux Vercel preview URLs avec Deployment Protection. Pas réparable côté code sauf à désactiver le SSO. Ne pas chercher des heures côté CORS ou headers — c'est juste Vercel.
+
+[2026-04-21] | Une branche feature non mergée = fix perdu | Le fix "empty string → null" avait été fait sur `feature/debug-bilan-save-error` qui n'a jamais été mergée vers develop. 6h plus tard, user redécouvre le même bug. Règle : vérifier l'état des branches ouvertes à la fin d'une session (`gh pr list --author @me`) et soit merger, soit fermer avec raison. Sinon les fixes meurent.
+
+[2026-04-21] | Toast d'erreur générique masque la cause | `toast('Erreur lors de la sauvegarde', 'error')` empêche le user de voir le vrai message Postgres. Toujours : `toast(\`Erreur: ${error.message}\`, 'error')` + `console.error('[ctx]', error, 'payload:', data)`. Le user peut copier/coller la vraie erreur au lieu de deviner.
