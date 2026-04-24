@@ -25,8 +25,6 @@
 [2026-04-13] | useCallback deps sur user (objet) au lieu de user?.id (string) | L'objet user change de référence à chaque auth event, relançant tous les useCallback/useEffect qui en dépendent.
 
 [2026-04-13] | Toujours npm run build avant push | Plusieurs commits pushés sans vérification ont cassé le site en prod.
-<<<<<<< Updated upstream
-=======
 
 [2026-04-20] | Ouvrir la console AVANT de patcher un bug | J'ai passé 2h à patcher des symptômes (wake handler, timeouts, watchdog) pour le bug tab-switch avant que le user ouvre enfin la console qui montrait directement `React error #418` puis `@supabase/gotrue-js: Lock was not released within 5000ms`. Règle : premier réflexe sur un bug client = demander console + Network, pas deviner.
 
@@ -59,4 +57,3 @@
 [2026-04-24] | "This page couldn't load" Safari = crash WebContent, pas erreur réseau | Ce message apparaît quand le process de rendu JS crash (infinite loop, memory, Rules of Hooks violation). PAS une erreur réseau. Ouvrir la console AVANT de cliquer sur l'action qui déclenche le crash pour voir l'erreur JS réelle (souvent un React error code).
 
 [2026-04-24] | React error #300 = Rules of Hooks violation ou setState en render | "Too many re-renders". Cause classique : `useMemo/useCallback/useEffect` placé APRÈS un `return` conditionnel — le nombre de hooks change entre renders. RÈGLE : **tous les hooks AVANT tout return**, même les returns précoces. Le linter react-hooks catche normalement mais peut être désactivé par eslint-disable.
->>>>>>> Stashed changes
