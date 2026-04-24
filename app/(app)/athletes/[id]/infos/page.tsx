@@ -57,6 +57,173 @@ function formatBilanLabel(freq: string, interval?: number, day?: number | number
   return s
 }
 
+// ─── Module-level subcomponents ──
+// Important: these MUST be defined at module scope, NOT inside InfosPage.
+// When defined inside, each parent render creates a new component ref
+// which unmounts the input → causes focus loss on every keystroke.
+
+function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className={styles.infoRow}>
+      <span className={styles.infoLabel}><i className={`fas ${icon}`} style={{ width: 16, color: 'var(--text3)' }} />{label}</span>
+      <span className={styles.infoValue}>{value || '\u2014'}</span>
+    </div>
+  )
+}
+
+function EditField({
+  label, field, type = 'text', options, formData, updateField,
+}: {
+  label: string
+  field: string
+  type?: string
+  options?: { value: string; label: string }[]
+  formData: any
+  updateField: (key: string, val: any) => void
+}) {
+  if (options) {
+    return (
+      <div style={{ marginBottom: 10 }}>
+        <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>{label}</label>
+        <select className="form-control" value={formData[field] || ''} onChange={(e) => updateField(field, e.target.value)}>
+          {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+    )
+  }
+  return (
+    <div style={{ marginBottom: 10 }}>
+      <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>{label}</label>
+      {type === 'textarea' ? (
+        <textarea className="form-control" rows={3} value={formData[field] ?? ''} onChange={(e) => updateField(field, e.target.value)} />
+      ) : (
+        <input
+          type={type}
+          className="form-control"
+          value={formData[field] ?? ''}
+          onChange={(e) => updateField(field, type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
+        />
+      )}
+    </div>
+  )
+}
+
+function BilanConfigEditor({
+  formData, updateField,
+}: {
+  formData: any
+  updateField: (key: string, val: any) => void
+}) {
+  const bilanFreq = formData.bilan_frequency || 'daily'
+  const completeFreq = formData.complete_bilan_frequency || 'weekly'
+  const completeDay = formData.complete_bilan_day ?? 1
+  const isBiweekly = completeFreq === 'biweekly'
+
+  function toggleDayCircle(dayIdx: number) {
+    if (isBiweekly) {
+      const current = Array.isArray(completeDay) ? [...completeDay] : [completeDay]
+      const idx = current.indexOf(dayIdx)
+      if (idx >= 0) current.splice(idx, 1)
+      else if (current.length < 2) current.push(dayIdx)
+      else current[1] = dayIdx
+      updateField('complete_bilan_day', current.length === 1 ? current : current)
+    } else {
+      updateField('complete_bilan_day', dayIdx)
+    }
+  }
+
+  function isDaySelected(dayIdx: number) {
+    if (Array.isArray(completeDay)) return completeDay.includes(dayIdx)
+    return completeDay === dayIdx
+  }
+
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
+      <div style={{ marginBottom: 16 }}>
+        <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 8 }}>
+          <i className="fas fa-calendar-day" style={{ marginRight: 6, color: 'var(--text3)' }} />Bilan quotidien
+        </label>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" className={`btn btn-sm ${bilanFreq !== 'none' ? 'btn-red' : 'btn-outline'}`}
+            onClick={() => updateField('bilan_frequency', 'daily')}>Active</button>
+          <button type="button" className={`btn btn-sm ${bilanFreq === 'none' ? 'btn-red' : 'btn-outline'}`}
+            onClick={() => updateField('bilan_frequency', 'none')}>Desactive</button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+          <span style={{ color: 'var(--text2)', fontSize: 13 }}><i className="fas fa-bell" style={{ marginRight: 4 }} />Notification a</span>
+          <input type="time" className="form-control" style={{ width: 'auto' }}
+            value={formData.bilan_notif_time || DEFAULT_NOTIF_TIME}
+            onChange={(e) => updateField('bilan_notif_time', e.target.value)} />
+        </div>
+      </div>
+
+      <div>
+        <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 8 }}>
+          <i className="fas fa-calendar-check" style={{ marginRight: 6, color: 'var(--primary)' }} />Bilan complet
+          <span style={{ fontWeight: 400, color: 'var(--text3)', fontSize: 12, marginLeft: 4 }}>(photos + mensurations)</span>
+        </label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+          {COMPLETE_FREQ_OPTS.map(o => (
+            <button key={o.v} type="button"
+              className={`btn btn-sm ${completeFreq === o.v ? 'btn-red' : 'btn-outline'}`}
+              onClick={() => updateField('complete_bilan_frequency', o.v)}>{o.l}</button>
+          ))}
+        </div>
+
+        {['weekly', 'biweekly'].includes(completeFreq) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
+            <span style={{ color: 'var(--text2)', fontSize: 13 }}>{isBiweekly ? 'Jours (2) :' : 'Jour :'}</span>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {JOURS_SEMAINE.map((jour, i) => (
+                <button key={i} type="button" onClick={() => toggleDayCircle(i)}
+                  style={{
+                    width: 32, height: 32, borderRadius: '50%', border: '2px solid',
+                    borderColor: isDaySelected(i) ? 'var(--primary)' : 'var(--border)',
+                    background: isDaySelected(i) ? 'var(--primary)' : 'transparent',
+                    color: isDaySelected(i) ? '#fff' : 'var(--text2)',
+                    fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>{jour.charAt(0)}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {completeFreq === 'monthly' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ color: 'var(--text2)', fontSize: 13 }}>Le</span>
+            <select className="form-control" style={{ width: 70 }}
+              value={formData.complete_bilan_month_day || 1}
+              onChange={(e) => updateField('complete_bilan_month_day', Number(e.target.value))}>
+              {Array.from({ length: 28 }).map((_, i) => (
+                <option key={i + 1} value={i + 1}>{i + 1}</option>
+              ))}
+            </select>
+            <span style={{ color: 'var(--text2)', fontSize: 13 }}>du mois</span>
+          </div>
+        )}
+
+        {completeFreq === 'custom' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <span style={{ color: 'var(--text2)', fontSize: 13 }}>Tous les</span>
+            <input type="number" className="form-control" style={{ width: 60 }}
+              value={formData.complete_bilan_interval || 14} min={2} max={90}
+              onChange={(e) => updateField('complete_bilan_interval', Number(e.target.value))} />
+            <span style={{ color: 'var(--text2)', fontSize: 13 }}>jours</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: 'var(--text2)', fontSize: 13 }}><i className="fas fa-bell" style={{ marginRight: 4 }} />Notification a</span>
+          <input type="time" className="form-control" style={{ width: 'auto' }}
+            value={formData.complete_bilan_notif_time || DEFAULT_NOTIF_TIME}
+            onChange={(e) => updateField('complete_bilan_notif_time', e.target.value)} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function InfosPage() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
@@ -229,191 +396,6 @@ export default function InfosPage() {
 
   function updateField(key: string, val: any) {
     setFormData((prev) => ({ ...prev, [key]: val }))
-  }
-
-  function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
-    return (
-      <div className={styles.infoRow}>
-        <span className={styles.infoLabel}><i className={`fas ${icon}`} style={{ width: 16, color: 'var(--text3)' }} />{label}</span>
-        <span className={styles.infoValue}>{value || '\u2014'}</span>
-      </div>
-    )
-  }
-
-  function EditField({ label, field, type = 'text', options }: { label: string; field: string; type?: string; options?: { value: string; label: string }[] }) {
-    if (options) {
-      return (
-        <div style={{ marginBottom: 10 }}>
-          <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>{label}</label>
-          <select className="form-control" value={formData[field] || ''} onChange={(e) => updateField(field, e.target.value)}>
-            {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </div>
-      )
-    }
-    return (
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>{label}</label>
-        {type === 'textarea' ? (
-          <textarea className="form-control" rows={3} value={formData[field] || ''} onChange={(e) => updateField(field, e.target.value)} />
-        ) : (
-          <input type={type} className="form-control" value={formData[field] || ''} onChange={(e) => updateField(field, type === 'number' ? Number(e.target.value) : e.target.value)} />
-        )}
-      </div>
-    )
-  }
-
-  // ── Bilan config editor ──
-  function BilanConfigEditor() {
-    const bilanFreq = formData.bilan_frequency || 'daily'
-    const completeFreq = formData.complete_bilan_frequency || 'weekly'
-    const completeDay = formData.complete_bilan_day ?? 1
-    const isBiweekly = completeFreq === 'biweekly'
-
-    function toggleDayCircle(dayIdx: number) {
-      if (isBiweekly) {
-        const current = Array.isArray(completeDay) ? [...completeDay] : [completeDay]
-        const idx = current.indexOf(dayIdx)
-        if (idx >= 0) {
-          current.splice(idx, 1)
-        } else if (current.length < 2) {
-          current.push(dayIdx)
-        } else {
-          current[1] = dayIdx
-        }
-        updateField('complete_bilan_day', current.length === 1 ? current : current)
-      } else {
-        updateField('complete_bilan_day', dayIdx)
-      }
-    }
-
-    function isDaySelected(dayIdx: number) {
-      if (Array.isArray(completeDay)) return completeDay.includes(dayIdx)
-      return completeDay === dayIdx
-    }
-
-    return (
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 16, marginTop: 16 }}>
-        {/* Daily bilan toggle */}
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 8 }}>
-            <i className="fas fa-calendar-day" style={{ marginRight: 6, color: 'var(--text3)' }} />Bilan quotidien
-          </label>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              type="button"
-              className={`btn btn-sm ${bilanFreq !== 'none' ? 'btn-red' : 'btn-outline'}`}
-              onClick={() => updateField('bilan_frequency', 'daily')}
-            >Active</button>
-            <button
-              type="button"
-              className={`btn btn-sm ${bilanFreq === 'none' ? 'btn-red' : 'btn-outline'}`}
-              onClick={() => updateField('bilan_frequency', 'none')}
-            >Desactive</button>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-            <span style={{ color: 'var(--text2)', fontSize: 13 }}><i className="fas fa-bell" style={{ marginRight: 4 }} />Notification a</span>
-            <input
-              type="time"
-              className="form-control"
-              style={{ width: 'auto' }}
-              value={formData.bilan_notif_time || DEFAULT_NOTIF_TIME}
-              onChange={(e) => updateField('bilan_notif_time', e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Complete bilan config */}
-        <div>
-          <label style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'block', marginBottom: 8 }}>
-            <i className="fas fa-calendar-check" style={{ marginRight: 6, color: 'var(--primary)' }} />Bilan complet
-            <span style={{ fontWeight: 400, color: 'var(--text3)', fontSize: 12, marginLeft: 4 }}>(photos + mensurations)</span>
-          </label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-            {COMPLETE_FREQ_OPTS.map(o => (
-              <button
-                key={o.v}
-                type="button"
-                className={`btn btn-sm ${completeFreq === o.v ? 'btn-red' : 'btn-outline'}`}
-                onClick={() => updateField('complete_bilan_frequency', o.v)}
-              >{o.l}</button>
-            ))}
-          </div>
-
-          {/* Day circles for weekly/biweekly */}
-          {['weekly', 'biweekly'].includes(completeFreq) && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
-              <span style={{ color: 'var(--text2)', fontSize: 13 }}>{isBiweekly ? 'Jours (2) :' : 'Jour :'}</span>
-              <div style={{ display: 'flex', gap: 4 }}>
-                {JOURS_SEMAINE.map((jour, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => toggleDayCircle(i)}
-                    style={{
-                      width: 32, height: 32, borderRadius: '50%', border: '2px solid',
-                      borderColor: isDaySelected(i) ? 'var(--primary)' : 'var(--border)',
-                      background: isDaySelected(i) ? 'var(--primary)' : 'transparent',
-                      color: isDaySelected(i) ? '#fff' : 'var(--text2)',
-                      fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}
-                  >
-                    {jour.charAt(0)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Month day for monthly */}
-          {completeFreq === 'monthly' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ color: 'var(--text2)', fontSize: 13 }}>Le</span>
-              <select
-                className="form-control"
-                style={{ width: 'auto' }}
-                value={formData.complete_bilan_month_day || 1}
-                onChange={(e) => updateField('complete_bilan_month_day', Number(e.target.value))}
-              >
-                {Array.from({ length: 28 }, (_, i) => (
-                  <option key={i + 1} value={i + 1}>{i + 1}</option>
-                ))}
-              </select>
-              <span style={{ color: 'var(--text2)', fontSize: 13 }}>du mois</span>
-            </div>
-          )}
-
-          {/* Custom interval */}
-          {completeFreq === 'custom' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{ color: 'var(--text2)', fontSize: 13 }}>Tous les</span>
-              <input
-                type="number"
-                className="form-control"
-                style={{ width: 60 }}
-                value={formData.complete_bilan_interval || 14}
-                min={2}
-                max={90}
-                onChange={(e) => updateField('complete_bilan_interval', Number(e.target.value))}
-              />
-              <span style={{ color: 'var(--text2)', fontSize: 13 }}>jours</span>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: 'var(--text2)', fontSize: 13 }}><i className="fas fa-bell" style={{ marginRight: 4 }} />Notification a</span>
-            <input
-              type="time"
-              className="form-control"
-              style={{ width: 'auto' }}
-              value={formData.complete_bilan_notif_time || DEFAULT_NOTIF_TIME}
-              onChange={(e) => updateField('complete_bilan_notif_time', e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
-    )
   }
 
   // ── Onboarding section ──
@@ -720,17 +702,17 @@ export default function InfosPage() {
           </div>
           {editingCard === 'personal' ? (
             <div>
-              <EditField label="Prenom" field="prenom" />
-              <EditField label="Nom" field="nom" />
-              <EditField label="Email" field="email" type="email" />
-              <EditField label="Telephone" field="telephone" />
-              <EditField label="Date de naissance" field="date_naissance" type="date" />
-              <EditField label="Genre" field="genre" options={[{ value: '', label: '\u2014' }, { value: 'homme', label: 'Homme' }, { value: 'femme', label: 'Femme' }]} />
-              <EditField label="Objectif" field="objectif" options={[{ value: '', label: '\u2014' }, ...Object.entries(OBJECTIF_LABELS).map(([v, l]) => ({ value: v, label: l }))]} />
-              <EditField label="Objectif pas/jour" field="pas_journalier" type="number" />
-              <EditField label="Objectif eau (ml/jour)" field="water_goal_ml" type="number" />
-              <EditField label="Mode d'acces" field="access_mode" options={[{ value: 'full', label: 'Complet' }, { value: 'training_only', label: 'Training uniquement' }, { value: 'nutrition_only', label: 'Diete uniquement' }]} />
-              <BilanConfigEditor />
+              <EditField formData={formData} updateField={updateField} label="Prenom" field="prenom" />
+              <EditField formData={formData} updateField={updateField} label="Nom" field="nom" />
+              <EditField formData={formData} updateField={updateField} label="Email" field="email" type="email" />
+              <EditField formData={formData} updateField={updateField} label="Telephone" field="telephone" />
+              <EditField formData={formData} updateField={updateField} label="Date de naissance" field="date_naissance" type="date" />
+              <EditField formData={formData} updateField={updateField} label="Genre" field="genre" options={[{ value: '', label: '\u2014' }, { value: 'homme', label: 'Homme' }, { value: 'femme', label: 'Femme' }]} />
+              <EditField formData={formData} updateField={updateField} label="Objectif" field="objectif" options={[{ value: '', label: '\u2014' }, ...Object.entries(OBJECTIF_LABELS).map(([v, l]) => ({ value: v, label: l }))]} />
+              <EditField formData={formData} updateField={updateField} label="Objectif pas/jour" field="pas_journalier" type="number" />
+              <EditField formData={formData} updateField={updateField} label="Objectif eau (ml/jour)" field="water_goal_ml" type="number" />
+              <EditField formData={formData} updateField={updateField} label="Mode d'acces" field="access_mode" options={[{ value: 'full', label: 'Complet' }, { value: 'training_only', label: 'Training uniquement' }, { value: 'nutrition_only', label: 'Diete uniquement' }]} />
+              <BilanConfigEditor formData={formData} updateField={updateField} />
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button className="btn btn-red btn-sm" onClick={() => saveEdit('personal')}><i className="fas fa-save" /> Sauvegarder</button>
                 <button className="btn btn-outline btn-sm" onClick={() => setEditingCard(null)}>Annuler</button>
@@ -764,10 +746,10 @@ export default function InfosPage() {
           </div>
           {editingCard === 'health' ? (
             <div>
-              <EditField label="Blessures / Limitations" field="blessures" type="textarea" />
-              <EditField label="Allergies alimentaires" field="allergies" type="textarea" />
-              <EditField label="Medicaments" field="medicaments" type="textarea" />
-              <EditField label="Notes sante" field="notes_sante" type="textarea" />
+              <EditField formData={formData} updateField={updateField} label="Blessures / Limitations" field="blessures" type="textarea" />
+              <EditField formData={formData} updateField={updateField} label="Allergies alimentaires" field="allergies" type="textarea" />
+              <EditField formData={formData} updateField={updateField} label="Medicaments" field="medicaments" type="textarea" />
+              <EditField formData={formData} updateField={updateField} label="Notes sante" field="notes_sante" type="textarea" />
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
                 <button className="btn btn-red btn-sm" onClick={() => saveEdit('health')}><i className="fas fa-save" /> Sauvegarder</button>
                 <button className="btn btn-outline btn-sm" onClick={() => setEditingCard(null)}>Annuler</button>
