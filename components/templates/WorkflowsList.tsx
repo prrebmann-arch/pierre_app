@@ -150,6 +150,15 @@ export default function WorkflowsList({ workflows, onRefresh }: Props) {
     onRefresh()
   }
 
+  // All hooks MUST be called before any conditional return to satisfy the
+  // Rules of Hooks. Moving useMemo after an `if (editing) return` caused
+  // React error #300 (hook count changes between renders) and crashed the
+  // Safari WebContent process when toggling between list/editor views.
+  const parsedWorkflows = useMemo(
+    () => workflows.map((wf) => ({ ...wf, parsedSteps: parseSteps(wf.steps) })),
+    [workflows]
+  )
+
   // Editor view
   if (editing || creating) {
     return (
@@ -198,11 +207,6 @@ export default function WorkflowsList({ workflows, onRefresh }: Props) {
       </div>
     )
   }
-
-  const parsedWorkflows = useMemo(
-    () => workflows.map((wf) => ({ ...wf, parsedSteps: parseSteps(wf.steps) })),
-    [workflows]
-  )
 
   // List view
   return (
