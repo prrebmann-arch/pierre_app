@@ -106,12 +106,13 @@ export default function TemplatesPage() {
           .limit(100)
         setNutritionTemplates((data || []) as NutritionTemplate[])
       } else if (activeTab === 'workflow') {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('onboarding_workflows')
-          .select('id, nom, coach_id, steps, created_at')
+          .select('id, name, description, coach_id, steps, created_at')
           .eq('coach_id', user.id)
           .order('created_at', { ascending: false })
           .limit(100)
+        if (error) console.error('[templates/workflow] select error:', error)
         setWorkflows(data || [])
       } else if (activeTab === 'questionnaires') {
         const { data } = await supabase
