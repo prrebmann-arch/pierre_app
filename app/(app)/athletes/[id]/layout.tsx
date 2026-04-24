@@ -19,6 +19,7 @@ const TABS = [
   { label: 'Posing', route: 'posing', icon: 'fa-person' },
   { label: 'Quest.', route: 'questionnaires', icon: 'fa-clipboard-list' },
   { label: 'Suppl.', route: 'supplements', icon: 'fa-capsules' },
+  { label: 'Routine', route: 'routine', icon: 'fa-sun' },
   { label: 'Menstr.', route: 'menstrual', icon: 'fa-calendar-days' },
 ]
 
