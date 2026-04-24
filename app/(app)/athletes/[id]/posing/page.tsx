@@ -12,6 +12,7 @@ import Modal from '@/components/ui/Modal'
 import Badge from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import { notifyAthlete } from '@/lib/push'
 import styles from '@/styles/athlete-tabs.module.css'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -100,8 +101,13 @@ export default function PosingPage() {
   async function startRecording() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
-        : MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : ''
+      // Prefer audio/mp4 (iOS Safari native, Chrome plays it).
+      // webm;opus is a fallback for Chrome/Firefox desktop — but iOS Safari on
+      // the athlete side can't play webm, so this is strictly a fallback.
+      const mime = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4'
+        : MediaRecorder.isTypeSupported('audio/mp4;codecs=mp4a.40.2') ? 'audio/mp4;codecs=mp4a.40.2'
+        : MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus'
+        : ''
       const mr = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined)
       audioChunksRef.current = []
       mr.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
@@ -176,6 +182,20 @@ export default function PosingPage() {
         audio_url: audioUrl,
       })
       if (error) throw error
+
+      // Notify athlete (in-app DB row + push if they have a token)
+      const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', params.id).single()
+      if (ath?.user_id) {
+        const bodyPreview = comment ? comment.slice(0, 80) : audioUrl ? 'Message vocal du coach' : loom ? 'Correction posing' : 'Nouveau retour'
+        await notifyAthlete(
+          ath.user_id,
+          'posing_retour',
+          'Correction posing',
+          bodyPreview,
+          { loom_url: loom || null, audio_url: audioUrl, titre: formTitre.trim() || 'Correction posing' },
+        )
+      }
+
       toast('Correction posing envoyee !', 'success')
       setShowModal(false)
       resetForm()
