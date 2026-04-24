@@ -110,15 +110,39 @@ export default function InfosPage() {
       // Cache main data
       setPageCache(cacheKey, { athlete: data, phase, plan, payments, cancels })
 
-      // Onboarding: try athlete_id first, fallback to user_id
-      let ob: any = obRes1.data?.[0] || null
+      // Onboarding: try by athlete_id, fallback to user_id. Also include
+      // `responses` column (used by OnboardingSection to show what the
+      // athlete answered to questionnaires).
+      let ob: any = null
+      const { data: obByAthleteId, error: ob1Err } = await supabase
+        .from('athlete_onboarding')
+        .select('id, athlete_id, workflow_id, completed, steps_completed, started_at, responses')
+        .eq('athlete_id', params.id)
+        .limit(1)
+      if (ob1Err) console.error('[onboarding] query by athlete_id failed:', ob1Err)
+      ob = obByAthleteId?.[0] || null
       if (!ob && data?.user_id) {
-        const r2 = await supabase.from('athlete_onboarding').select('id, athlete_id, workflow_id, completed, steps_completed, started_at').eq('athlete_id', data.user_id).limit(1)
-        ob = r2.data?.[0] || null
+        const { data: obByUserId, error: ob2Err } = await supabase
+          .from('athlete_onboarding')
+          .select('id, athlete_id, workflow_id, completed, steps_completed, started_at, responses')
+          .eq('athlete_id', data.user_id)
+          .limit(1)
+        if (ob2Err) console.error('[onboarding] query by user_id failed:', ob2Err)
+        ob = obByUserId?.[0] || null
       }
       setOnboarding(ob)
-      if (ob?.workflow_id) {
-        const { data: wf } = await supabase.from('onboarding_workflows').select('id, name, steps, created_at').eq('id', ob.workflow_id).single()
+
+      // Resolve workflow: prefer the one on the onboarding row, fall back to
+      // the workflow assigned on the athlete record itself (so we can show
+      // the workflow steps even before the athlete has started it).
+      const resolvedWorkflowId = ob?.workflow_id || data?.onboarding_workflow_id || null
+      if (resolvedWorkflowId) {
+        const { data: wf, error: wfErr } = await supabase
+          .from('onboarding_workflows')
+          .select('id, name, steps, created_at')
+          .eq('id', resolvedWorkflowId)
+          .single()
+        if (wfErr) console.error('[onboarding] workflow fetch failed:', wfErr, 'id:', resolvedWorkflowId)
         setWorkflow(wf)
       } else {
         setWorkflow(null)
@@ -394,11 +418,14 @@ export default function InfosPage() {
 
   // ── Onboarding section ──
   function OnboardingSection() {
-    if (!workflow || !onboarding) return null
+    // Show the workflow as soon as it's assigned, even if the athlete
+    // hasn't started it yet (no athlete_onboarding row) — progress defaults
+    // to "not started" for every step.
+    if (!workflow) return null
 
     const steps = typeof workflow.steps === 'string' ? JSON.parse(workflow.steps) : (workflow.steps || [])
-    const completed = onboarding.steps_completed || []
-    const responses = typeof onboarding.responses === 'string' ? JSON.parse(onboarding.responses) : (onboarding.responses || {})
+    const completed = onboarding?.steps_completed || []
+    const responses = typeof onboarding?.responses === 'string' ? JSON.parse(onboarding.responses) : (onboarding?.responses || {})
 
     const isDone = (idx: number, step: any) =>
       completed.includes(idx) || completed.includes(String(idx)) ||
