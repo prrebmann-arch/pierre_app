@@ -250,11 +250,6 @@ export default function PosingPage() {
             </div>
 
             <div>
-              <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>Titre</label>
-              <input type="text" className="form-control" value={formTitre} onChange={(e) => setFormTitre(e.target.value)} placeholder="Correction posing" />
-            </div>
-
-            <div>
               <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>
                 <i className="fas fa-comment" style={{ marginRight: 6 }} />Message texte
               </label>
@@ -414,11 +409,6 @@ export default function PosingPage() {
       {/* Correction modal */}
       <Modal isOpen={showModal} onClose={() => { setShowModal(false); resetForm() }} title="Envoyer une correction posing">
         <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>Titre</label>
-            <input type="text" className="form-control" value={formTitre} onChange={(e) => setFormTitre(e.target.value)} placeholder="Correction posing" />
-          </div>
-
           <div>
             <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>
               <i className="fas fa-comment" style={{ marginRight: 6 }} />Message texte
