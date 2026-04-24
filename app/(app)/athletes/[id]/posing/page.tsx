@@ -137,14 +137,19 @@ export default function PosingPage() {
   }
 
   async function uploadAudioBlob(blob: Blob): Promise<string | null> {
-    const ext = blob.type.includes('mp4') ? 'm4a' : 'webm'
+    // `coach-audio` bucket accepts audio/webm, audio/mp4, audio/mpeg, audio/ogg.
+    // The `execution-videos` bucket is locked to video/* mime types.
+    const ext = blob.type.includes('mp4') ? 'm4a'
+      : blob.type.includes('ogg') ? 'ogg'
+      : blob.type.includes('mpeg') ? 'mp3'
+      : 'webm'
     const path = `posing-retours/${params.id}/${Date.now()}.${ext}`
     const { error } = await supabase.storage
-      .from('execution-videos')
+      .from('coach-audio')
       .upload(path, blob, { contentType: blob.type, upsert: false })
     if (error) { console.error('[posing] audio upload error:', error); throw new Error(error.message) }
     const { data: signed } = await supabase.storage
-      .from('execution-videos')
+      .from('coach-audio')
       .createSignedUrl(path, 60 * 60 * 24 * 365 * 5) // 5 years
     return signed?.signedUrl || null
   }
