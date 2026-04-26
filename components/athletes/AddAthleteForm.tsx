@@ -261,14 +261,32 @@ export default function AddAthleteForm({ isOpen, onClose, onCreated }: AddAthlet
         }
 
         if (onboardingUserId) {
-          await supabase.from('athlete_onboarding').insert({
-            athlete_id: onboardingUserId,
-            workflow_id: workflowId,
-            current_step: 0,
-            steps_completed: [],
-            completed: false,
-            responses: {},
-          })
+          // Insert via API route that uses the service role to bypass RLS.
+          // Client-side insert was silently failing on RLS (coach's auth.uid
+          // != athlete_id in the inserted row) — which meant every athlete
+          // created with a workflow had NO onboarding row, and the workflow
+          // never appeared in the athlete app.
+          try {
+            const { data: { session } } = await supabase.auth.getSession()
+            const resp = await fetch('/api/athlete-onboarding/init', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session?.access_token || ''}`,
+              },
+              body: JSON.stringify({
+                athlete_id: onboardingUserId,
+                workflow_id: workflowId,
+              }),
+            })
+            if (!resp.ok) {
+              const msg = await resp.text()
+              console.error('[athlete-onboarding init] failed:', resp.status, msg)
+              toast('Onboarding non initialise (voir console)', 'error')
+            }
+          } catch (err) {
+            console.error('[athlete-onboarding init] exception:', err)
+          }
         }
       }
 
