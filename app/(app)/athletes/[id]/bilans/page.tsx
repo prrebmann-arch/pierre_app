@@ -13,6 +13,7 @@ import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import BilanAccordion from '@/components/bilans/BilanAccordion'
 import BilanProgressView from '@/components/bilans/BilanProgressView'
 import PhotoCompare from '@/components/bilans/PhotoCompare'
+import BilanPhotosUploadModal from '@/components/bilans/BilanPhotosUploadModal'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import type { DailyReport } from '@/components/bilans/BilanAccordion'
@@ -221,6 +222,9 @@ export default function BilansPage() {
   // Bilan traite popup state
   const [bilanTraiteOpen, setBilanTraiteOpen] = useState(false)
 
+  // Photo import modal state
+  const [photoImportOpen, setPhotoImportOpen] = useState(false)
+
   const loadData = useCallback(async () => {
     // Resolve user_id: from context or fallback via DB query
     let userId = athleteUserId
@@ -360,21 +364,35 @@ export default function BilansPage() {
 
   return (
     <>
-      {/* View toggle */}
-      <div className={styles.bpToggle}>
+      {/* View toggle + import photos */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <div className={styles.bpToggle} style={{ marginBottom: 0 }}>
+          <button
+            className={`${styles.bpToggleBtn} ${viewMode === 'table' ? styles.bpToggleBtnActive : ''}`}
+            onClick={() => setViewMode('table')}
+          >
+            <i className="fas fa-table-list" />
+            Tableau
+          </button>
+          <button
+            className={`${styles.bpToggleBtn} ${viewMode === 'progress' ? styles.bpToggleBtnActive : ''}`}
+            onClick={() => setViewMode('progress')}
+          >
+            <i className="fas fa-chart-line" />
+            Progression
+          </button>
+        </div>
         <button
-          className={`${styles.bpToggleBtn} ${viewMode === 'table' ? styles.bpToggleBtnActive : ''}`}
-          onClick={() => setViewMode('table')}
+          onClick={() => setPhotoImportOpen(true)}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
+            background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontWeight: 600,
+            cursor: 'pointer',
+          }}
         >
-          <i className="fas fa-table-list" />
-          Tableau
-        </button>
-        <button
-          className={`${styles.bpToggleBtn} ${viewMode === 'progress' ? styles.bpToggleBtnActive : ''}`}
-          onClick={() => setViewMode('progress')}
-        >
-          <i className="fas fa-chart-line" />
-          Progression
+          <i className="fas fa-camera" />
+          Importer photos
         </button>
       </div>
 
@@ -416,6 +434,15 @@ export default function BilansPage() {
           onClose={() => setBilanTraiteOpen(false)}
         />
       )}
+
+      <BilanPhotosUploadModal
+        isOpen={photoImportOpen}
+        onClose={() => setPhotoImportOpen(false)}
+        athleteId={athleteId}
+        athletePrenom={(athlete || selectedAthlete)?.prenom || ''}
+        existingDates={bilans.map(b => b.date)}
+        onSuccess={() => { setPhotosLoaded(false); loadData() }}
+      />
     </>
   )
 }

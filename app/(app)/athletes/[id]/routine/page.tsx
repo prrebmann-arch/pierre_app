@@ -25,7 +25,6 @@ type RoutineItem = {
 }
 
 type RoutineLog = { id: string; routine_item_id: string; athlete_id: string; date: string }
-type DailyAction = { id: string; athlete_id: string; date: string; text: string; emoji: string | null; completed: boolean; created_at: string }
 
 function todayStr() { return new Date().toISOString().slice(0, 10) }
 function daysAgoStr(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10) }
@@ -39,7 +38,6 @@ export default function RoutinePage() {
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState<RoutineItem[]>([])
   const [logs, setLogs] = useState<RoutineLog[]>([])
-  const [todayActions, setTodayActions] = useState<DailyAction[]>([])
 
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<RoutineItem | null>(null)
@@ -49,7 +47,7 @@ export default function RoutinePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [itemsRes, logsRes, actionsRes] = await Promise.all([
+      const [itemsRes, logsRes] = await Promise.all([
         supabase.from('routine_items')
           .select('id, athlete_id, coach_id, title, emoji, display_order, active, created_by, created_at')
           .eq('athlete_id', params.id).eq('active', true),
@@ -57,17 +55,11 @@ export default function RoutinePage() {
           .select('id, routine_item_id, athlete_id, date')
           .eq('athlete_id', params.id)
           .gte('date', daysAgoStr(6)).lte('date', todayStr()),
-        supabase.from('daily_actions')
-          .select('id, athlete_id, date, text, emoji, completed, created_at')
-          .eq('athlete_id', params.id).eq('date', todayStr())
-          .order('display_order', { ascending: true }),
       ])
       if (itemsRes.error) { console.error('[routine] items error:', itemsRes.error); toast(`Erreur: ${itemsRes.error.message}`, 'error') }
       if (logsRes.error) console.error('[routine] logs error:', logsRes.error)
-      if (actionsRes.error) console.error('[routine] actions error:', actionsRes.error)
       setItems((itemsRes.data || []) as RoutineItem[])
       setLogs((logsRes.data || []) as RoutineLog[])
-      setTodayActions((actionsRes.data || []) as DailyAction[])
     } finally {
       setLoading(false)
     }
@@ -114,7 +106,7 @@ export default function RoutinePage() {
       }
       setModalOpen(false)
       await loadData()
-      toast('Habitude enregistrée', 'success')
+      toast('Routine enregistrée', 'success')
     } catch (e: any) {
       console.error('[routine] save error:', e)
       toast(`Erreur: ${e.message || e}`, 'error')
@@ -159,9 +151,9 @@ export default function RoutinePage() {
     <div className={styles.tabContent} style={{ padding: 24 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
         <div>
-          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>☀️ Routine &amp; habitudes</h2>
+          <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>☀️ Routines</h2>
           <p style={{ margin: '4px 0 0', color: 'var(--text3)', fontSize: 13 }}>
-            Habitudes récurrentes que l'athlète coche chaque jour. Les "3 actions du jour" sont définies par l'athlète lui-même.
+            Routines récurrentes que l&apos;athlète coche chaque jour.
           </p>
         </div>
         <button
@@ -169,7 +161,7 @@ export default function RoutinePage() {
           style={{ background: 'var(--primary)', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}
         >
           <i className="fas fa-plus" style={{ marginRight: 6 }} />
-          Nouvelle habitude
+          Nouvelle routine
         </button>
       </div>
 
@@ -186,35 +178,15 @@ export default function RoutinePage() {
         </div>
       )}
 
-      {/* Today's 3 actions (read-only for coach) */}
-      {todayActions.length > 0 && (
-        <div style={{ padding: 14, background: 'var(--bg2)', borderRadius: 12, border: '1px solid var(--border)', marginBottom: 20 }}>
-          <div style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 700, letterSpacing: 0.5, marginBottom: 10 }}>
-            ⭐ 3 ACTIONS DU JOUR (définies par l'athlète)
-          </div>
-          {todayActions.map((a) => (
-            <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0' }}>
-              <span style={{ fontSize: 14, color: a.completed ? '#22c55e' : 'var(--text3)' }}>
-                <i className={`fas ${a.completed ? 'fa-check-circle' : 'fa-circle'}`} />
-              </span>
-              {a.emoji && <span>{a.emoji}</span>}
-              <span style={{ textDecoration: a.completed ? 'line-through' : 'none', color: a.completed ? 'var(--text3)' : 'var(--text)' }}>
-                {a.text}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-
       {items.length === 0 ? (
         <EmptyState
           icon="fas fa-sun"
-          message="Aucune habitude définie. Crée la routine de ton athlète — il verra les tâches dans son app dès demain matin."
+          message="Aucune routine définie. Crée la routine de ton athlète — il verra les tâches dans son app dès demain matin."
         />
       ) : (
         <div>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text3)', letterSpacing: 0.8, marginBottom: 10 }}>
-            HABITUDES
+            ROUTINES
           </div>
           {habits.map((item, i) => (
             <ItemRow
@@ -230,7 +202,7 @@ export default function RoutinePage() {
         </div>
       )}
 
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Modifier l\u2019habitude' : 'Nouvelle habitude'}>
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Modifier la routine' : 'Nouvelle routine'}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label style={{ fontSize: 13, color: 'var(--text2)' }}>
             Titre
