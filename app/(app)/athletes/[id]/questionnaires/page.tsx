@@ -19,13 +19,63 @@ const Q_TYPES: { value: string; label: string; icon: string }[] = [
   { value: 'choice', label: 'Choix multiples', icon: 'fa-list-ul' },
   { value: 'rating', label: 'Note (1-10)', icon: 'fa-star' },
   { value: 'yesno', label: 'Oui / Non', icon: 'fa-toggle-on' },
+  { value: 'photo', label: 'Photo', icon: 'fa-image' },
 ]
+
+const PHOTO_POSITIONS = [
+  { value: 'front', label: 'Face' },
+  { value: 'side', label: 'Profil' },
+  { value: 'back', label: 'Dos' },
+  { value: 'other', label: 'Autre' },
+]
+
+function isPhotoAnswer(answer: unknown): answer is string {
+  if (typeof answer !== 'string' || !answer) return false
+  // Soit une URL http(s) avec extension image, soit un path athlete-photos
+  // ({user_id}/{date}_{position}.jpg ou similaire)
+  if (/^https?:\/\//.test(answer)) {
+    return /\.(jpe?g|png|webp)/i.test(answer) || /athlete-photos/.test(answer)
+  }
+  // Path : commence par un UUID ou ID, contient .jpg/.png/.webp
+  return /\.(jpe?g|png|webp)$/i.test(answer)
+}
+
+function PhotoAnswer({ pathOrUrl }: { pathOrUrl: string }) {
+  const supabase = createClient()
+  const [url, setUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    if (/^https?:\/\//.test(pathOrUrl)) {
+      setUrl(pathOrUrl)
+      return
+    }
+    ;(async () => {
+      const { data } = await supabase.storage
+        .from('athlete-photos')
+        .createSignedUrl(pathOrUrl, 60 * 60)
+      if (!cancelled) setUrl(data?.signedUrl ?? null)
+    })()
+    return () => { cancelled = true }
+  }, [pathOrUrl, supabase])
+
+  if (!url) {
+    return <span style={{ color: 'var(--text3)', fontSize: 12 }}>Chargement…</span>
+  }
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <a href={url} target="_blank" rel="noopener noreferrer">
+      <img src={url} alt="Photo" style={{ maxWidth: 200, maxHeight: 280, borderRadius: 8, border: '1px solid var(--border)' }} />
+    </a>
+  )
+}
 
 function formatAnswer(question: any, answer: any): string {
   if (answer == null) return '\u2014'
   if (question.type === 'yesno') return answer ? 'Oui' : 'Non'
   if (question.type === 'rating') return `${answer}/10`
   if (question.type === 'choice' && Array.isArray(answer)) return answer.join(', ')
+  if (question.type === 'photo') return isPhotoAnswer(answer) ? 'Photo envoyée' : 'Pas de photo'
   return String(answer)
 }
 
@@ -242,6 +292,17 @@ export default function QuestionnairesPage() {
                   const nq = [...quickQuestions]; nq[i] = { ...nq[i], options: e.target.value.split('\n').map((s: string) => s.trim()).filter(Boolean) }; setQuickQuestions(nq)
                 }} />
               )}
+              {q.type === 'photo' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                  <label style={{ fontSize: 11, color: 'var(--text3)' }}>Position</label>
+                  <select className="form-control" style={{ width: 140 }} value={q.position || 'front'} onChange={(e) => {
+                    const nq = [...quickQuestions]; nq[i] = { ...nq[i], position: e.target.value }; setQuickQuestions(nq)
+                  }}>
+                    {PHOTO_POSITIONS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>Face/Profil/Dos s&apos;ajouteront automatiquement à la page Bilans.</span>
+                </div>
+              )}
             </div>
           ))}
           <button className="btn btn-outline" style={{ marginTop: 12 }} onClick={() => {
@@ -354,7 +415,9 @@ export default function QuestionnairesPage() {
                         </div>
                         {resp && (
                           <div style={{ marginTop: 4, fontSize: 14, paddingLeft: 22 }}>
-                            {ans ? (
+                            {ans && q.type === 'photo' && isPhotoAnswer(ans.answer) ? (
+                              <PhotoAnswer pathOrUrl={ans.answer} />
+                            ) : ans ? (
                               <span style={{ color: q.type === 'yesno' ? (ans.answer ? 'var(--success)' : 'var(--danger)') : 'var(--text)' }}>
                                 {formatAnswer(q, ans.answer)}
                               </span>

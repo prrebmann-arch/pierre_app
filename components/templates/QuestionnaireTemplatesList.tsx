@@ -13,6 +13,14 @@ const Q_TYPES = [
   { value: 'choice', label: 'Choix multiples', icon: 'fa-list-ul' },
   { value: 'rating', label: 'Note (1-10)', icon: 'fa-star' },
   { value: 'yesno', label: 'Oui / Non', icon: 'fa-toggle-on' },
+  { value: 'photo', label: 'Photo', icon: 'fa-image' },
+] as const
+
+const PHOTO_POSITIONS = [
+  { value: 'front', label: 'Face' },
+  { value: 'side', label: 'Profil' },
+  { value: 'back', label: 'Dos' },
+  { value: 'other', label: 'Autre' },
 ] as const
 
 interface Question {
@@ -21,6 +29,7 @@ interface Question {
   type: string
   options?: string[]
   required?: boolean
+  position?: 'front' | 'side' | 'back' | 'other'
 }
 
 interface QuestionnaireTemplate {
@@ -331,6 +340,25 @@ function QuestionEditor({
             onChange={(e) => updateOptions(e.target.value)}
             placeholder={'Option 1\nOption 2\nOption 3'}
           />
+        </div>
+      )}
+
+      {question.type === 'photo' && (
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <label style={{ fontSize: 11, color: 'var(--text3)' }}>Position du bilan</label>
+          <select
+            className="form-control"
+            style={{ width: 160 }}
+            value={question.position || 'front'}
+            onChange={(e) => onChange({ position: e.target.value as Question['position'] })}
+          >
+            {PHOTO_POSITIONS.map((p) => (
+              <option key={p.value} value={p.value}>{p.label}</option>
+            ))}
+          </select>
+          <span style={{ fontSize: 11, color: 'var(--text3)', flex: 1 }}>
+            Si Face/Profil/Dos, la photo apparaîtra automatiquement sur la page Bilans à la date de soumission.
+          </span>
         </div>
       )}
 
