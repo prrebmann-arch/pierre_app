@@ -127,16 +127,17 @@ export default function MealEditor({
   // When switching meal type, store current meals and load other tab's meals
   function switchMealType(newType: 'training' | 'rest') {
     if (newType === mealType) return
-    // Save current tab meals to temp
-    const currentMacros = isMacroOnly ? manualMacros : undefined
-    setTempMeals((prev) => ({ ...prev, [mealType]: { meals: [...meals], macros: currentMacros } }))
+    // Always persist current tab's meals AND macros so we can reload them later
+    setTempMeals((prev) => ({ ...prev, [mealType]: { meals: [...meals], macros: { ...manualMacros } } }))
     // Load other tab from temp if available
     const other = tempMeals[newType]
     if (other) {
       setMeals(other.meals.length ? other.meals : [{ foods: [] }])
-      if (other.macros) setManualMacros(other.macros)
+      setManualMacros(other.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 })
     } else {
+      // Fresh tab: reset macros and meals so each day stays independent
       setMeals([{ foods: [] }])
+      setManualMacros({ calories: 0, proteines: 0, glucides: 0, lipides: 0 })
     }
     setActiveMealIdx(0)
     setMealType(newType)
@@ -276,28 +277,40 @@ export default function MealEditor({
           const otherTemp = tempMeals[otherType]
 
           let otherTab: any = { meals: [], macros: { calories: 0, proteines: 0, glucides: 0, lipides: 0 }, macro_only: false }
-          if (otherTemp?.meals?.length) {
-            const otherMealsData = otherTemp.meals.map((m) => {
-              const foods = m.foods.map((f) => {
-                const macros = calcFoodMacros(f)
-                return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
+          if (otherTemp) {
+            const hasFood = otherTemp.meals.some((m) => m.foods.length > 0)
+            const otherMacros = otherTemp.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 }
+            const hasMacros = !!(otherMacros.calories || otherMacros.proteines || otherMacros.glucides || otherMacros.lipides)
+
+            if (isMacroOnly && hasMacros) {
+              otherTab = {
+                meals: [],
+                macros: otherMacros,
+                macro_only: true,
+              }
+            } else if (hasFood) {
+              const otherMealsData = otherTemp.meals.map((m) => {
+                const foods = m.foods.map((f) => {
+                  const macros = calcFoodMacros(f)
+                  return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
+                })
+                const obj: any = { foods }
+                if (m.pre_workout) obj.pre_workout = true
+                if (m.time) obj.time = m.time
+                return obj
               })
-              const obj: any = { foods }
-              if (m.pre_workout) obj.pre_workout = true
-              if (m.time) obj.time = m.time
-              return obj
-            })
-            const otherTotals = otherMealsData.reduce(
-              (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
-                (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
-                return acc
-              },
-              { kcal: 0, p: 0, g: 0, l: 0 },
-            )
-            otherTab = {
-              meals: otherMealsData,
-              macros: { calories: Math.round(otherTotals.kcal), proteines: Math.round(otherTotals.p), glucides: Math.round(otherTotals.g), lipides: Math.round(otherTotals.l) },
-              macro_only: !!otherTemp.macros,
+              const otherTotals = otherMealsData.reduce(
+                (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
+                  (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
+                  return acc
+                },
+                { kcal: 0, p: 0, g: 0, l: 0 },
+              )
+              otherTab = {
+                meals: otherMealsData,
+                macros: { calories: Math.round(otherTotals.kcal), proteines: Math.round(otherTotals.p), glucides: Math.round(otherTotals.g), lipides: Math.round(otherTotals.l) },
+                macro_only: false,
+              }
             }
           }
 
@@ -366,12 +379,15 @@ export default function MealEditor({
         // Save paired plan (other tab) if coach edited it during this session
         const otherType = mealType === 'training' ? 'rest' : 'training'
         const otherTemp = tempMeals[otherType]
-        if (otherTemp?.meals?.length) {
+        if (otherTemp) {
           const hasFood = otherTemp.meals.some((m) => m.foods.length > 0)
-          if (hasFood) {
+          const otherMacros = otherTemp.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 }
+          const hasMacros = !!(otherMacros.calories || otherMacros.proteines || otherMacros.glucides || otherMacros.lipides)
+          // Save if user filled foods OR (macro-only) entered any macro values
+          if (hasFood || (isMacroOnly && hasMacros)) {
             await supabase.from('nutrition_plans').update({ actif: false }).eq('athlete_id', athleteId).eq('meal_type', otherType)
 
-            const otherMealsData = otherTemp.meals.map((m) => {
+            const otherMealsData = isMacroOnly ? [] : otherTemp.meals.map((m) => {
               const foods = m.foods.map((f) => {
                 const macros = calcFoodMacros(f)
                 return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
@@ -381,26 +397,37 @@ export default function MealEditor({
               if (m.time) obj.time = m.time
               return obj
             })
-            const otherTotals = otherMealsData.reduce(
-              (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
-                (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
-                return acc
-              },
-              { kcal: 0, p: 0, g: 0, l: 0 },
-            )
+
+            let otherCal = 0, otherP = 0, otherG = 0, otherL = 0
+            if (isMacroOnly) {
+              otherCal = otherMacros.calories
+              otherP = otherMacros.proteines
+              otherG = otherMacros.glucides
+              otherL = otherMacros.lipides
+            } else {
+              const totals = otherMealsData.reduce(
+                (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
+                  (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
+                  return acc
+                },
+                { kcal: 0, p: 0, g: 0, l: 0 },
+              )
+              otherCal = Math.round(totals.kcal); otherP = Math.round(totals.p); otherG = Math.round(totals.g); otherL = Math.round(totals.l)
+            }
+
             await supabase.from('nutrition_plans').insert({
               nom: planName.trim(),
               meal_type: otherType,
               meals_data: JSON.stringify(otherMealsData),
-              calories_objectif: Math.round(otherTotals.kcal),
-              proteines: Math.round(otherTotals.p),
-              glucides: Math.round(otherTotals.g),
-              lipides: Math.round(otherTotals.l),
+              calories_objectif: otherCal,
+              proteines: otherP,
+              glucides: otherG,
+              lipides: otherL,
               valid_from: today,
               actif: true,
               athlete_id: athleteId,
               coach_id: user.id,
-              macro_only: false,
+              macro_only: isMacroOnly || false,
             })
           }
         }
@@ -528,19 +555,44 @@ export default function MealEditor({
           <>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>kcal total</label>
-              <input type="number" value={manualMacros.calories || ''} onChange={(e) => setManualMacros((p) => ({ ...p, calories: parseInt(e.target.value) || 0 }))} />
+              <input
+                type="number"
+                value={manualMacros.calories || ''}
+                onChange={(e) => setManualMacros((p) => ({ ...p, calories: parseInt(e.target.value) || 0 }))}
+              />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Proteines (g)</label>
-              <input type="number" value={manualMacros.proteines || ''} onChange={(e) => setManualMacros((p) => ({ ...p, proteines: parseInt(e.target.value) || 0 }))} />
+              <input
+                type="number"
+                value={manualMacros.proteines || ''}
+                onChange={(e) => setManualMacros((p) => {
+                  const proteines = parseInt(e.target.value) || 0
+                  return { ...p, proteines, calories: Math.round(proteines * 4 + p.glucides * 4 + p.lipides * 9) }
+                })}
+              />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Glucides (g)</label>
-              <input type="number" value={manualMacros.glucides || ''} onChange={(e) => setManualMacros((p) => ({ ...p, glucides: parseInt(e.target.value) || 0 }))} />
+              <input
+                type="number"
+                value={manualMacros.glucides || ''}
+                onChange={(e) => setManualMacros((p) => {
+                  const glucides = parseInt(e.target.value) || 0
+                  return { ...p, glucides, calories: Math.round(p.proteines * 4 + glucides * 4 + p.lipides * 9) }
+                })}
+              />
             </div>
             <div className="form-group" style={{ marginBottom: 0 }}>
               <label>Lipides (g)</label>
-              <input type="number" value={manualMacros.lipides || ''} onChange={(e) => setManualMacros((p) => ({ ...p, lipides: parseInt(e.target.value) || 0 }))} />
+              <input
+                type="number"
+                value={manualMacros.lipides || ''}
+                onChange={(e) => setManualMacros((p) => {
+                  const lipides = parseInt(e.target.value) || 0
+                  return { ...p, lipides, calories: Math.round(p.proteines * 4 + p.glucides * 4 + lipides * 9) }
+                })}
+              />
             </div>
           </>
         ) : (
