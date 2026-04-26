@@ -73,30 +73,26 @@ export async function POST(request: Request) {
     paths[pos] = path
   }
 
-  // Upsert daily_reports (user_id, date)
-  const { data: existing, error: selErr } = await sb
-    .from('daily_reports')
-    .select('id')
-    .eq('user_id', athlete.user_id)
-    .eq('date', date)
-    .maybeSingle()
-  if (selErr) {
-    return NextResponse.json({ error: `Lecture bilan: ${selErr.message}` }, { status: 500 })
-  }
-
+  // Upsert daily_reports atomique sur (user_id, date) — même pattern que l'athlete app
   const patch: Record<string, string> = {}
   for (const [pos, p] of Object.entries(paths)) patch[`photo_${pos}`] = p as string
 
-  if (existing?.id) {
-    const { error: updErr } = await sb.from('daily_reports').update(patch).eq('id', existing.id)
-    if (updErr) return NextResponse.json({ error: `Update bilan: ${updErr.message}` }, { status: 500 })
-  } else {
-    const { error: insErr } = await sb.from('daily_reports').insert({
-      user_id: athlete.user_id,
-      date,
-      ...patch,
+  const { error: dbErr } = await sb
+    .from('daily_reports')
+    .upsert(
+      { user_id: athlete.user_id, date, ...patch },
+      { onConflict: 'user_id,date' }
+    )
+  if (dbErr) {
+    console.error('[bilan-photos/upload] upsert daily_reports failed', {
+      user_id: athlete.user_id, date, patch,
+      code: dbErr.code, message: dbErr.message, details: dbErr.details, hint: dbErr.hint,
     })
-    if (insErr) return NextResponse.json({ error: `Insert bilan: ${insErr.message}` }, { status: 500 })
+    return NextResponse.json({
+      error: `Bilan: ${dbErr.message}${dbErr.hint ? ` (${dbErr.hint})` : ''}`,
+      code: dbErr.code,
+      details: dbErr.details,
+    }, { status: 500 })
   }
 
   return NextResponse.json({ ok: true, paths })
