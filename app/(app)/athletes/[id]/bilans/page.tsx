@@ -406,6 +406,7 @@ export default function BilansPage() {
         initialType={photoType}
         initialDate={photoDate}
         photoHistory={photoHistory}
+        athleteName={(athlete || selectedAthlete) ? `${(athlete || selectedAthlete)!.prenom || ''}_${(athlete || selectedAthlete)!.nom || ''}`.trim() : undefined}
       />
 
       {bilanTraiteOpen && (athlete || selectedAthlete)?.user_id && (

@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import Card from '@/components/ui/Card'
 import Toggle from '@/components/ui/Toggle'
 import Modal from '@/components/ui/Modal'
+import InstagramLayoutSection from '@/components/profile/InstagramLayoutSection'
 import type { PlatformInvoice } from '@/lib/types'
 import styles from '@/styles/profile.module.css'
 
@@ -606,6 +607,8 @@ export default function ProfilePage() {
           </div>
         </div>
       </Card>
+
+      <InstagramLayoutSection />
 
       {/* Import modal */}
       <Modal

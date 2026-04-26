@@ -269,6 +269,15 @@
 }
 .pcTab:hover { background: var(--bg4); color: var(--text); }
 .pcTabActive { background: var(--primary); color: #fff; }
+.pcHeaderRight { display: flex; align-items: center; gap: 8px; }
+.pcExportBtn {
+  background: var(--primary); color: #fff; border: none;
+  padding: 8px 16px; border-radius: 8px; font-size: 13px;
+  font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px;
+  transition: all 0.15s;
+}
+.pcExportBtn:hover:not(:disabled) { filter: brightness(1.1); }
+.pcExportBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 .pcClose {
   background: none; border: none; color: var(--text3);
   font-size: 22px; cursor: pointer; padding: 8px;
@@ -287,20 +296,35 @@
 }
 .pcDivider { width: 2px; background: var(--border); margin: 0 12px; flex-shrink: 0; }
 
-.pcImgWrap {
+.pcCellWrap {
   display: flex; flex-direction: column; align-items: center;
-  flex: 1; min-width: 0; max-height: 75vh;
+  flex: 1; min-width: 0; gap: 10px;
 }
-.pcImgWrap img {
-  max-width: 100%; max-height: 72vh;
+/* Cell aspect ratio matches half of Instagram portrait export (540:1350 = 2:5) */
+.pcCell {
+  position: relative;
+  aspect-ratio: 2 / 5;
+  height: min(72vh, 75vh);
+  max-width: 100%;
+  background: #000;
   border-radius: 12px;
-  object-fit: contain;
+  overflow: hidden;
   transition: opacity 0.15s ease;
 }
 .pcImgFade { opacity: 0.3; }
 
+.pcResetBtn {
+  position: absolute; bottom: 8px; left: 8px;
+  background: var(--overlay); border: 1px solid var(--hover-border-strong);
+  color: #fff; width: 32px; height: 32px; z-index: 3;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; cursor: pointer;
+  transition: all 0.15s; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.pcResetBtn:hover { background: var(--primary); border-color: var(--primary); }
+
 .pcDate {
-  margin-top: 10px; font-size: 13px; font-weight: 600;
+  font-size: 13px; font-weight: 600;
   color: var(--text2); text-align: center;
 }
 
@@ -324,6 +348,7 @@
   background: var(--primary); color: #fff;
   font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
   padding: 4px 12px; border-radius: 20px;
+  z-index: 3;
 }
 
 /* Responsive photo compare */
@@ -331,8 +356,9 @@
   .pcViewer { max-width: 100%; }
   .pcBody { flex-direction: column; gap: 16px; }
   .pcDivider { width: 100%; height: 1px; margin: 0; }
-  .pcImgWrap img { max-height: 35vh; }
+  .pcCell { height: 50vh; }
   .pcNav { width: 32px; height: 32px; font-size: 12px; }
+  .pcExportBtn { padding: 6px 12px; font-size: 12px; }
 }
 
 /* ===== BILANS OVERVIEW (.bo-*) ===== */
