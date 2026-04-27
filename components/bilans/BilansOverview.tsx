@@ -152,16 +152,18 @@ export default function BilansOverview() {
 
   const markAsTreated = useCallback(async (reportId: string) => {
     setMarking(reportId)
-    const { error } = await supabase
+    const now = new Date().toISOString()
+    const { data, error } = await supabase
       .from('daily_reports')
-      .update({ coach_reviewed_at: new Date().toISOString() })
+      .update({ coach_reviewed_at: now })
       .eq('id', reportId)
+      .select('id')
     setMarking(null)
-    if (error) {
+    if (error || !data || data.length === 0) {
       toast('Impossible de marquer comme traite', 'error')
       return
     }
-    setReports(prev => prev.map(r => r.id === reportId ? { ...r, coach_reviewed_at: new Date().toISOString() } : r))
+    setReports(prev => prev.map(r => r.id === reportId ? { ...r, coach_reviewed_at: now } : r))
     toast('Bilan marque comme traite', 'success')
   }, [supabase, toast])
 
