@@ -7,12 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useAthleteContext } from '@/contexts/AthleteContext'
 import { useToast } from '@/contexts/ToastContext'
-import { toDateStr, isBilanDate, getLastExpectedBilanDate, getNextBilanDate } from '@/lib/utils'
-import { notifyAthlete } from '@/lib/push'
-import { useAudioRecorder } from '@/hooks/useAudioRecorder'
+import { toDateStr, getLastExpectedBilanDate, getNextBilanDate } from '@/lib/utils'
 import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Skeleton from '@/components/ui/Skeleton'
-import EmptyState from '@/components/ui/EmptyState'
 import styles from '@/styles/bilans.module.css'
 import type { Athlete } from '@/lib/types'
 
@@ -26,26 +23,19 @@ interface DailyReport {
   photo_front?: string | null
   photo_side?: string | null
   photo_back?: string | null
+  coach_reviewed_at?: string | null
   [key: string]: unknown
 }
 
 interface AthleteData {
   athlete: Athlete
-  status: 'done' | 'late' | 'upcoming'
+  status: 'done' | 'late' | 'upcoming' | 'treated'
   bilanReport: DailyReport | null
   lastBilanReport: DailyReport | null
   expectedStr: string
 }
 
 type FilterKey = 'all' | 'done' | 'late' | 'upcoming'
-
-const BILAN_TRAITE_MESSAGES = [
-  "Bon bilan, pas de changement, donne-toi a fond !",
-  "Tres beau resultat, continue comme ca !",
-  "Bilan correct, on garde le cap !",
-  "Super progression, rien a modifier !",
-  "RAS, on continue sur cette lancee !",
-]
 
 const FILTER_BTNS: { key: FilterKey; label: string; icon: string }[] = [
   { key: 'all', label: 'Tous', icon: '' },
@@ -54,202 +44,11 @@ const FILTER_BTNS: { key: FilterKey; label: string; icon: string }[] = [
   { key: 'upcoming', label: 'A venir', icon: 'fa-clock' },
 ]
 
-// ── Bilan Traite Popup ──
-
-function BilanTraitePopup({
-  userId,
-  prenom,
-  athleteId,
-  onClose,
-  onSent,
-}: {
-  userId: string
-  prenom: string
-  athleteId: string | null
-  onClose: () => void
-  onSent: () => void
-}) {
-  const { user } = useAuth()
-  const { toast } = useToast()
-  const supabase = createClient()
-
-  const [selectedChip, setSelectedChip] = useState(-1)
-  const [customMsg, setCustomMsg] = useState('')
-  const [loomUrl, setLoomUrl] = useState('')
-  const recorder = useAudioRecorder({
-    bucket: 'coach-audio',
-    pathPrefix: `${user?.id || 'unknown'}/bilan_${userId}_`,
-  })
-
-  const handleSend = async () => {
-    const msg = customMsg.trim() || (selectedChip >= 0 ? BILAN_TRAITE_MESSAGES[selectedChip] : '')
-    const hasAudio = !!recorder.audioUrl
-    const hasLoom = !!loomUrl.trim()
-
-    if (!msg && !hasAudio && !hasLoom) {
-      toast('Ajoutez un message, vocal ou lien Loom', 'error')
-      return
-    }
-
-    const finalMsg = msg || 'Bilan verifie'
-
-    // Save in bilan_retours
-    if (athleteId) {
-      await supabase.from('bilan_retours').insert({
-        athlete_id: athleteId,
-        coach_id: user?.id,
-        loom_url: hasLoom ? loomUrl.trim() : null,
-        titre: 'Bilan traite',
-        commentaire: finalMsg,
-        audio_url: hasAudio ? recorder.audioUrl : null,
-        type: hasLoom ? (hasAudio ? 'mixed' : 'loom') : (hasAudio ? 'audio' : 'message'),
-      })
-    }
-
-    // Notify athlete (DB + push)
-    const meta: Record<string, string> = {}
-    if (hasAudio && recorder.audioUrl) meta.audio_url = recorder.audioUrl
-    if (hasLoom) meta.loom_url = loomUrl.trim()
-
-    const title = hasAudio
-      ? 'Message vocal de ton coach'
-      : hasLoom
-        ? 'Video de ton coach'
-        : 'Retour bilan'
-    const body = hasAudio
-      ? (msg ? msg : "Ton coach t'a envoye un message vocal sur ton bilan")
-      : hasLoom
-        ? (msg ? msg : "Ton coach t'a envoye une video sur ton bilan")
-        : 'Ton bilan a ete verifie : ' + finalMsg.charAt(0).toLowerCase() + finalMsg.slice(1)
-
-    await notifyAthlete(userId, 'bilan', title, body, meta)
-
-    onClose()
-    onSent()
-    toast('Notification envoyee !', 'success')
-  }
-
-  const formatTime = (secs: number) => `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
-
-  return (
-    <div className={styles.btOverlay} onClick={(e) => { if (e.target === e.currentTarget) onClose() }}>
-      <div className={styles.btPopup}>
-        <div className={styles.btPopupHeader}>
-          <div className={styles.btPopupTitle}>
-            <div className={styles.btPopupAvatar}>{prenom.charAt(0)}</div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>Retour bilan</div>
-              <div style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400 }}>{prenom}</div>
-            </div>
-          </div>
-          <button className={styles.btClose} onClick={onClose}>
-            <i className="fas fa-times" />
-          </button>
-        </div>
-
-        <div className={styles.btPopupBody}>
-          <div className={styles.btSectionLabel}>
-            <i className="fas fa-comment-dots" /> Message rapide
-          </div>
-          <div className={styles.btChips}>
-            {BILAN_TRAITE_MESSAGES.map((msg, i) => (
-              <button
-                key={i}
-                type="button"
-                className={`${styles.btChip} ${selectedChip === i && !customMsg.trim() ? styles.btChipActive : ''}`}
-                onClick={() => { setSelectedChip(i); setCustomMsg('') }}
-              >
-                {msg}
-              </button>
-            ))}
-          </div>
-
-          <div className={styles.btSectionLabel} style={{ marginTop: 16 }}>
-            <i className="fas fa-pen" /> Ou message libre
-          </div>
-          <input
-            type="text"
-            className={styles.btInput}
-            placeholder="Ecrivez votre message..."
-            value={customMsg}
-            onChange={(e) => { setCustomMsg(e.target.value); setSelectedChip(-1) }}
-          />
-
-          <div className={styles.btDivider} />
-
-          <div className={styles.btExtras}>
-            <div className={styles.btExtraItem}>
-              <div className={styles.btSectionLabel} style={{ margin: 0 }}>
-                <i className="fas fa-video" /> Lien Loom
-              </div>
-              <input
-                type="url"
-                className={styles.btInput}
-                placeholder="https://www.loom.com/share/..."
-                value={loomUrl}
-                onChange={(e) => setLoomUrl(e.target.value)}
-              />
-            </div>
-            <div className={styles.btExtraItem}>
-              <div className={styles.btSectionLabel} style={{ margin: 0 }}>
-                <i className="fas fa-microphone" /> Message vocal
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  type="button"
-                  className={styles.btMicBtn}
-                  onClick={() => recorder.isRecording ? recorder.stopRecording() : recorder.startRecording()}
-                  disabled={recorder.uploading}
-                  style={recorder.isRecording ? { borderColor: 'var(--danger)' } : undefined}
-                >
-                  {recorder.uploading ? (
-                    <i className="fas fa-spinner fa-spin" />
-                  ) : recorder.isRecording ? (
-                    <>
-                      <i className="fas fa-stop" style={{ color: 'var(--danger)' }} />
-                      <span>{formatTime(recorder.seconds)}</span>
-                    </>
-                  ) : (
-                    <>
-                      <i className="fas fa-microphone" />
-                      <span>Enregistrer</span>
-                    </>
-                  )}
-                </button>
-                {recorder.audioUrl && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-                    <audio controls src={recorder.audioUrl} style={{ height: 32, flex: 1 }} />
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={recorder.clearAudio}
-                      style={{ padding: '3px 6px', color: 'var(--danger)' }}
-                    >
-                      <i className="fas fa-trash" />
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className={styles.btPopupFooter}>
-          <button className="btn btn-outline btn-sm" onClick={onClose}>Annuler</button>
-          <button className="btn btn-red" onClick={handleSend}>
-            <i className="fas fa-paper-plane" style={{ marginRight: 6 }} />
-            Envoyer
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Status Badge ──
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'done') return <span className={`${styles.boStatus} ${styles.boStatusDone}`}><i className="fas fa-check" /> Soumis</span>
+  if (status === 'treated') return <span className={`${styles.boStatus} ${styles.boStatusDone}`}><i className="fas fa-check-double" /> Traite</span>
   if (status === 'late') return <span className={`${styles.boStatus} ${styles.boStatusLate}`}><i className="fas fa-exclamation-circle" /> En retard</span>
   return <span className={`${styles.boStatus} ${styles.boStatusUpcoming}`}><i className="fas fa-clock" /> A venir</span>
 }
@@ -259,11 +58,12 @@ function StatusBadge({ status }: { status: string }) {
 export default function BilansOverview() {
   const { user } = useAuth()
   const { athletes, loading: athletesLoading } = useAthleteContext()
+  const { toast } = useToast()
   const router = useRouter()
   const [filter, setFilter] = useState<FilterKey>('all')
   const [reports, setReports] = useState<DailyReport[]>([])
   const [loading, setLoading] = useState(true)
-  const [popup, setPopup] = useState<{ userId: string; prenom: string; athleteId: string | null } | null>(null)
+  const [marking, setMarking] = useState<string | null>(null)
 
   const supabase = createClient()
 
@@ -280,7 +80,7 @@ export default function BilansOverview() {
 
       const { data } = await supabase
         .from('daily_reports')
-        .select('id, user_id, date, weight, energy, sleep_quality, stress, adherence, sessions_executed, session_performance, steps, photo_front, photo_side, photo_back')
+        .select('id, user_id, date, weight, energy, sleep_quality, stress, adherence, sessions_executed, session_performance, steps, photo_front, photo_side, photo_back, coach_reviewed_at')
         .in('user_id', athleteUserIds)
         .gte('date', fromDate)
         .order('date', { ascending: false })
@@ -321,11 +121,11 @@ export default function BilansOverview() {
         const bilanReport = myReports.find(r => r.date === expectedStr) || null
         const lastBilanReport = myReports.find(r => r.weight || r.photo_front || r.photo_side || r.photo_back) || null
 
-        let status: 'done' | 'late' | 'upcoming'
+        let status: 'done' | 'late' | 'upcoming' | 'treated'
         if (freq === 'none') {
           status = 'upcoming'
         } else if (bilanReport) {
-          status = 'done'
+          status = bilanReport.coach_reviewed_at ? 'treated' : 'done'
         } else if (isPast) {
           status = 'late'
         } else {
@@ -338,15 +138,32 @@ export default function BilansOverview() {
 
   const counts = useMemo(() => {
     const c = { all: athleteData.length, done: 0, late: 0, upcoming: 0 }
-    athleteData.forEach(d => { c[d.status]++ })
+    athleteData.forEach(d => {
+      if (d.status === 'done' || d.status === 'late' || d.status === 'upcoming') c[d.status]++
+    })
     return c
   }, [athleteData])
 
   const filtered = useMemo(() => {
     const data = filter === 'all' ? athleteData : athleteData.filter(d => d.status === filter)
-    const order: Record<string, number> = { late: 0, done: 1, upcoming: 2 }
-    return [...data].sort((a, b) => (order[a.status] ?? 3) - (order[b.status] ?? 3))
+    const order: Record<string, number> = { late: 0, done: 1, treated: 2, upcoming: 3 }
+    return [...data].sort((a, b) => (order[a.status] ?? 4) - (order[b.status] ?? 4))
   }, [athleteData, filter])
+
+  const markAsTreated = useCallback(async (reportId: string) => {
+    setMarking(reportId)
+    const { error } = await supabase
+      .from('daily_reports')
+      .update({ coach_reviewed_at: new Date().toISOString() })
+      .eq('id', reportId)
+    setMarking(null)
+    if (error) {
+      toast('Impossible de marquer comme traite', 'error')
+      return
+    }
+    setReports(prev => prev.map(r => r.id === reportId ? { ...r, coach_reviewed_at: new Date().toISOString() } : r))
+    toast('Bilan marque comme traite', 'success')
+  }, [supabase, toast])
 
   if (athletesLoading || loading) {
     return (
@@ -429,17 +246,18 @@ export default function BilansOverview() {
                   <td style={{ color: 'var(--text3)' }}>Echeance: {echeanceStr}</td>
                   <td style={{ color: 'var(--text3)' }}>{lastBilanDate ? lastDateStr : '\u2014'}</td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    {d.status === 'done' && (
+                    {d.status === 'done' && d.bilanReport && (
                       <button
                         className={styles.boActionBtn}
                         style={{ color: 'var(--success)' }}
                         onClick={(e) => {
                           e.stopPropagation()
-                          setPopup({ userId: a.user_id!, prenom: a.prenom, athleteId: a.id })
+                          markAsTreated(d.bilanReport!.id)
                         }}
-                        title="Bilan traite"
+                        disabled={marking === d.bilanReport.id}
+                        title="Marquer comme traite"
                       >
-                        <i className="fas fa-check" />
+                        <i className={marking === d.bilanReport.id ? 'fas fa-spinner fa-spin' : 'fas fa-check'} />
                       </button>
                     )}
                     <Link
@@ -463,16 +281,6 @@ export default function BilansOverview() {
         </table>
       </div>
 
-      {/* Bilan Traite Popup */}
-      {popup && (
-        <BilanTraitePopup
-          userId={popup.userId}
-          prenom={popup.prenom}
-          athleteId={popup.athleteId}
-          onClose={() => setPopup(null)}
-          onSent={() => fetchReports()}
-        />
-      )}
     </div>
   )
 }
