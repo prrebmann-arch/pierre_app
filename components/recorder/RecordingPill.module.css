@@ -1,0 +1,61 @@
+.pill {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--card-bg, #1f1f1f);
+  color: var(--text, #fff);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  font-size: 14px;
+  font-weight: 500;
+  user-select: none;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ff3b3b;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.dotProcessing {
+  background: #f0a020;
+  animation: none;
+}
+
+.timer { font-variant-numeric: tabular-nums; min-width: 44px; }
+.timerWarning { color: #f0a020; }
+
+.btn {
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+.btnStop { background: #ff3b3b; color: #fff; }
+.btnStop:hover { background: #e02525; }
+.btnCancel:hover { background: rgba(255, 255, 255, 0.1); }
+
+.uploading {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px;
+}
+.progressBar {
+  width: 80px; height: 4px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2); overflow: hidden;
+}
+.progressFill { height: 100%; background: var(--primary, #5b8dff); transition: width 0.3s ease; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
