@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useRef, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react'
 import { useScreenRecorder, type RecorderResult } from '@/hooks/useScreenRecorder'
 import { extractThumbnail } from '@/hooks/useThumbnailExtractor'
 import { createClient } from '@/lib/supabase/client'
@@ -177,6 +177,16 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     setPending(null)
     setAthleteIdForNext(null)
   }, [])
+
+  // Auto-pickup: if recorder stopped without user clicking Stop (browser-end or hard-cap),
+  // trigger the same post-stop flow.
+  useEffect(() => {
+    if (!recorder.autoStoppedAt) return
+    if (isProcessing || pending || isUploading) return
+    recorder.consumeAutoStopped()
+    // Drive the standard post-stop flow; it'll consume the cached result instantly.
+    void stopRecording()
+  }, [recorder.autoStoppedAt, isProcessing, pending, isUploading, stopRecording, recorder])
 
   const finalizeRecording = useCallback(async ({ titre, commentaire, athleteId }: FinalizeArgs) => {
     if (!pending || !user) { toast('Aucun enregistrement en attente', 'error'); return }

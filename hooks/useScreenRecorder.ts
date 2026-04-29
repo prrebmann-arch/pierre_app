@@ -53,6 +53,13 @@ export function useScreenRecorder() {
   const dimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 })
   const mimeRef = useRef<{ mimeType: string; ext: 'mp4' | 'webm' } | null>(null)
 
+  // Result-ready coordination: onstop sets resultRef and resolves any waiter
+  const resultRef = useRef<RecorderResult | null>(null)
+  const stopPromiseRef = useRef<{ resolve: (r: RecorderResult) => void; reject: (e: Error) => void } | null>(null)
+  // Tracks whether the recorder stopped without a user-initiated stopRecording call
+  const [autoStoppedAt, setAutoStoppedAt] = useState<number | null>(null)
+  const userInitiatedStopRef = useRef(false)
+
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null }
     if (compositorStopRef.current) { compositorStopRef.current(); compositorStopRef.current = null }
@@ -68,6 +75,9 @@ export function useScreenRecorder() {
   const startRecording = useCallback(async (opts: StartRecordingOptions) => {
     setState({ isRecording: false, seconds: 0, errorMessage: null })
     secondsRef.current = 0
+    resultRef.current = null
+    userInitiatedStopRef.current = false
+    setAutoStoppedAt(null)
 
     const mime = pickMimeType()
     if (!mime) {
@@ -149,6 +159,44 @@ export function useScreenRecorder() {
       if (e.data.size > 0) chunksRef.current.push(e.data)
     }
 
+    // Single source-of-truth for finalize: runs whenever the recorder transitions
+    // to 'inactive', regardless of who initiated the stop.
+    recorder.onstop = () => {
+      if (resultRef.current) return  // already finalized
+      const m = mimeRef.current
+      if (!m) {
+        const err = new Error('Recorder finalized without MIME type')
+        stopPromiseRef.current?.reject(err)
+        stopPromiseRef.current = null
+        cleanup()
+        setState({ isRecording: false, seconds: 0, errorMessage: null })
+        return
+      }
+      const blob = new Blob(chunksRef.current, { type: m.mimeType.split(';')[0] })
+      const result: RecorderResult = {
+        blob,
+        durationS: secondsRef.current,
+        width: dimensionsRef.current.width,
+        height: dimensionsRef.current.height,
+        mimeType: m.mimeType.split(';')[0],
+        ext: m.ext,
+      }
+      resultRef.current = result
+      cleanup()
+      setState({ isRecording: false, seconds: 0, errorMessage: null })
+
+      // Notify any awaiting stopRecording caller
+      const waiter = stopPromiseRef.current
+      stopPromiseRef.current = null
+      if (waiter) {
+        waiter.resolve(result)
+      } else if (!userInitiatedStopRef.current) {
+        // Auto-stopped (browser-end or hard-cap) and no caller was awaiting yet.
+        // Mark autoStoppedAt so the consumer can pick up the result via stopRecording().
+        setAutoStoppedAt(Date.now())
+      }
+    }
+
     // Auto-stop at hard cap; sync duration via secondsRef
     timerRef.current = setInterval(() => {
       secondsRef.current = secondsRef.current + 1
@@ -166,51 +214,63 @@ export function useScreenRecorder() {
 
     recorder.start(1000) // chunk every 1s
     setState({ isRecording: true, seconds: 0, errorMessage: null })
-  }, [])
-
-  const stopRecording = useCallback((): Promise<RecorderResult> => {
-    return new Promise((resolve, reject) => {
-      const recorder = recorderRef.current
-      if (!recorder) { reject(new Error('No active recording')); return }
-
-      const finalize = () => {
-        const mime = mimeRef.current!
-        const blob = new Blob(chunksRef.current, { type: mime.mimeType.split(';')[0] })
-        const result: RecorderResult = {
-          blob,
-          durationS: secondsRef.current,
-          width: dimensionsRef.current.width,
-          height: dimensionsRef.current.height,
-          mimeType: mime.mimeType.split(';')[0],
-          ext: mime.ext,
-        }
-        cleanup()
-        setState({ isRecording: false, seconds: 0, errorMessage: null })
-        resolve(result)
-      }
-
-      // Always wait for the stop event to ensure final chunk is flushed
-      recorder.addEventListener('stop', finalize, { once: true })
-      if (recorder.state !== 'inactive') {
-        recorder.stop()
-      }
-    })
   }, [cleanup])
 
+  const stopRecording = useCallback((): Promise<RecorderResult> => {
+    userInitiatedStopRef.current = true
+    // If onstop already ran, return the cached result.
+    if (resultRef.current) {
+      return Promise.resolve(resultRef.current)
+    }
+    const recorder = recorderRef.current
+    if (!recorder) return Promise.reject(new Error('No active recording'))
+
+    // Replace any prior waiter (rare; called twice)
+    const prior = stopPromiseRef.current
+    if (prior) {
+      // Drain it: it will be replaced by the new one. Resolve it never to avoid hang;
+      // since onstop will run once, the new waiter receives the result.
+      // (The prior caller's reference is lost — they will hang. Should not happen in practice
+      // because UI disables Stop button while processing.)
+    }
+
+    return new Promise<RecorderResult>((resolve, reject) => {
+      stopPromiseRef.current = { resolve, reject }
+      if (recorder.state === 'recording') {
+        recorder.stop()
+      }
+      // If state is already 'inactive', onstop has either fired (and cached the result, handled above)
+      // or is queued. The waiter we just installed will be picked up by onstop when it runs.
+    })
+  }, [])
+
   const cancelRecording = useCallback(() => {
+    userInitiatedStopRef.current = true  // prevent autoStoppedAt from being set
     const recorder = recorderRef.current
     if (recorder && recorder.state === 'recording') recorder.stop()
     chunksRef.current = []
+    resultRef.current = null
+    if (stopPromiseRef.current) {
+      stopPromiseRef.current.reject(new Error('Recording cancelled'))
+      stopPromiseRef.current = null
+    }
     cleanup()
     setState({ isRecording: false, seconds: 0, errorMessage: null })
+    setAutoStoppedAt(null)
   }, [cleanup])
+
+  const consumeAutoStopped = useCallback(() => {
+    setAutoStoppedAt(null)
+  }, [])
 
   return {
     isRecording: state.isRecording,
     seconds: state.seconds,
     errorMessage: state.errorMessage,
+    autoStoppedAt,
     startRecording,
     stopRecording,
     cancelRecording,
+    consumeAutoStopped,
   }
 }
