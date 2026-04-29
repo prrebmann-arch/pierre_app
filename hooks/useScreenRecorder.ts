@@ -43,6 +43,9 @@ function pickMimeType() {
 
 export function useScreenRecorder() {
   const [state, setState] = useState<ScreenRecorderState>({ isRecording: false, seconds: 0, errorMessage: null })
+  // Exposed live cam stream during recording — used for Picture-in-Picture preview.
+  // Sharing the same MediaStream across multiple <video> elements is supported.
+  const [liveCamStream, setLiveCamStream] = useState<MediaStream | null>(null)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const screenStreamRef = useRef<MediaStream | null>(null)
@@ -72,6 +75,7 @@ export function useScreenRecorder() {
     camStreamRef.current = null
     micStreamRef.current = null
     recorderRef.current = null
+    setLiveCamStream(null)
   }, [])
 
   const startRecording = useCallback(async (opts: StartRecordingOptions) => {
@@ -132,6 +136,7 @@ export function useScreenRecorder() {
     screenStreamRef.current = screenStream
     micStreamRef.current = micStream
     camStreamRef.current = camStream
+    setLiveCamStream(camStream)
 
     // Build the output stream
     let outputVideoStream: MediaStream
@@ -281,6 +286,7 @@ export function useScreenRecorder() {
     seconds: state.seconds,
     errorMessage: state.errorMessage,
     autoStoppedAt,
+    liveCamStream,
     startRecording,
     stopRecording,
     cancelRecording,
