@@ -7,10 +7,13 @@
     "app/api/stripe/cron/route.ts": { "maxDuration": 120 },
     "app/api/instagram/messages/route.ts": { "maxDuration": 60 },
     "app/api/instagram/sync-reels/route.ts": { "maxDuration": 30 },
-    "app/api/instagram/sync-stories/route.ts": { "maxDuration": 30 }
+    "app/api/instagram/sync-stories/route.ts": { "maxDuration": 30 },
+    "app/api/videos/save-retour/route.ts": { "maxDuration": 30 },
+    "app/api/videos/archive-old-retours/route.ts": { "maxDuration": 60 }
   },
   "crons": [
     { "path": "/api/instagram/sync-stories", "schedule": "0 8 * * *" },
-    { "path": "/api/stripe/cron", "schedule": "0 9 * * *" }
+    { "path": "/api/stripe/cron", "schedule": "0 9 * * *" },
+    { "path": "/api/videos/archive-old-retours", "schedule": "0 3 * * *" }
   ]
 }

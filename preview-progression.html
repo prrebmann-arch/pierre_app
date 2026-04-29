@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preview — Vue Progression V5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+:root {
+  --primary: #B30808;
+  --bg: #09090b;
+  --bg2: #111114;
+  --bg3: #19191d;
+  --bg4: #222226;
+  --text: #f5f5f7;
+  --text2: #b0b0ba;
+  --text3: #8e8e9a;
+  --border: rgba(255,255,255,0.08);
+  --glass-border: rgba(255,255,255,0.12);
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #3b82f6;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; padding: 32px; max-width: 1100px; margin: 0 auto; }
+
+/* Toggle */
+.toggle { display: inline-flex; background: var(--bg2); border-radius: 12px; padding: 3px; border: 1px solid var(--border); margin-bottom: 24px; }
+.toggle-btn { display: flex; align-items: center; gap: 7px; padding: 9px 22px; border-radius: 10px; border: none; background: transparent; color: var(--text3); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.toggle-btn.active { background: rgba(255,255,255,0.06); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.25); border: 1px solid var(--border); }
+
+/* Hero Before/After */
+.hero {
+  background: var(--bg2); border: 1px solid var(--glass-border); border-radius: 20px;
+  overflow: hidden; margin-bottom: 16px; position: relative;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, rgba(179,8,8,0.06) 0%, transparent 70%),
+              radial-gradient(ellipse at 70% 50%, rgba(34,197,94,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 28px 0; position: relative; z-index: 1;
+}
+.hero-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+.hero-title-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; background: rgba(179,8,8,0.12); color: var(--primary); }
+.hero-badge { font-size: 11px; font-weight: 600; color: var(--text3); background: var(--bg3); padding: 4px 10px; border-radius: 6px; }
+
+.hero-body {
+  display: flex; align-items: stretch; gap: 0; padding: 20px 28px 24px;
+  position: relative; z-index: 1;
+}
+.hero-photo-side {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px;
+}
+.hero-photo-label { font-size: 10px; font-weight: 800; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; }
+.hero-photo-date { font-size: 13px; font-weight: 700; color: var(--text2); }
+.hero-photo {
+  width: 100%; max-width: 200px; aspect-ratio: 9/16; border-radius: 14px;
+  background: var(--bg4); border: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text3); font-size: 40px;
+  overflow: hidden; position: relative;
+}
+.hero-photo img { width: 100%; height: 100%; object-fit: cover; }
+.hero-photo .overlay {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.5); backdrop-filter: blur(10px);
+  text-align: center; padding: 6px 0;
+  font-size: 10px; font-weight: 800; color: rgba(255,255,255,0.8);
+  letter-spacing: 1px; text-transform: uppercase;
+}
+
+.hero-center {
+  width: 200px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 16px; padding: 20px 0;
+}
+.hero-delta {
+  text-align: center;
+}
+.hero-delta-value {
+  font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+}
+.hero-delta-label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+.hero-arrow { color: var(--text3); font-size: 20px; }
+
+.hero-dates {
+  display: flex; gap: 8px; justify-content: center; padding: 0 28px 16px;
+  position: relative; z-index: 1;
+}
+.hero-date-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--bg4); border: 1px solid var(--border);
+  cursor: pointer; transition: all 0.2s;
+}
+.hero-date-dot.active { background: var(--primary); border-color: var(--primary); box-shadow: 0 0 8px rgba(179,8,8,0.4); }
+.hero-date-dot:hover { border-color: var(--text3); transform: scale(1.3); }
+
+/* Section card */
+.section { background: var(--bg2); border: 1px solid var(--glass-border); border-radius: 20px; overflow: hidden; margin-bottom: 16px; transition: border-color 0.2s; }
+.section:hover { border-color: rgba(255,255,255,0.15); }
+.section-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 10px; }
+.section-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 700; }
+.section-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+
+/* Two-column layout */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+@media (max-width: 800px) { .two-col { grid-template-columns: 1fr; } }
+
+/* Weight chart mockup */
+.chart-area { padding: 8px 24px 16px; position: relative; }
+.chart-values { display: flex; align-items: baseline; gap: 12px; }
+.chart-current { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+.chart-unit { font-size: 11px; font-weight: 400; color: var(--text3); }
+.chart-delta { font-size: 13px; font-weight: 700; }
+.chart-stats { display: flex; gap: 12px; padding: 4px 24px 16px; }
+.chart-stat { font-size: 11px; color: var(--text3); background: rgba(255,255,255,0.04); border-radius: 6px; padding: 4px 10px; display: flex; align-items: center; gap: 4px; }
+.chart-stat strong { font-weight: 700; color: var(--text2); }
+
+/* Radar chart */
+.radar-wrap { display: flex; align-items: center; justify-content: center; padding: 16px 24px 12px; }
+.radar-legend { display: flex; gap: 16px; justify-content: center; padding: 0 24px 16px; }
+.radar-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--text3); }
+.radar-dot { width: 10px; height: 10px; border-radius: 3px; }
+
+/* Metric Rows */
+.metric-rows { padding: 4px 0 8px; }
+.metric-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 24px; border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.15s;
+}
+.metric-row:hover { background: rgba(255,255,255,0.02); }
+.metric-row:last-child { border-bottom: none; }
+.metric-row-icon {
+  width: 28px; height: 28px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; flex-shrink: 0;
+}
+.metric-row-label { width: 80px; flex-shrink: 0; font-size: 12px; font-weight: 600; color: var(--text2); }
+.metric-row-chart { flex: 1; height: 36px; position: relative; }
+.metric-row-values { width: 90px; flex-shrink: 0; text-align: right; }
+.metric-row-current { font-size: 16px; font-weight: 800; }
+.metric-row-delta { font-size: 10px; font-weight: 700; display: block; margin-top: 1px; }
+
+/* Mensuration charts mockup */
+.mens-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding: 4px 16px 16px; }
+@media (max-width: 800px) { .mens-grid { grid-template-columns: 1fr; } }
+.mens-card { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 8px; padding: 12px 16px 10px; }
+.mens-header { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.mens-val { font-size: 18px; font-weight: 700; margin-left: auto; }
+.mens-delta { font-size: 12px; font-weight: 700; margin-left: 8px; }
+.mens-chart { height: 60px; background: linear-gradient(to bottom, rgba(255,255,255,0.02), transparent); border-radius: 4px; margin-top: 4px; }
+
+/* Hero strip small */
+.hero-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.hero-card {
+  background: var(--bg2); border: 1px solid var(--glass-border);
+  border-radius: 20px; padding: 18px 20px; position: relative; overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.hero-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.hero-card-bar { position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.hero-card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-bottom: 10px; }
+.hero-card-value { font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.hero-card-unit { font-size: 12px; font-weight: 400; color: var(--text3); margin-left: 3px; }
+.hero-card-delta { font-size: 11px; font-weight: 700; margin-top: 2px; }
+.hero-card-label { font-size: 11px; font-weight: 600; color: var(--text3); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Tab selector for photo view */
+.photo-tabs { display: flex; gap: 6px; padding: 0 28px; position: relative; z-index: 1; }
+.photo-tab { padding: 6px 14px; border-radius: 8px; border: none; background: var(--bg3); color: var(--text3); font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.photo-tab.active { background: var(--primary); color: #fff; }
+</style>
+</head>
+<body>
+
+<!-- Toggle -->
+<div class="toggle">
+  <button class="toggle-btn"><i class="fas fa-table-list"></i> Tableau</button>
+  <button class="toggle-btn active"><i class="fas fa-chart-line"></i> Progression</button>
+</div>
+
+<!-- 1. HERO BEFORE/AFTER -->
+<div class="hero">
+  <div class="hero-header">
+    <div class="hero-title">
+      <div class="hero-title-icon"><i class="fas fa-arrow-right-arrow-left"></i></div>
+      Transformation
+    </div>
+    <div class="hero-badge">3 mois de suivi</div>
+  </div>
+
+  <div class="photo-tabs" style="margin-top:12px">
+    <button class="photo-tab active">Face</button>
+    <button class="photo-tab">Profil</button>
+    <button class="photo-tab">Dos</button>
+  </div>
+
+  <div class="hero-body">
+    <div class="hero-photo-side">
+      <div class="hero-photo-label">Debut</div>
+      <div class="hero-photo">
+        <i class="fas fa-user" style="opacity:0.15"></i>
+        <div class="overlay">27 mars 2026</div>
+      </div>
+    </div>
+
+    <div class="hero-center">
+      <div class="hero-delta">
+        <div class="hero-delta-value" style="color:var(--success)">-2.3 kg</div>
+        <div class="hero-delta-label">Poids</div>
+      </div>
+      <div class="hero-arrow"><i class="fas fa-right-long"></i></div>
+      <div class="hero-delta">
+        <div class="hero-delta-value" style="color:var(--success)">-3.1 cm</div>
+        <div class="hero-delta-label">Ventre</div>
+      </div>
+      <div class="hero-delta">
+        <div class="hero-delta-value" style="color:var(--text2)">8.2<span style="font-size:12px;color:var(--text3)">/10</span></div>
+        <div class="hero-delta-label">Adherence moy.</div>
+      </div>
+    </div>
+
+    <div class="hero-photo-side">
+      <div class="hero-photo-label" style="color:var(--success)">Dernier</div>
+      <div class="hero-photo">
+        <i class="fas fa-user" style="opacity:0.15"></i>
+        <div class="overlay">14 avril 2026</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-dates">
+    <div class="hero-date-dot" title="27 mars"></div>
+    <div class="hero-date-dot" title="3 avr"></div>
+    <div class="hero-date-dot" title="10 avr"></div>
+    <div class="hero-date-dot active" title="14 avr"></div>
+  </div>
+</div>
+
+<!-- 2. STATS STRIP -->
+<div class="hero-strip">
+  <div class="hero-card">
+    <div class="hero-card-bar" style="background:linear-gradient(90deg,#818cf8,#a5b4fc)"></div>
+    <div class="hero-card-icon" style="background:rgba(129,140,248,0.12);color:#818cf8"><i class="fas fa-moon"></i></div>
+    <div class="hero-card-value">7.2<span class="hero-card-unit">/10</span></div>
+    <div class="hero-card-label">Sommeil moy.</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-card-bar" style="background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div>
+    <div class="hero-card-icon" style="background:rgba(245,158,11,0.12);color:#f59e0b"><i class="fas fa-bolt"></i></div>
+    <div class="hero-card-value">7.8<span class="hero-card-unit">/10</span></div>
+    <div class="hero-card-label">Energie moy.</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-card-bar" style="background:linear-gradient(90deg,#22c55e,#4ade80)"></div>
+    <div class="hero-card-icon" style="background:rgba(34,197,94,0.12);color:#22c55e"><i class="fas fa-circle-check"></i></div>
+    <div class="hero-card-value">8.2<span class="hero-card-unit">/10</span></div>
+    <div class="hero-card-label">Adherence moy.</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-card-bar" style="background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div>
+    <div class="hero-card-icon" style="background:rgba(59,130,246,0.12);color:#3b82f6"><i class="fas fa-dumbbell"></i></div>
+    <div class="hero-card-value">12</div>
+    <div class="hero-card-label">Seances</div>
+  </div>
+  <div class="hero-card">
+    <div class="hero-card-bar" style="background:linear-gradient(90deg,#7209B7,#a855f7)"></div>
+    <div class="hero-card-icon" style="background:rgba(114,9,183,0.12);color:#7209B7"><i class="fas fa-heart-pulse"></i></div>
+    <div class="hero-card-value">340<span class="hero-card-unit">min</span></div>
+    <div class="hero-card-label">Cardio total</div>
+  </div>
+</div>
+
+<!-- 3. WEIGHT + MENSURATIONS side by side -->
+<div class="two-col">
+  <!-- Weight -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-icon" style="background:rgba(179,8,8,0.12);color:#B30808"><i class="fas fa-weight-scale"></i></div>
+        Poids
+      </div>
+      <div class="chart-values">
+        <span class="chart-current">87.7<span class="chart-unit"> kg</span></span>
+        <span class="chart-delta" style="color:var(--success)">-2.3 kg</span>
+      </div>
+    </div>
+    <div class="chart-area">
+      <svg viewBox="0 0 500 180" style="width:100%">
+        <defs>
+          <linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#B30808" stop-opacity="0.25"/>
+            <stop offset="100%" stop-color="#B30808" stop-opacity="0.02"/>
+          </linearGradient>
+        </defs>
+        <line x1="40" y1="20" x2="490" y2="20" stroke="rgba(255,255,255,0.04)"/>
+        <line x1="40" y1="60" x2="490" y2="60" stroke="rgba(255,255,255,0.04)"/>
+        <line x1="40" y1="100" x2="490" y2="100" stroke="rgba(255,255,255,0.04)"/>
+        <line x1="40" y1="140" x2="490" y2="140" stroke="rgba(255,255,255,0.04)"/>
+        <text x="35" y="23" fill="#8e8e9a" font-size="9" text-anchor="end">90</text>
+        <text x="35" y="63" fill="#8e8e9a" font-size="9" text-anchor="end">88</text>
+        <text x="35" y="103" fill="#8e8e9a" font-size="9" text-anchor="end">86</text>
+        <text x="35" y="143" fill="#8e8e9a" font-size="9" text-anchor="end">84</text>
+        <polygon points="50,140 100,120 150,100 200,80 250,95 300,75 350,60 400,50 450,40 480,35 480,150 50,150" fill="url(#wg)"/>
+        <polyline points="50,140 100,120 150,100 200,80 250,95 300,75 350,60 400,50 450,40 480,35" fill="none" stroke="#B30808" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="50" cy="140" r="2.5" fill="rgba(179,8,8,0.5)"/>
+        <circle cx="150" cy="100" r="2.5" fill="rgba(179,8,8,0.5)"/>
+        <circle cx="250" cy="95" r="2.5" fill="rgba(179,8,8,0.5)"/>
+        <circle cx="350" cy="60" r="2.5" fill="rgba(179,8,8,0.5)"/>
+        <circle cx="480" cy="35" r="5.5" fill="#B30808" stroke="#111114" stroke-width="2.5" style="filter:drop-shadow(0 0 8px rgba(179,8,8,0.6))"/>
+        <text x="50" y="168" fill="#8e8e9a" font-size="9" text-anchor="start">23 mars</text>
+        <text x="265" y="168" fill="#8e8e9a" font-size="9" text-anchor="middle">4 avr.</text>
+        <text x="480" y="168" fill="#8e8e9a" font-size="9" text-anchor="end">14 avr.</text>
+      </svg>
+    </div>
+    <div class="chart-stats">
+      <span class="chart-stat"><i class="fas fa-arrow-down" style="color:var(--success);font-size:9px"></i> Min <strong>84.2 kg</strong></span>
+      <span class="chart-stat"><i class="fas fa-minus" style="color:var(--text3);font-size:9px"></i> Moy <strong>86.9 kg</strong></span>
+      <span class="chart-stat"><i class="fas fa-arrow-up" style="color:var(--warning);font-size:9px"></i> Max <strong>90.0 kg</strong></span>
+    </div>
+  </div>
+
+  <!-- Mensurations -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">
+        <div class="section-icon" style="background:rgba(232,93,4,0.12);color:#E85D04"><i class="fas fa-ruler"></i></div>
+        Mensurations
+      </div>
+    </div>
+    <div class="mens-grid" style="grid-template-columns:1fr">
+      <div class="mens-card">
+        <div class="mens-header">
+          <i class="fas fa-ruler-horizontal" style="color:#E85D04;font-size:11px"></i> Ventre
+          <span class="mens-val" style="color:var(--text)">82.0 <span style="font-size:11px;color:var(--text3)">cm</span></span>
+          <span class="mens-delta" style="color:var(--success)">-3.1 cm</span>
+        </div>
+        <div class="mens-chart">
+          <svg viewBox="-12 -4 116 108" style="width:100%;height:70px" preserveAspectRatio="none">
+            <defs><linearGradient id="mg1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#E85D04" stop-opacity="0.25"/><stop offset="100%" stop-color="#E85D04" stop-opacity="0"/></linearGradient></defs>
+            <polygon points="0,20 25,30 50,45 75,60 100,80 100,104 0,104" fill="url(#mg1)"/>
+            <polyline points="0,20 25,30 50,45 75,60 100,80" fill="none" stroke="#E85D04" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+        </div>
+      </div>
+      <div class="mens-card">
+        <div class="mens-header">
+          <i class="fas fa-ruler-combined" style="color:#7209B7;font-size:11px"></i> Hanches
+          <span class="mens-val" style="color:var(--text)">96.0 <span style="font-size:11px;color:var(--text3)">cm</span></span>
+          <span class="mens-delta" style="color:var(--success)">-1.2 cm</span>
+        </div>
+        <div class="mens-chart">
+          <svg viewBox="-12 -4 116 108" style="width:100%;height:70px" preserveAspectRatio="none">
+            <defs><linearGradient id="mg2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#7209B7" stop-opacity="0.25"/><stop offset="100%" stop-color="#7209B7" stop-opacity="0"/></linearGradient></defs>
+            <polygon points="0,30 25,35 50,50 75,55 100,70 100,104 0,104" fill="url(#mg2)"/>
+            <polyline points="0,30 25,35 50,50 75,55 100,70" fill="none" stroke="#7209B7" stroke-width="2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. METRIC SPARKLINES full width -->
+<div class="section">
+  <div class="section-header">
+    <div class="section-title">
+      <div class="section-icon" style="background:rgba(129,140,248,0.12);color:#818cf8"><i class="fas fa-chart-line"></i></div>
+      Bien-etre
+    </div>
+    <span class="hero-badge">moyennes hebdo</span>
+  </div>
+  <div class="metric-rows" id="metricRows"></div>
+</div>
+
+<script>
+// Generate metric sparkline rows
+const metrics = [
+  { label: 'Energie', icon: 'fa-bolt', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', data: [6,7,8,7,6,8,7,9,8] },
+  { label: 'Sommeil', icon: 'fa-moon', color: '#818cf8', bg: 'rgba(129,140,248,0.12)', data: [7,6,7,8,7,7,6,7,8] },
+  { label: 'Stress', icon: 'fa-face-grimace', color: '#ef4444', bg: 'rgba(239,68,68,0.12)', data: [6,5,4,5,6,3,4,3,2], inv: true },
+  { label: 'Courb.', icon: 'fa-dumbbell', color: '#f97316', bg: 'rgba(249,115,22,0.12)', data: [5,4,3,5,4,2,3,2,2], inv: true },
+  { label: 'Adherence', icon: 'fa-circle-check', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', data: [8,7,9,8,6,8,9,8,9] },
+  { label: 'Plaisir', icon: 'fa-heart', color: '#ec4899', bg: 'rgba(236,72,153,0.12)', data: [7,8,7,6,8,7,8,9,8] },
+];
+
+const container = document.getElementById('metricRows');
+metrics.forEach(m => {
+  const vals = m.data;
+  const last = vals[vals.length - 1];
+  const first = vals[0];
+  const diff = last - first;
+  const diffColor = m.inv
+    ? (diff <= 0 ? 'var(--success)' : 'var(--danger)')
+    : (diff >= 0 ? 'var(--success)' : 'var(--danger)');
+
+  // Build SVG sparkline
+  const vMin = Math.min(...vals) - 0.5;
+  const vMax = Math.max(...vals) + 0.5;
+  const range = vMax - vMin || 1;
+  const W = 400, H = 36, padX = 4, padY = 4;
+  const plotW = W - padX * 2, plotH = H - padY * 2;
+
+  const pts = vals.map((v, i) => {
+    const x = padX + (i / (vals.length - 1)) * plotW;
+    const y = padY + plotH - ((v - vMin) / range) * plotH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  const lineStr = pts.join(' ');
+  const fillStr = lineStr + ` ${(padX + plotW).toFixed(1)},${(padY + plotH).toFixed(1)} ${padX.toFixed(1)},${(padY + plotH).toFixed(1)}`;
+
+  const row = document.createElement('div');
+  row.className = 'metric-row';
+  row.innerHTML = `
+    <div class="metric-row-icon" style="background:${m.bg};color:${m.color}"><i class="fas ${m.icon}"></i></div>
+    <div class="metric-row-label">${m.label}</div>
+    <div class="metric-row-chart">
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:36px" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="mg_${m.label}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${m.color}" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="${m.color}" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <polygon points="${fillStr}" fill="url(#mg_${m.label})"/>
+        <polyline points="${lineStr}" fill="none" stroke="${m.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        <circle cx="${pts[pts.length-1].split(',')[0]}" cy="${pts[pts.length-1].split(',')[1]}" r="3.5" fill="${m.color}" stroke="#111114" stroke-width="1.5"/>
+      </svg>
+    </div>
+    <div class="metric-row-values">
+      <span class="metric-row-current" style="color:${m.color}">${last.toFixed(1)}</span>
+      <span class="metric-row-delta" style="color:${diffColor}">${diff > 0 ? '+' : ''}${diff.toFixed(1)}</span>
+    </div>
+  `;
+  container.appendChild(row);
+});
+</script>
+
+</body>
+</html>

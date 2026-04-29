@@ -6,6 +6,10 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import Sidebar from '@/components/layout/Sidebar'
 import styles from '@/styles/sidebar.module.css'
+import { RecorderProvider } from '@/contexts/RecorderContext'
+import RecordingPill from '@/components/recorder/RecordingPill'
+import RetourFinalizeModal from '@/components/recorder/RetourFinalizeModal'
+import LiveCamPiP from '@/components/recorder/LiveCamPiP'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -103,12 +107,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AthleteProvider>
-      <div className={styles.appLayout}>
-        <Sidebar />
-        <main className={styles.mainContent}>
-          {children}
-        </main>
-      </div>
+      <RecorderProvider>
+        <div className={styles.appLayout}>
+          <Sidebar />
+          <main className={styles.mainContent}>
+            {children}
+          </main>
+        </div>
+        <RecordingPill />
+        <LiveCamPiP />
+        <RetourFinalizeModal />
+      </RecorderProvider>
     </AthleteProvider>
   )
 }
