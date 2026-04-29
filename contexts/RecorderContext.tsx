@@ -75,14 +75,11 @@ interface RecorderContextValue {
   isUploading: boolean
   uploadProgress: number
 
-  // live preview
-  camStream: MediaStream | null
-
   // intent state
   athleteIdForNext: string | null
 
   // actions
-  startRecording: (opts: { withWebcam: boolean; athleteId: string }) => Promise<void>
+  startRecording: (opts: { withWebcam: boolean; athleteId: string; preAcquiredCamStream?: MediaStream | null }) => Promise<void>
   stopRecording: () => Promise<void>
   cancelRecording: () => void
   finalizeRecording: (args: FinalizeArgs) => Promise<void>
@@ -111,10 +108,10 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const cancelledRef = useRef(false)
   const progressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const startRecording = useCallback(async (opts: { withWebcam: boolean; athleteId: string }) => {
+  const startRecording = useCallback(async (opts: { withWebcam: boolean; athleteId: string; preAcquiredCamStream?: MediaStream | null }) => {
     cancelledRef.current = false
     setAthleteIdForNext(opts.athleteId)
-    await recorder.startRecording({ withWebcam: opts.withWebcam })
+    await recorder.startRecording({ withWebcam: opts.withWebcam, preAcquiredCamStream: opts.preAcquiredCamStream })
   }, [recorder])
 
   const stopRecording = useCallback(async () => {
@@ -268,7 +265,6 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     pending,
     isUploading,
     uploadProgress,
-    camStream: recorder.camStream,
     athleteIdForNext,
     startRecording,
     stopRecording,

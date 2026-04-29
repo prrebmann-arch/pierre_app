@@ -10,6 +10,8 @@ export interface ScreenRecorderState {
 
 export interface StartRecordingOptions {
   withWebcam: boolean
+  /** Pre-acquired cam stream (e.g. from modal preview) to avoid re-prompting */
+  preAcquiredCamStream?: MediaStream | null
 }
 
 export interface RecorderResult {
@@ -41,7 +43,6 @@ function pickMimeType() {
 
 export function useScreenRecorder() {
   const [state, setState] = useState<ScreenRecorderState>({ isRecording: false, seconds: 0, errorMessage: null })
-  const [camStream, setCamStream] = useState<MediaStream | null>(null)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const screenStreamRef = useRef<MediaStream | null>(null)
@@ -71,7 +72,6 @@ export function useScreenRecorder() {
     camStreamRef.current = null
     micStreamRef.current = null
     recorderRef.current = null
-    setCamStream(null)
   }, [])
 
   const startRecording = useCallback(async (opts: StartRecordingOptions) => {
@@ -115,20 +115,23 @@ export function useScreenRecorder() {
     }
 
     if (opts.withWebcam) {
-      try {
-        camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320 } })
-      } catch (err) {
-        screenStream.getTracks().forEach(t => t.stop())
-        micStream.getTracks().forEach(t => t.stop())
-        setState({ isRecording: false, seconds: 0, errorMessage: 'Accès à la webcam refusé.' })
-        throw err
+      if (opts.preAcquiredCamStream) {
+        camStream = opts.preAcquiredCamStream
+      } else {
+        try {
+          camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320 } })
+        } catch (err) {
+          screenStream.getTracks().forEach(t => t.stop())
+          micStream.getTracks().forEach(t => t.stop())
+          setState({ isRecording: false, seconds: 0, errorMessage: 'Accès à la webcam refusé.' })
+          throw err
+        }
       }
     }
 
     screenStreamRef.current = screenStream
     micStreamRef.current = micStream
     camStreamRef.current = camStream
-    setCamStream(camStream)
 
     // Build the output stream
     let outputVideoStream: MediaStream
@@ -278,7 +281,6 @@ export function useScreenRecorder() {
     seconds: state.seconds,
     errorMessage: state.errorMessage,
     autoStoppedAt,
-    camStream,
     startRecording,
     stopRecording,
     cancelRecording,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -31,6 +31,9 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
   // record state
   const [withWebcam, setWithWebcam] = useState(false)
   const [starting, setStarting] = useState(false)
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const previewVideoRef = useRef<HTMLVideoElement | null>(null)
 
   // loom state
   const [loomUrl, setLoomUrl] = useState('')
@@ -38,20 +41,79 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
   const [comment, setComment] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Stop preview cam when toggle off / modal closes / unmount.
+  // Note: we do NOT stop it when starting recording — the stream is handed off to the recorder.
+  function stopPreview() {
+    setPreviewStream((prev) => {
+      prev?.getTracks().forEach((t) => t.stop())
+      return null
+    })
+    setPreviewError(null)
+  }
+
+  // Acquire / release cam preview based on toggle + modal state
+  useEffect(() => {
+    let cancelled = false
+    if (open && mode === 'record' && withWebcam && !previewStream) {
+      navigator.mediaDevices
+        .getUserMedia({ video: { width: 320, height: 320 } })
+        .then((s) => {
+          if (cancelled) {
+            s.getTracks().forEach((t) => t.stop())
+            return
+          }
+          setPreviewStream(s)
+        })
+        .catch((err) => {
+          if (cancelled) return
+          setPreviewError(err instanceof Error ? err.message : 'Accès webcam refusé')
+        })
+    }
+    if (!withWebcam && previewStream) stopPreview()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, mode, withWebcam])
+
+  // Bind stream to video element
+  useEffect(() => {
+    const v = previewVideoRef.current
+    if (!v) return
+    if (previewStream && v.srcObject !== previewStream) {
+      v.srcObject = previewStream
+      v.play().catch(() => {})
+    } else if (!previewStream && v.srcObject) {
+      v.srcObject = null
+    }
+  }, [previewStream])
+
   function close() {
+    stopPreview()
     setOpen(false)
     setLoomUrl('')
     setTitre('')
     setComment('')
     setMode('record')
+    setWithWebcam(false)
   }
 
   async function handleStartRecord() {
     setStarting(true)
     try {
-      await startRecording({ withWebcam, athleteId })
-      close()
+      // Hand off pre-acquired preview stream to recorder so we don't re-prompt
+      const handoff = previewStream
+      // Don't stop the preview — recorder takes ownership now
+      setPreviewStream(null)
+      await startRecording({ withWebcam, athleteId, preAcquiredCamStream: handoff })
+      // Close modal WITHOUT calling stopPreview (handoff already happened)
+      setOpen(false)
+      setLoomUrl('')
+      setTitre('')
+      setComment('')
+      setMode('record')
+      setWithWebcam(false)
     } catch (err) {
+      // If start failed, the handoff stream might still be alive — release it
+      stopPreview()
       const msg = err instanceof Error ? err.message : 'Erreur démarrage enregistrement'
       toast(msg, 'error')
     } finally {
@@ -146,8 +208,43 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
                   onChange={(e) => setWithWebcam(e.target.checked)}
                   style={{ width: 18, height: 18 }}
                 />
-                Inclure ma webcam (bulle visible pendant l&apos;enregistrement)
+                Inclure ma webcam (bulle en bas à gauche de la vidéo)
               </label>
+
+              {withWebcam && (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <div
+                    style={{
+                      width: 160,
+                      height: 160,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      background: '#000',
+                      border: '3px solid var(--primary, #5b8dff)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {previewError ? (
+                      <span style={{ fontSize: 11, color: 'var(--danger, #ff6464)', textAlign: 'center', padding: 8 }}>
+                        {previewError}
+                      </span>
+                    ) : previewStream ? (
+                      <video
+                        ref={previewVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+                      />
+                    ) : (
+                      <i className="fas fa-spinner fa-spin" style={{ color: 'var(--text3)' }} />
+                    )}
+                  </div>
+                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>Aperçu — cadre-toi avant de démarrer</span>
+                </div>
+              )}
 
               <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>
                 Durée maximum : 15 minutes. Tu peux naviguer librement dans COACH pendant l&apos;enregistrement.
