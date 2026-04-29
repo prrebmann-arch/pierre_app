@@ -3,23 +3,19 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
-import { notifyAthlete } from '@/lib/push'
 import { getPageCache, setPageCache } from '@/lib/utils'
 import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
-import Modal from '@/components/ui/Modal'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import styles from '@/styles/athlete-tabs.module.css'
-import StartRecordingModal from '@/components/recorder/StartRecordingModal'
+import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import RetourVideoPlayer from '@/components/videos/RetourVideoPlayer'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export default function RetoursPage() {
   const params = useParams<{ id: string }>()
-  const { user } = useAuth()
   const { toast } = useToast()
   const supabase = createClient()
 
@@ -28,12 +24,6 @@ export default function RetoursPage() {
 
   const [loading, setLoading] = useState(!cached)
   const [retours, setRetours] = useState<any[]>(cached ?? [])
-  const [showModal, setShowModal] = useState(false)
-  const [showRecordModal, setShowRecordModal] = useState(false)
-  const [formLoom, setFormLoom] = useState('')
-  const [formTitre, setFormTitre] = useState('')
-  const [formComment, setFormComment] = useState('')
-  const [saving, setSaving] = useState(false)
 
   const loadRetours = useCallback(async () => {
     if (!retours.length) setLoading(true)
@@ -57,37 +47,6 @@ export default function RetoursPage() {
   }, [params.id, loadRetours])
 
   useRefetchOnResume(loadRetours, loading)
-
-  async function submitRetour() {
-    if (!formLoom.trim()) { toast("L'URL Loom est obligatoire", 'error'); return }
-    setSaving(true)
-    const { error } = await supabase.from('bilan_retours').insert({
-      athlete_id: params.id,
-      coach_id: user?.id,
-      loom_url: formLoom.trim(),
-      titre: formTitre.trim() || 'Retour bilan',
-      commentaire: formComment.trim() || null,
-    })
-    setSaving(false)
-    if (error) { toast('Erreur lors de l\'envoi', 'error'); return }
-
-    // Notify athlete (DB + push)
-    const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', params.id).single()
-    if (ath?.user_id) {
-      await notifyAthlete(
-        ath.user_id, 'retour', 'Nouveau retour video',
-        `Votre coach vous a envoye un retour : ${formTitre.trim() || 'Retour bilan'}`,
-        { loom_url: formLoom.trim(), titre: formTitre.trim() || 'Retour bilan' },
-      )
-    }
-
-    toast('Retour video envoye !', 'success')
-    setShowModal(false)
-    setFormLoom('')
-    setFormTitre('')
-    setFormComment('')
-    loadRetours()
-  }
 
   async function deleteRetour(id: string) {
     if (!confirm('Supprimer ce retour video ?')) return
@@ -113,14 +72,7 @@ export default function RetoursPage() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>Retours video envoyes</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="btn btn-red" onClick={() => setShowRecordModal(true)}>
-            <i className="fas fa-circle" /> Enregistrer un retour
-          </button>
-          <button className="btn btn-outline" onClick={() => setShowModal(true)}>
-            <i className="fas fa-link" /> Lien Loom
-          </button>
-        </div>
+        <NouveauRetourButton athleteId={params.id} onCreated={loadRetours} />
       </div>
 
       {retours.length === 0 ? (
@@ -166,34 +118,6 @@ export default function RetoursPage() {
         })
       )}
 
-      <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Envoyer un retour video">
-        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>Titre</label>
-            <input type="text" className="form-control" value={formTitre} onChange={(e) => setFormTitre(e.target.value)} placeholder="Retour bilan" />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>URL Loom *</label>
-            <input type="url" className="form-control" value={formLoom} onChange={(e) => setFormLoom(e.target.value)} placeholder="https://www.loom.com/share/..." />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, color: 'var(--text3)', display: 'block', marginBottom: 4 }}>Commentaire</label>
-            <textarea className="form-control" rows={3} value={formComment} onChange={(e) => setFormComment(e.target.value)} placeholder="Optionnel" />
-          </div>
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-            <button className="btn btn-outline" onClick={() => setShowModal(false)}>Annuler</button>
-            <button className="btn btn-red" onClick={submitRetour} disabled={saving}>
-              {saving ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-paper-plane" /> Envoyer</>}
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      <StartRecordingModal
-        isOpen={showRecordModal}
-        onClose={() => setShowRecordModal(false)}
-        athleteId={params.id}
-      />
     </div>
   )
 }

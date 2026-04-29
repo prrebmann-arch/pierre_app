@@ -15,6 +15,7 @@ import BilanProgressView from '@/components/bilans/BilanProgressView'
 import PhotoCompare from '@/components/bilans/PhotoCompare'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import type { DailyReport } from '@/components/bilans/BilanAccordion'
 import type { PhotoType, PhotoEntry } from '@/components/bilans/PhotoCompare'
 import type { Athlete } from '@/lib/types'
@@ -360,22 +361,25 @@ export default function BilansPage() {
 
   return (
     <>
-      {/* View toggle */}
-      <div className={styles.bpToggle}>
-        <button
-          className={`${styles.bpToggleBtn} ${viewMode === 'table' ? styles.bpToggleBtnActive : ''}`}
-          onClick={() => setViewMode('table')}
-        >
-          <i className="fas fa-table-list" />
-          Tableau
-        </button>
-        <button
-          className={`${styles.bpToggleBtn} ${viewMode === 'progress' ? styles.bpToggleBtnActive : ''}`}
-          onClick={() => setViewMode('progress')}
-        >
-          <i className="fas fa-chart-line" />
-          Progression
-        </button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        {/* View toggle */}
+        <div className={styles.bpToggle}>
+          <button
+            className={`${styles.bpToggleBtn} ${viewMode === 'table' ? styles.bpToggleBtnActive : ''}`}
+            onClick={() => setViewMode('table')}
+          >
+            <i className="fas fa-table-list" />
+            Tableau
+          </button>
+          <button
+            className={`${styles.bpToggleBtn} ${viewMode === 'progress' ? styles.bpToggleBtnActive : ''}`}
+            onClick={() => setViewMode('progress')}
+          >
+            <i className="fas fa-chart-line" />
+            Progression
+          </button>
+        </div>
+        <NouveauRetourButton athleteId={params.id} />
       </div>
 
       {viewMode === 'progress' ? (
