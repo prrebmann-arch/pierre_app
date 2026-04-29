@@ -555,6 +555,13 @@
 .tvDetailStatLbl { font-size: 11px; color: var(--text3); margin-left: 4px; }
 .tvDetailSep { width: 1px; height: 30px; background: var(--border); }
 
+/* Edited badge */
+.editedBadge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--text3); margin-left: 8px;
+}
+.editedBadge i { font-size: 9px; }
+
 /* View exercise card */
 .tvExCard {
   border-top: 1px solid var(--border-subtle); padding: 12px 0;

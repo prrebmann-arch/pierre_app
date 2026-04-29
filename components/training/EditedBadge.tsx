@@ -1,4 +1,4 @@
-"use client";
+import styles from "@/styles/training.module.css";
 
 interface EditedBadgeProps {
   editedAt: string | null;
@@ -6,8 +6,10 @@ interface EditedBadgeProps {
 
 export default function EditedBadge({ editedAt }: EditedBadgeProps) {
   if (!editedAt) return null;
+  const date = new Date(editedAt);
+  if (isNaN(date.getTime())) return null;
 
-  const formatted = new Date(editedAt).toLocaleString("fr-FR", {
+  const formatted = date.toLocaleString("fr-FR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -17,10 +19,11 @@ export default function EditedBadge({ editedAt }: EditedBadgeProps) {
 
   return (
     <span
+      className={styles.editedBadge}
       title={`Modifié le ${formatted}`}
-      className="inline-flex items-center gap-1 text-xs text-gray-500 ml-2"
+      aria-label={`Modifié le ${formatted}`}
     >
-      <i className="fa-solid fa-pencil" style={{ fontSize: 10 }} />
+      <i className="fa-solid fa-pencil" />
       Édité
     </span>
   );
