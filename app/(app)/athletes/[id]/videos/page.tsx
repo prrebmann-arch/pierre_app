@@ -7,6 +7,7 @@ import { getPageCache, setPageCache } from '@/lib/utils'
 import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import { MAX_VIDEOS_LOAD } from '@/lib/constants'
 import VideosGrid, { type VideoItem } from '@/components/videos/VideosGrid'
+import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import dynamic from 'next/dynamic'
 
 const VideoDetail = dynamic(() => import('@/components/videos/VideoDetail'), { ssr: false })
@@ -103,9 +104,12 @@ export default function AthleteVideosPage() {
 
   return (
     <div>
-      <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>
-        Videos d&apos;execution
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
+          Videos d&apos;execution
+        </h2>
+        <NouveauRetourButton athleteId={athleteId} />
+      </div>
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40 }}>

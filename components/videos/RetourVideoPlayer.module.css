@@ -1,0 +1,37 @@
+.wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+.video {
+  width: 100%;
+  display: block;
+  max-height: 70vh;
+}
+.archived {
+  padding: 24px;
+  text-align: center;
+  color: var(--text2);
+  font-size: 14px;
+  background: var(--card-bg-2, #2a2a2a);
+  border-radius: 8px;
+}
+.controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.85);
+}
+.speedBtn {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.speedBtnActive { background: var(--primary, #5b8dff); border-color: var(--primary, #5b8dff); }

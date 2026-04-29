@@ -16,6 +16,7 @@ import PhotoCompare from '@/components/bilans/PhotoCompare'
 import BilanPhotosUploadModal from '@/components/bilans/BilanPhotosUploadModal'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import type { DailyReport } from '@/components/bilans/BilanAccordion'
 import type { PhotoType, PhotoEntry } from '@/components/bilans/PhotoCompare'
 import type { Athlete } from '@/lib/types'
@@ -374,7 +375,7 @@ export default function BilansPage() {
 
   return (
     <>
-      {/* View toggle + import photos */}
+      {/* View toggle + actions (import photos + nouveau retour) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
         <div className={styles.bpToggle} style={{ marginBottom: 0 }}>
           <button
@@ -392,18 +393,21 @@ export default function BilansPage() {
             Progression
           </button>
         </div>
-        <button
-          onClick={() => setPhotoImportOpen(true)}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
-            background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          <i className="fas fa-camera" />
-          Importer photos
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setPhotoImportOpen(true)}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '8px 14px', borderRadius: 10, border: '1px solid var(--border)',
+              background: 'var(--bg2)', color: 'var(--text)', fontSize: 13, fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            <i className="fas fa-camera" />
+            Importer photos
+          </button>
+          <NouveauRetourButton athleteId={params.id} />
+        </div>
       </div>
 
       {viewMode === 'progress' ? (
