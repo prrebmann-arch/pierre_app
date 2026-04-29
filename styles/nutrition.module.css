@@ -561,3 +561,62 @@
   .editorBody { flex-direction: column; }
   .foodLibrary { width: 100%; min-width: 0; max-height: 300px; border-right: none; border-bottom: 1px solid var(--border-subtle); }
 }
+
+/* ── Meal variant tabs (multi-variant meals) ── */
+.variantTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+  align-items: center;
+}
+.variantTab,
+.variantTabAdd {
+  padding: 4px 10px;
+  border: 1px solid var(--border, #d4d4d8);
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+}
+.variantTabActive {
+  background: var(--primary, #18181b);
+  color: white;
+  border-color: var(--primary, #18181b);
+}
+.variantActions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+.variantActions button {
+  padding: 2px 8px;
+  font-size: 12px;
+  border: 1px solid var(--border, #d4d4d8);
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+}
+.variantActions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.addVariantBtn {
+  margin: 8px 0;
+  padding: 4px 10px;
+  border: 1px dashed var(--border, #d4d4d8);
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text3);
+  font-family: inherit;
+}
+.addVariantBtn:hover {
+  color: var(--text);
+  border-color: var(--text3);
+}

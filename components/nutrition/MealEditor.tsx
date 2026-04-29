@@ -127,6 +127,60 @@ function setEditableFoods(meal: MealData, activeVariantId: string | undefined, n
   return { ...meal, variants }
 }
 
+/** Ajoute une variante au repas. Si le repas est simple, le convertit en multi-variantes (la 1re variante reprend les foods existants). Max 3 variantes. */
+function addVariantToMeal(meal: MealData, label: string): MealData {
+  const newVariant: MealVariant = { id: newVariantId(), label, foods: [] }
+  if (!hasVariants(meal)) {
+    // Conversion repas simple → multi-variantes : la 1re variante reprend les foods existants.
+    const first: MealVariant = { id: newVariantId(), label: 'Variante 1', foods: meal.foods ?? [] }
+    return {
+      label: meal.label,
+      time: meal.time,
+      pre_workout: meal.pre_workout,
+      variants: [first, { ...newVariant, label }],
+    }
+  }
+  if (meal.variants!.length >= 3) return meal
+  return { ...meal, variants: [...meal.variants!, newVariant] }
+}
+
+/** Duplique une variante existante (max 3). */
+function duplicateVariant(meal: MealData, variantId: string): MealData {
+  if (!hasVariants(meal) || meal.variants!.length >= 3) return meal
+  const src = meal.variants!.find((v) => v.id === variantId)
+  if (!src) return meal
+  const copy: MealVariant = { id: newVariantId(), label: `${src.label} (copie)`, foods: [...src.foods] }
+  return { ...meal, variants: [...meal.variants!, copy] }
+}
+
+/** Renomme une variante. */
+function renameVariant(meal: MealData, variantId: string, newLabel: string): MealData {
+  if (!hasVariants(meal)) return meal
+  return {
+    ...meal,
+    variants: meal.variants!.map((v) => (v.id === variantId ? { ...v, label: newLabel } : v)),
+  }
+}
+
+/** Supprime une variante (garde au moins 1 variante). */
+function removeVariantFromMeal(meal: MealData, variantId: string): MealData {
+  if (!hasVariants(meal)) return meal
+  if (meal.variants!.length <= 1) return meal // protection : on garde au moins 1
+  return { ...meal, variants: meal.variants!.filter((v) => v.id !== variantId) }
+}
+
+/** Convertit un repas multi-variantes en repas simple, en gardant la variante choisie. */
+function convertToSimpleMeal(meal: MealData, keepVariantId: string): MealData {
+  if (!hasVariants(meal)) return meal
+  const keep = meal.variants!.find((v) => v.id === keepVariantId) ?? meal.variants![0]
+  return {
+    label: meal.label,
+    time: meal.time,
+    pre_workout: meal.pre_workout,
+    foods: keep.foods,
+  }
+}
+
 export default function MealEditor({
   athleteId, planId, planName: initName, mealType: initMealType,
   initialMeals, macroOnly: initMacroOnly, initialMacros, initialOtherTab, onSaved, onBack,
@@ -744,6 +798,127 @@ export default function MealEditor({
                       </button>
                     </div>
                   </div>
+
+                  {/* Variant tabs (multi-variant meal) */}
+                  {hasVariants(meal) && (
+                    <div className={styles.variantTabs} onClick={(e) => e.stopPropagation()}>
+                      {meal.variants!.map((v) => {
+                        const isActiveVariant = (activeVariantIdByMeal[mealIdx] ?? meal.variants![0].id) === v.id
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            className={`${styles.variantTab} ${isActiveVariant ? styles.variantTabActive : ''}`}
+                            onClick={() => setActiveVariantIdByMeal({ ...activeVariantIdByMeal, [mealIdx]: v.id })}
+                          >
+                            {v.label}
+                          </button>
+                        )
+                      })}
+                      {meal.variants!.length < 3 && (
+                        <button
+                          type="button"
+                          className={styles.variantTabAdd}
+                          onClick={() => {
+                            const label = prompt('Label de la nouvelle variante (ex: Shake)')
+                            if (!label) return
+                            const updated = addVariantToMeal(meal, label)
+                            const newMeals = [...meals]
+                            newMeals[mealIdx] = updated
+                            setMeals(newMeals)
+                          }}
+                        >
+                          + Option
+                        </button>
+                      )}
+                      <div className={styles.variantActions}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const activeId = activeVariantIdByMeal[mealIdx] ?? meal.variants![0].id
+                            const updated = duplicateVariant(meal, activeId)
+                            if (updated === meal) return // limit hit or src not found
+                            const newMeals = [...meals]
+                            newMeals[mealIdx] = updated
+                            setMeals(newMeals)
+                          }}
+                          disabled={meal.variants!.length >= 3}
+                        >
+                          Dupliquer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const activeId = activeVariantIdByMeal[mealIdx] ?? meal.variants![0].id
+                            const cur = meal.variants!.find((v) => v.id === activeId)
+                            if (!cur) return
+                            const newLabel = prompt('Nouveau label', cur.label)
+                            if (!newLabel) return
+                            const updated = renameVariant(meal, activeId, newLabel)
+                            const newMeals = [...meals]
+                            newMeals[mealIdx] = updated
+                            setMeals(newMeals)
+                          }}
+                        >
+                          Renommer
+                        </button>
+                        <button
+                          type="button"
+                          disabled={meal.variants!.length <= 1}
+                          onClick={() => {
+                            if (!confirm('Supprimer cette variante ?')) return
+                            const activeId = activeVariantIdByMeal[mealIdx] ?? meal.variants![0].id
+                            const updated = removeVariantFromMeal(meal, activeId)
+                            const newMeals = [...meals]
+                            newMeals[mealIdx] = updated
+                            setMeals(newMeals)
+                            // reset active variant pointer to first remaining
+                            if (updated.variants && updated.variants.length > 0) {
+                              setActiveVariantIdByMeal({ ...activeVariantIdByMeal, [mealIdx]: updated.variants[0].id })
+                            }
+                          }}
+                        >
+                          Supprimer
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!confirm('Convertir en repas simple ? Les autres variantes seront perdues.')) return
+                            const activeId = activeVariantIdByMeal[mealIdx] ?? meal.variants![0].id
+                            const updated = convertToSimpleMeal(meal, activeId)
+                            const newMeals = [...meals]
+                            newMeals[mealIdx] = updated
+                            setMeals(newMeals)
+                          }}
+                        >
+                          Convertir en simple
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* "Add variant" button (simple meal) */}
+                  {!hasVariants(meal) && (
+                    <button
+                      type="button"
+                      className={styles.addVariantBtn}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const label = prompt('Label de la 2e variante (ex: Shake)')
+                        if (!label) return
+                        const updated = addVariantToMeal(meal, label)
+                        const newMeals = [...meals]
+                        newMeals[mealIdx] = updated
+                        setMeals(newMeals)
+                        // pointer sur la nouvelle variante
+                        if (updated.variants && updated.variants.length >= 2) {
+                          setActiveVariantIdByMeal({ ...activeVariantIdByMeal, [mealIdx]: updated.variants[1].id })
+                        }
+                      }}
+                    >
+                      + Ajouter une option
+                    </button>
+                  )}
 
                   {/* Food header */}
                   <div className={styles.foodHeader}>
