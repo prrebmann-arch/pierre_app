@@ -12,6 +12,12 @@ export interface StartRecordingOptions {
   withWebcam: boolean
   /** Pre-acquired cam stream (e.g. from modal preview) to avoid re-prompting */
   preAcquiredCamStream?: MediaStream | null
+  /** Optional explicit microphone deviceId */
+  micDeviceId?: string
+  /** Optional explicit webcam deviceId (only used if preAcquiredCamStream is null) */
+  camDeviceId?: string
+  /** Webcam bubble position as percent of canvas (0–1). Defaults to bottom-left inset. */
+  bubblePosition?: { xPct: number; yPct: number } | null
 }
 
 export interface RecorderResult {
@@ -111,7 +117,10 @@ export function useScreenRecorder() {
     }
 
     try {
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const audioConstraint: MediaTrackConstraints | true = opts.micDeviceId
+        ? { deviceId: { exact: opts.micDeviceId } }
+        : true
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint })
     } catch (err) {
       screenStream.getTracks().forEach(t => t.stop())
       setState({ isRecording: false, seconds: 0, errorMessage: 'Accès au micro refusé.' })
@@ -123,7 +132,10 @@ export function useScreenRecorder() {
         camStream = opts.preAcquiredCamStream
       } else {
         try {
-          camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320 } })
+          const videoConstraint: MediaTrackConstraints = opts.camDeviceId
+            ? { deviceId: { exact: opts.camDeviceId }, width: 320, height: 320 }
+            : { width: 320, height: 320 }
+          camStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint })
         } catch (err) {
           screenStream.getTracks().forEach(t => t.stop())
           micStream.getTracks().forEach(t => t.stop())
@@ -142,7 +154,7 @@ export function useScreenRecorder() {
     let outputVideoStream: MediaStream
     if (camStream) {
       try {
-        const composited = await import('./../components/recorder/CanvasCompositor').then(m => m.startCompositing(screenStream, camStream!))
+        const composited = await import('./../components/recorder/CanvasCompositor').then(m => m.startCompositing(screenStream, camStream!, opts.bubblePosition || null))
         compositorStopRef.current = composited.stop
         outputVideoStream = composited.stream
         dimensionsRef.current = { width: composited.canvas.width, height: composited.canvas.height }
