@@ -104,6 +104,44 @@ function calcMealTotals(foods: FoodItem[]): { kcal: number; p: number; g: number
   return { kcal, p, g, l }
 }
 
+/**
+ * Sérialise les meals pour la persistance dans `meals_data` (nutrition_plans / nutrition_templates).
+ * - Préserve `variants` quand présent (avec `id` stable) — sinon préserve `foods`.
+ * - Strip défensif : seules les propriétés listées survivent (drop runtime-only fields).
+ * - `allow_conversion: false` est omis pour minimiser le JSON (seul `true` est conservé).
+ */
+function serializeMealsForSave(meals: MealData[]): MealData[] {
+  const serializeFood = (f: FoodItem): FoodItem => ({
+    aliment: f.aliment,
+    qte: f.qte,
+    kcal: f.kcal,
+    p: f.p,
+    g: f.g,
+    l: f.l,
+    ...(f.allow_conversion ? { allow_conversion: true } : {}),
+  })
+  return meals.map((m) => {
+    if (hasVariants(m)) {
+      return {
+        label: m.label,
+        time: m.time,
+        pre_workout: m.pre_workout,
+        variants: m.variants!.map((v) => ({
+          id: v.id,
+          label: v.label,
+          foods: v.foods.map(serializeFood),
+        })),
+      }
+    }
+    return {
+      label: m.label,
+      time: m.time,
+      pre_workout: m.pre_workout,
+      foods: (m.foods ?? []).map(serializeFood),
+    }
+  })
+}
+
 /** Returns the foods of the active variant if the meal has variants, else `meal.foods`. */
 function getEditableFoods(meal: MealData, activeVariantId: string | undefined): FoodItem[] {
   if (!hasVariants(meal)) return meal.foods ?? []
@@ -396,16 +434,24 @@ export default function MealEditor({
     if (!user) return
     setSaving(true)
 
-    const mealsData = isMacroOnly ? [] : meals.map((m) => {
-      const foods = m.foods.map((f) => {
-        const macros = calcFoodMacros(f)
-        return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
-      })
-      const obj: any = { foods }
-      if (m.pre_workout) obj.pre_workout = true
-      if (m.time) obj.time = m.time
-      return obj
+    // Recompute macros on each food before serialization, so DB always reflects
+    // the latest aliments_db values (qty changes, food edits, etc.).
+    const mealsWithFreshMacros: MealData[] = meals.map((m) => {
+      if (hasVariants(m)) {
+        return {
+          ...m,
+          variants: m.variants!.map((v) => ({
+            ...v,
+            foods: v.foods.map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+          })),
+        }
+      }
+      return {
+        ...m,
+        foods: (m.foods ?? []).map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+      }
     })
+    const mealsData = isMacroOnly ? [] : serializeMealsForSave(mealsWithFreshMacros)
 
     const finalTotals = isMacroOnly ? manualMacros : {
       calories: totals.kcal, proteines: Math.round(totals.p), glucides: Math.round(totals.g), lipides: Math.round(totals.l),
@@ -432,7 +478,8 @@ export default function MealEditor({
 
           let otherTab: any = { meals: [], macros: { calories: 0, proteines: 0, glucides: 0, lipides: 0 }, macro_only: false }
           if (otherTemp) {
-            const hasFood = otherTemp.meals.some((m) => m.foods.length > 0)
+            // hasFood doit prendre en compte variants ET foods.
+            const hasFood = otherTemp.meals.some((m) => getMealFoods(m).length > 0)
             const otherMacros = otherTemp.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 }
             const hasMacros = !!(otherMacros.calories || otherMacros.proteines || otherMacros.glucides || otherMacros.lipides)
 
@@ -443,20 +490,27 @@ export default function MealEditor({
                 macro_only: true,
               }
             } else if (hasFood) {
-              const otherMealsData = otherTemp.meals.map((m) => {
-                const foods = m.foods.map((f) => {
-                  const macros = calcFoodMacros(f)
-                  return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
-                })
-                const obj: any = { foods }
-                if (m.pre_workout) obj.pre_workout = true
-                if (m.time) obj.time = m.time
-                return obj
+              const otherWithFreshMacros: MealData[] = otherTemp.meals.map((m) => {
+                if (hasVariants(m)) {
+                  return {
+                    ...m,
+                    variants: m.variants!.map((v) => ({
+                      ...v,
+                      foods: v.foods.map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+                    })),
+                  }
+                }
+                return {
+                  ...m,
+                  foods: (m.foods ?? []).map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+                }
               })
-              const otherTotals = otherMealsData.reduce(
-                (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
-                  (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
-                  return acc
+              const otherMealsData = serializeMealsForSave(otherWithFreshMacros)
+              // Totals: pour les repas multi-variantes, on prend la 1re variante comme canonique.
+              const otherTotals = otherWithFreshMacros.reduce(
+                (acc, m) => {
+                  const t = calcMealTotals(getMealFoods(m))
+                  return { kcal: acc.kcal + t.kcal, p: acc.p + t.p, g: acc.g + t.g, l: acc.l + t.l }
                 },
                 { kcal: 0, p: 0, g: 0, l: 0 },
               )
@@ -534,23 +588,29 @@ export default function MealEditor({
         const otherType = mealType === 'training' ? 'rest' : 'training'
         const otherTemp = tempMeals[otherType]
         if (otherTemp) {
-          const hasFood = otherTemp.meals.some((m) => m.foods.length > 0)
+          const hasFood = otherTemp.meals.some((m) => getMealFoods(m).length > 0)
           const otherMacros = otherTemp.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 }
           const hasMacros = !!(otherMacros.calories || otherMacros.proteines || otherMacros.glucides || otherMacros.lipides)
           // Save if user filled foods OR (macro-only) entered any macro values
           if (hasFood || (isMacroOnly && hasMacros)) {
             await supabase.from('nutrition_plans').update({ actif: false }).eq('athlete_id', athleteId).eq('meal_type', otherType)
 
-            const otherMealsData = isMacroOnly ? [] : otherTemp.meals.map((m) => {
-              const foods = m.foods.map((f) => {
-                const macros = calcFoodMacros(f)
-                return { aliment: f.aliment, qte: f.qte, ...macros, allow_conversion: f.allow_conversion || false }
-              })
-              const obj: any = { foods }
-              if (m.pre_workout) obj.pre_workout = true
-              if (m.time) obj.time = m.time
-              return obj
+            const otherWithFreshMacros: MealData[] = otherTemp.meals.map((m) => {
+              if (hasVariants(m)) {
+                return {
+                  ...m,
+                  variants: m.variants!.map((v) => ({
+                    ...v,
+                    foods: v.foods.map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+                  })),
+                }
+              }
+              return {
+                ...m,
+                foods: (m.foods ?? []).map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+              }
             })
+            const otherMealsData = isMacroOnly ? [] : serializeMealsForSave(otherWithFreshMacros)
 
             let otherCal = 0, otherP = 0, otherG = 0, otherL = 0
             if (isMacroOnly) {
@@ -559,10 +619,11 @@ export default function MealEditor({
               otherG = otherMacros.glucides
               otherL = otherMacros.lipides
             } else {
-              const totals = otherMealsData.reduce(
-                (acc: { kcal: number; p: number; g: number; l: number }, m: any) => {
-                  (m.foods || []).forEach((f: any) => { acc.kcal += f.kcal || 0; acc.p += f.p || 0; acc.g += f.g || 0; acc.l += f.l || 0 })
-                  return acc
+              // Totals: 1re variante = canonique pour les repas multi-variantes.
+              const totals = otherWithFreshMacros.reduce(
+                (acc, m) => {
+                  const t = calcMealTotals(getMealFoods(m))
+                  return { kcal: acc.kcal + t.kcal, p: acc.p + t.p, g: acc.g + t.g, l: acc.l + t.l }
                 },
                 { kcal: 0, p: 0, g: 0, l: 0 },
               )
