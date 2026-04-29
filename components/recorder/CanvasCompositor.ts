@@ -20,7 +20,8 @@ async function waitForMetadata(video: HTMLVideoElement, timeoutMs = 5000): Promi
 
 export async function startCompositing(
   screenStream: MediaStream,
-  camStream: MediaStream
+  camStream: MediaStream,
+  bubblePosition: { xPct: number; yPct: number } | null = null
 ): Promise<CompositingResult> {
   const screenVideo = document.createElement('video')
   screenVideo.srcObject = screenStream
@@ -52,8 +53,16 @@ export async function startCompositing(
       ctx.drawImage(screenVideo, 0, 0, canvas.width, canvas.height)
 
       if (camVideo.readyState >= 2) {
-        const cx = BUBBLE_INSET + BUBBLE_RADIUS
-        const cy = canvas.height - BUBBLE_INSET - BUBBLE_RADIUS
+        // Position priority: explicit percent (drag-set) > default bottom-left inset
+        let cx: number
+        let cy: number
+        if (bubblePosition) {
+          cx = Math.max(BUBBLE_RADIUS, Math.min(canvas.width - BUBBLE_RADIUS, bubblePosition.xPct * canvas.width))
+          cy = Math.max(BUBBLE_RADIUS, Math.min(canvas.height - BUBBLE_RADIUS, bubblePosition.yPct * canvas.height))
+        } else {
+          cx = BUBBLE_INSET + BUBBLE_RADIUS
+          cy = canvas.height - BUBBLE_INSET - BUBBLE_RADIUS
+        }
 
         ctx.save()
         ctx.beginPath()

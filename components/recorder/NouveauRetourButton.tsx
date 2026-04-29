@@ -41,6 +41,28 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
   const [previewError, setPreviewError] = useState<string | null>(null)
   const previewVideoRef = useRef<HTMLVideoElement | null>(null)
 
+  // Device pickers
+  const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
+  const [selectedMicId, setSelectedMicId] = useState<string>('')
+  const [selectedCamId, setSelectedCamId] = useState<string>('')
+
+  // Bubble position (percent of canvas; default bottom-left)
+  const BUBBLE_DEFAULT = { xPct: 0.07, yPct: 0.93 }
+  const [bubblePos, setBubblePos] = useState<{ xPct: number; yPct: number }>(() => {
+    if (typeof window === 'undefined') return BUBBLE_DEFAULT
+    try {
+      const saved = window.localStorage.getItem('recorder.bubblePos')
+      if (saved) {
+        const p = JSON.parse(saved) as { xPct: number; yPct: number }
+        if (typeof p.xPct === 'number' && typeof p.yPct === 'number') return p
+      }
+    } catch {}
+    return BUBBLE_DEFAULT
+  })
+  const stageRef = useRef<HTMLDivElement | null>(null)
+  const draggingRef = useRef(false)
+
   // ── Loom + message + audio state ──
   const [titre, setTitre] = useState('')
   const [loomUrl, setLoomUrl] = useState('')
@@ -61,12 +83,45 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     setPreviewError(null)
   }
 
+  // Enumerate devices when modal opens (labels require permission to be granted)
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    navigator.mediaDevices.enumerateDevices().then((devices) => {
+      if (cancelled) return
+      const audio = devices.filter((d) => d.kind === 'audioinput')
+      const video = devices.filter((d) => d.kind === 'videoinput')
+      setAudioDevices(audio)
+      setVideoDevices(video)
+      if (!selectedMicId && audio[0]) setSelectedMicId(audio[0].deviceId)
+      if (!selectedCamId && video[0]) setSelectedCamId(video[0].deviceId)
+    }).catch(() => {})
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, previewStream])
+
+  // When camera selection changes while preview is active, drop current stream
+  // so the next effect re-acquires with the new deviceId.
+  useEffect(() => {
+    if (previewStream && withWebcam && selectedCamId) {
+      const currentTrack = previewStream.getVideoTracks()[0]
+      const currentSettings = currentTrack?.getSettings()
+      if (currentSettings?.deviceId && currentSettings.deviceId !== selectedCamId) {
+        stopPreview()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCamId])
+
   // Acquire / release cam preview based on toggle + modal state
   useEffect(() => {
     let cancelled = false
     if (open && withWebcam && !previewStream) {
+      const constraint: MediaTrackConstraints = selectedCamId
+        ? { deviceId: { exact: selectedCamId }, width: 320, height: 320 }
+        : { width: 320, height: 320 }
       navigator.mediaDevices
-        .getUserMedia({ video: { width: 320, height: 320 } })
+        .getUserMedia({ video: constraint })
         .then((s) => {
           if (cancelled) {
             s.getTracks().forEach((t) => t.stop())
@@ -82,7 +137,7 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     if (!withWebcam && previewStream) stopPreview()
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, withWebcam])
+  }, [open, withWebcam, selectedCamId])
 
   useEffect(() => {
     const v = previewVideoRef.current
@@ -111,6 +166,13 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     setStarting(true)
     try {
       const handoff = previewStream
+      const mic = selectedMicId || undefined
+      const cam = selectedCamId || undefined
+      const pos = withWebcam ? bubblePos : null
+      // Persist bubble position for next time
+      if (typeof window !== 'undefined' && withWebcam) {
+        try { window.localStorage.setItem('recorder.bubblePos', JSON.stringify(bubblePos)) } catch {}
+      }
       // Reset flags FIRST so the acquisition useEffect doesn't re-prompt during handoff
       setOpen(false)
       setWithWebcam(false)
@@ -121,7 +183,14 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
       if (audio.isRecording) audio.stopRecording()
       audio.clearAudio()
       setPreviewStream(null)
-      await startRecording({ withWebcam, athleteId, preAcquiredCamStream: handoff })
+      await startRecording({
+        withWebcam,
+        athleteId,
+        preAcquiredCamStream: handoff,
+        micDeviceId: mic,
+        camDeviceId: cam,
+        bubblePosition: pos,
+      })
     } catch (err) {
       previewStream?.getTracks().forEach((t) => t.stop())
       const msg = err instanceof Error ? err.message : 'Erreur démarrage enregistrement'
@@ -129,6 +198,27 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     } finally {
       setStarting(false)
     }
+  }
+
+  // Drag handlers for bubble repositioning on the 16:9 stage
+  function onBubbleDragStart(e: React.PointerEvent) {
+    draggingRef.current = true
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+  }
+  function onBubbleDragMove(e: React.PointerEvent) {
+    if (!draggingRef.current) return
+    const stage = stageRef.current
+    if (!stage) return
+    const rect = stage.getBoundingClientRect()
+    const x = (e.clientX - rect.left) / rect.width
+    const y = (e.clientY - rect.top) / rect.height
+    const xPct = Math.max(0.05, Math.min(0.95, x))
+    const yPct = Math.max(0.05, Math.min(0.95, y))
+    setBubblePos({ xPct, yPct })
+  }
+  function onBubbleDragEnd(e: React.PointerEvent) {
+    draggingRef.current = false
+    try { (e.target as HTMLElement).releasePointerCapture(e.pointerId) } catch {}
   }
 
   async function handleSubmitOther() {
@@ -206,6 +296,43 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
                 {starting ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-circle" /> Démarrer</>}
               </button>
             </div>
+            {/* Mic + Cam selectors */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 3 }}>
+                  <i className="fas fa-microphone" style={{ marginRight: 4 }} />Micro
+                </label>
+                <select
+                  className="form-control"
+                  style={{ fontSize: 12 }}
+                  value={selectedMicId}
+                  onChange={(e) => setSelectedMicId(e.target.value)}
+                >
+                  {audioDevices.length === 0 && <option value="">Défaut</option>}
+                  {audioDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>{d.label || `Micro ${d.deviceId.slice(0, 6)}`}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 3 }}>
+                  <i className="fas fa-video" style={{ marginRight: 4 }} />Caméra
+                </label>
+                <select
+                  className="form-control"
+                  style={{ fontSize: 12 }}
+                  value={selectedCamId}
+                  onChange={(e) => setSelectedCamId(e.target.value)}
+                  disabled={!withWebcam}
+                >
+                  {videoDevices.length === 0 && <option value="">Défaut</option>}
+                  {videoDevices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>{d.label || `Caméra ${d.deviceId.slice(0, 6)}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, marginTop: 10 }}>
               <input
                 type="checkbox"
@@ -213,32 +340,67 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
                 onChange={(e) => setWithWebcam(e.target.checked)}
                 style={{ width: 16, height: 16 }}
               />
-              Inclure ma webcam (bulle en bas à gauche)
+              Inclure ma webcam dans la vidéo
             </label>
+
             {withWebcam && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, marginTop: 10 }}>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>
+                  Glisse la bulle pour positionner la webcam dans la vidéo
+                </div>
                 <div
+                  ref={stageRef}
                   style={{
-                    width: 120, height: 120, borderRadius: '50%', overflow: 'hidden',
-                    background: '#000', border: '3px solid var(--primary, #5b8dff)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative',
+                    width: '100%',
+                    aspectRatio: '16 / 9',
+                    background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)',
+                    border: '1px solid var(--border, #2a2a2a)',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    touchAction: 'none',
                   }}
                 >
-                  {previewError ? (
-                    <span style={{ fontSize: 10, color: 'var(--danger, #ff6464)', textAlign: 'center', padding: 6 }}>{previewError}</span>
-                  ) : previewStream ? (
-                    <video
-                      ref={previewVideoRef}
-                      autoPlay
-                      muted
-                      playsInline
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
-                    />
-                  ) : (
-                    <i className="fas fa-spinner fa-spin" style={{ color: 'var(--text3)' }} />
-                  )}
+                  {/* Bubble — draggable */}
+                  <div
+                    onPointerDown={onBubbleDragStart}
+                    onPointerMove={onBubbleDragMove}
+                    onPointerUp={onBubbleDragEnd}
+                    onPointerCancel={onBubbleDragEnd}
+                    style={{
+                      position: 'absolute',
+                      width: 60,
+                      height: 60,
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      background: '#000',
+                      border: '3px solid var(--primary, #5b8dff)',
+                      cursor: 'grab',
+                      left: `calc(${bubblePos.xPct * 100}% - 30px)`,
+                      top: `calc(${bubblePos.yPct * 100}% - 30px)`,
+                      touchAction: 'none',
+                      boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                    }}
+                  >
+                    {previewError ? (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'var(--danger, #ff6464)', textAlign: 'center', padding: 4, pointerEvents: 'none' }}>
+                        Cam KO
+                      </div>
+                    ) : previewStream ? (
+                      <video
+                        ref={previewVideoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)', pointerEvents: 'none' }}
+                      />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                        <i className="fas fa-spinner fa-spin" style={{ color: 'var(--text3)', fontSize: 14 }} />
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <span style={{ fontSize: 10, color: 'var(--text3)' }}>Aperçu — cadre-toi avant de démarrer</span>
               </div>
             )}
           </div>

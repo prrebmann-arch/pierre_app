@@ -82,7 +82,14 @@ interface RecorderContextValue {
   athleteIdForNext: string | null
 
   // actions
-  startRecording: (opts: { withWebcam: boolean; athleteId: string; preAcquiredCamStream?: MediaStream | null }) => Promise<void>
+  startRecording: (opts: {
+    withWebcam: boolean
+    athleteId: string
+    preAcquiredCamStream?: MediaStream | null
+    micDeviceId?: string
+    camDeviceId?: string
+    bubblePosition?: { xPct: number; yPct: number } | null
+  }) => Promise<void>
   stopRecording: () => Promise<void>
   cancelRecording: () => void
   finalizeRecording: (args: FinalizeArgs) => Promise<void>
@@ -111,10 +118,23 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const cancelledRef = useRef(false)
   const progressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const startRecording = useCallback(async (opts: { withWebcam: boolean; athleteId: string; preAcquiredCamStream?: MediaStream | null }) => {
+  const startRecording = useCallback(async (opts: {
+    withWebcam: boolean
+    athleteId: string
+    preAcquiredCamStream?: MediaStream | null
+    micDeviceId?: string
+    camDeviceId?: string
+    bubblePosition?: { xPct: number; yPct: number } | null
+  }) => {
     cancelledRef.current = false
     setAthleteIdForNext(opts.athleteId)
-    await recorder.startRecording({ withWebcam: opts.withWebcam, preAcquiredCamStream: opts.preAcquiredCamStream })
+    await recorder.startRecording({
+      withWebcam: opts.withWebcam,
+      preAcquiredCamStream: opts.preAcquiredCamStream,
+      micDeviceId: opts.micDeviceId,
+      camDeviceId: opts.camDeviceId,
+      bubblePosition: opts.bubblePosition,
+    })
   }, [recorder])
 
   const stopRecording = useCallback(async () => {
