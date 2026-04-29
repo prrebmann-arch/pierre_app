@@ -5,9 +5,13 @@
 -- Pre-req: 2 athletes (A and B), 2 workout_logs (one for each)
 -- Set up a recent log (within 7d) and an old log (>7d) for athlete A.
 
--- Test 1: Athlete A can update own recent log (expected: 1 row updated)
+-- Wrap in a transaction so SET LOCAL applies and the test mutations roll back.
+BEGIN;
+
 SET LOCAL ROLE authenticated;
 SET LOCAL request.jwt.claims = '{"sub": "<athlete_a_uuid>"}';
+
+-- Test 1: Athlete A can update own recent log (expected: 1 row updated)
 UPDATE workout_logs
   SET exercices_completes = '[]'::jsonb, edited_at = now()
   WHERE id = '<athlete_a_recent_log_id>';
@@ -22,6 +26,11 @@ UPDATE workout_logs
   SET exercices_completes = '[]'::jsonb, edited_at = now()
   WHERE id = '<athlete_b_log_id>';
 
--- Test 4: Same matrix for DELETE
-DELETE FROM workout_logs WHERE id = '<athlete_a_old_log_id>';   -- expected: 0
-DELETE FROM workout_logs WHERE id = '<athlete_a_recent_log_id>'; -- expected: 1 (cascade execution_videos)
+-- Test 4a: Athlete A cannot DELETE old log (expected: 0 rows)
+DELETE FROM workout_logs WHERE id = '<athlete_a_old_log_id>';
+
+-- Test 4b: Athlete A can DELETE own recent log (expected: 1 row, cascades execution_videos)
+DELETE FROM workout_logs WHERE id = '<athlete_a_recent_log_id>';
+
+-- Roll back so this script can be re-run.
+ROLLBACK;

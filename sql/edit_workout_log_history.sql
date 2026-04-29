@@ -11,8 +11,19 @@ ALTER TABLE workout_logs
 ALTER TABLE workout_logs
   ADD COLUMN IF NOT EXISTS locked_at TIMESTAMPTZ
   GENERATED ALWAYS AS (
+    -- COALESCE(started_at, created_at): if both are null (should not happen
+    -- since created_at has a NOT NULL default), locked_at becomes NULL and
+    -- the row is permanently locked — defensive lockout.
     COALESCE(started_at, created_at) + INTERVAL '7 days'
   ) STORED;
+-- Note: locked_at is derived from started_at/created_at and will silently
+-- update if started_at is backfilled later. We assume started_at is set
+-- once at session start and never modified. If a future feature mutates
+-- started_at on existing rows, replace this with a trigger that freezes
+-- locked_at on first INSERT.
+
+-- Assumption: workout_logs.athlete_id is the auth.users(id) of the athlete.
+-- If the column is renamed (e.g. user_id), update the policies below.
 
 -- 2. RLS policies — assume RLS already enabled on workout_logs
 DROP POLICY IF EXISTS "athlete can edit own unlocked logs" ON workout_logs;
@@ -37,12 +48,13 @@ BEGIN
   ) THEN
     ALTER TABLE execution_videos
       DROP CONSTRAINT execution_videos_workout_log_id_fkey;
-    ALTER TABLE execution_videos
-      ADD CONSTRAINT execution_videos_workout_log_id_fkey
-      FOREIGN KEY (workout_log_id)
-      REFERENCES workout_logs(id)
-      ON DELETE CASCADE;
   END IF;
+
+  ALTER TABLE execution_videos
+    ADD CONSTRAINT execution_videos_workout_log_id_fkey
+    FOREIGN KEY (workout_log_id)
+    REFERENCES workout_logs(id)
+    ON DELETE CASCADE;
 END $$;
 
 COMMIT;
