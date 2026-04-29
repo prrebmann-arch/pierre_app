@@ -99,21 +99,22 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
   async function handleStartRecord() {
     setStarting(true)
     try {
-      // Hand off pre-acquired preview stream to recorder so we don't re-prompt
       const handoff = previewStream
-      // Don't stop the preview — recorder takes ownership now
-      setPreviewStream(null)
-      await startRecording({ withWebcam, athleteId, preAcquiredCamStream: handoff })
-      // Close modal WITHOUT calling stopPreview (handoff already happened)
+      // Reset flags FIRST so the acquisition useEffect (deps: open/mode/withWebcam)
+      // sees withWebcam=false on next render and doesn't re-prompt while we hand off.
       setOpen(false)
+      setWithWebcam(false)
       setLoomUrl('')
       setTitre('')
       setComment('')
       setMode('record')
-      setWithWebcam(false)
+      // Now drop the preview state (recorder takes ownership of the tracks)
+      setPreviewStream(null)
+      await startRecording({ withWebcam, athleteId, preAcquiredCamStream: handoff })
     } catch (err) {
-      // If start failed, the handoff stream might still be alive — release it
-      stopPreview()
+      // If start failed, the handoff stream is now orphaned in the recorder's
+      // failed setup path — best effort: stop tracks we still have a ref to.
+      previewStream?.getTracks().forEach((t) => t.stop())
       const msg = err instanceof Error ? err.message : 'Erreur démarrage enregistrement'
       toast(msg, 'error')
     } finally {
@@ -252,7 +253,12 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
 
               <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
                 <button className="btn btn-outline" onClick={close} disabled={starting}>Annuler</button>
-                <button className="btn btn-red" onClick={handleStartRecord} disabled={starting}>
+                <button
+                  className="btn btn-red"
+                  onClick={handleStartRecord}
+                  disabled={starting || (withWebcam && !previewStream && !previewError)}
+                  title={withWebcam && !previewStream && !previewError ? 'Initialisation webcam…' : undefined}
+                >
                   {starting ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-circle" /> Démarrer</>}
                 </button>
               </div>

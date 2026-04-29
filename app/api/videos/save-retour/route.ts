@@ -129,7 +129,7 @@ export async function POST(request: Request) {
         type: 'retour',
         title: 'Nouveau retour vidéo',
         body: `Votre coach vous a envoyé : ${titre}`,
-        metadata: { retour_id: retourId, has_video: true },
+        metadata: { retour_id: retourId, has_video: true, titre, commentaire: commentaire ?? null },
       })
       if (notifErr) console.error('[save-retour] notification insert failed:', notifErr)
 
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
           sound: 'default',
           title: 'Nouveau retour vidéo',
           body: `Votre coach vous a envoyé : ${titre}`,
-          data: { type: 'retour', retour_id: retourId, has_video: true },
+          data: { type: 'retour', retour_id: retourId, has_video: true, titre, commentaire: commentaire ?? null },
         }))
         const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
