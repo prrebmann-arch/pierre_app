@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/contexts/AuthContext'
 import styles from './RetourVideoPlayer.module.css'
 
 interface Props {
@@ -18,7 +18,7 @@ interface SignedUrls {
 const SPEEDS = [1, 1.5, 2]
 
 export default function RetourVideoPlayer({ retourId, archived }: Props) {
-  const supabase = createClient()
+  const auth = useAuth() as { accessToken?: string | null }
   const videoRef = useRef<HTMLVideoElement>(null)
   const [urls, setUrls] = useState<SignedUrls | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -26,16 +26,13 @@ export default function RetourVideoPlayer({ retourId, archived }: Props) {
 
   useEffect(() => {
     if (archived) return
+    if (!auth.accessToken) return  // wait for auth context to provide token
     let cancelled = false
 
     async function fetchUrls() {
       try {
-        const { data } = await supabase.auth.getSession()
-        const token = data.session?.access_token
-        if (!token) { setError('Session expirée'); return }
-
         const res = await fetch(`/api/videos/retour-signed-url?id=${encodeURIComponent(retourId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${auth.accessToken}` },
         })
         if (!res.ok) {
           const body = await res.text()
@@ -51,7 +48,7 @@ export default function RetourVideoPlayer({ retourId, archived }: Props) {
 
     fetchUrls()
     return () => { cancelled = true }
-  }, [retourId, archived, supabase])
+  }, [retourId, archived, auth.accessToken])
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.playbackRate = speed
