@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from 'react'
 import { useScreenRecorder, type RecorderResult } from '@/hooks/useScreenRecorder'
 import { extractThumbnail } from '@/hooks/useThumbnailExtractor'
 import { createClient } from '@/lib/supabase/client'
@@ -314,7 +314,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     }
   }, [pending, user, accessToken, supabase, toast])
 
-  const value: RecorderContextValue = {
+  const value = useMemo<RecorderContextValue>(() => ({
     isRecording: recorder.isRecording,
     seconds: recorder.seconds,
     errorMessage: recorder.errorMessage,
@@ -332,7 +332,25 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     cancelRecording,
     finalizeRecording,
     discardPending,
-  }
+  }), [
+    recorder.isRecording,
+    recorder.seconds,
+    recorder.errorMessage,
+    recorder.liveCamStream,
+    recorder.liveMode,
+    isProcessing,
+    pending,
+    isUploading,
+    uploadProgress,
+    athleteIdForNext,
+    registerPipVideo,
+    enterPipWithStream,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    finalizeRecording,
+    discardPending,
+  ])
 
   return <RecorderContext.Provider value={value}>{children}</RecorderContext.Provider>
 }
