@@ -402,7 +402,7 @@ export default function MealEditor({
 
   // ── Import-from-template state ──
   const [importPickerType, setImportPickerType] = useState<'jour' | 'repas' | null>(null)
-  const [importTemplates, setImportTemplates] = useState<Array<{ id: string; nom: string; meals_data: unknown; calories_objectif: number | null; macro_only?: boolean }>>([])
+  const [importTemplates, setImportTemplates] = useState<Array<{ id: string; nom: string; meals_data: unknown; calories_objectif: number | null }>>([])
   const [importLoading, setImportLoading] = useState(false)
 
   const openImportPicker = useCallback(async (type: 'jour' | 'repas') => {
@@ -412,7 +412,7 @@ export default function MealEditor({
     try {
       const { data } = await supabase
         .from('nutrition_templates')
-        .select('id, nom, meals_data, calories_objectif, macro_only')
+        .select('id, nom, meals_data, calories_objectif')
         .eq('coach_id', user.id)
         .eq('template_type', type)
         .order('created_at', { ascending: false })
