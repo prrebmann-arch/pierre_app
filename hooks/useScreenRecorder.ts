@@ -138,26 +138,15 @@ export function useScreenRecorder() {
     camStreamRef.current = camStream
     setLiveCamStream(camStream)
 
-    // Build the output stream
-    let outputVideoStream: MediaStream
-    if (camStream) {
-      try {
-        const composited = await import('./../components/recorder/CanvasCompositor').then(m => m.startCompositing(screenStream, camStream!))
-        compositorStopRef.current = composited.stop
-        outputVideoStream = composited.stream
-        dimensionsRef.current = { width: composited.canvas.width, height: composited.canvas.height }
-      } catch (err) {
-        screenStream.getTracks().forEach(t => t.stop())
-        micStream.getTracks().forEach(t => t.stop())
-        camStream.getTracks().forEach(t => t.stop())
-        setState({ isRecording: false, seconds: 0, errorMessage: 'Erreur composition webcam' })
-        throw err
-      }
-    } else {
-      outputVideoStream = screenStream
-      const settings = screenStream.getVideoTracks()[0]?.getSettings()
-      dimensionsRef.current = { width: settings?.width ?? 1920, height: settings?.height ?? 1080 }
-    }
+    // Output = pure screen capture, no canvas compositing.
+    // The webcam appears in the recording only via the in-page LiveCamBubble
+    // that getDisplayMedia captures (when the coach shares "this tab" or
+    // "entire screen"). This avoids the previous "two bubbles" artifact
+    // where the canvas-composited cam (bottom-left) appeared in addition
+    // to the in-page bubble.
+    const outputVideoStream: MediaStream = screenStream
+    const settings = screenStream.getVideoTracks()[0]?.getSettings()
+    dimensionsRef.current = { width: settings?.width ?? 1920, height: settings?.height ?? 1080 }
 
     // Combine output video + mic audio into a single stream for MediaRecorder
     const combined = new MediaStream([

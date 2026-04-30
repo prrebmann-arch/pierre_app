@@ -16,6 +16,7 @@ import PhotoCompare from '@/components/bilans/PhotoCompare'
 import BilanPhotosUploadModal from '@/components/bilans/BilanPhotosUploadModal'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import type { DailyReport } from '@/components/bilans/BilanAccordion'
 import type { PhotoType, PhotoEntry } from '@/components/bilans/PhotoCompare'
 import type { Athlete } from '@/lib/types'
@@ -439,12 +440,11 @@ export default function BilansPage() {
         athleteName={(athlete || selectedAthlete) ? `${(athlete || selectedAthlete)!.prenom || ''}_${(athlete || selectedAthlete)!.nom || ''}`.trim() : undefined}
       />
 
-      {bilanTraiteOpen && (athlete || selectedAthlete)?.user_id && (
-        <BilanTraitePopupInline
-          userId={(athlete || selectedAthlete)!.user_id!}
-          prenom={(athlete || selectedAthlete)!.prenom}
+      {(athlete || selectedAthlete)?.id && (
+        <NouveauRetourButton
           athleteId={(athlete || selectedAthlete)!.id}
-          onClose={() => setBilanTraiteOpen(false)}
+          open={bilanTraiteOpen}
+          onOpenChange={setBilanTraiteOpen}
         />
       )}
 
