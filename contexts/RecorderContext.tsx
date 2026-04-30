@@ -81,11 +81,16 @@ interface RecorderContextValue {
   // intent state
   athleteIdForNext: string | null
 
+  // PiP coordination
+  registerPipVideo: (el: HTMLVideoElement | null) => void
+  enterPipWithStream: (stream: MediaStream | null) => Promise<boolean>
+
   // actions
   startRecording: (opts: {
     withWebcam: boolean
     athleteId: string
     preAcquiredCamStream?: MediaStream | null
+    preAcquiredMicStream?: MediaStream | null
     micDeviceId?: string
     camDeviceId?: string
     bubblePosition?: { xPct: number; yPct: number } | null
@@ -118,10 +123,37 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const cancelledRef = useRef(false)
   const progressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  // Persistent <video> element for PiP — registered by LiveCamPiP and used
+  // synchronously from the modal's user-gesture click to avoid losing the
+  // transient activation (which getDisplayMedia would consume otherwise).
+  const pipVideoRef = useRef<HTMLVideoElement | null>(null)
+  const registerPipVideo = useCallback((el: HTMLVideoElement | null) => {
+    pipVideoRef.current = el
+  }, [])
+  const enterPipWithStream = useCallback(async (stream: MediaStream | null): Promise<boolean> => {
+    const v = pipVideoRef.current
+    if (!v || !stream) return false
+    try {
+      if (v.srcObject !== stream) {
+        v.srcObject = stream
+      }
+      // Best-effort play — required by some browsers before requestPictureInPicture.
+      try { await v.play() } catch {}
+      if (typeof v.requestPictureInPicture === 'function' && document.pictureInPictureEnabled) {
+        await v.requestPictureInPicture()
+        return true
+      }
+    } catch (err) {
+      console.warn('[recorder] enterPipWithStream failed:', err)
+    }
+    return false
+  }, [])
+
   const startRecording = useCallback(async (opts: {
     withWebcam: boolean
     athleteId: string
     preAcquiredCamStream?: MediaStream | null
+    preAcquiredMicStream?: MediaStream | null
     micDeviceId?: string
     camDeviceId?: string
     bubblePosition?: { xPct: number; yPct: number } | null
@@ -131,6 +163,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     await recorder.startRecording({
       withWebcam: opts.withWebcam,
       preAcquiredCamStream: opts.preAcquiredCamStream,
+      preAcquiredMicStream: opts.preAcquiredMicStream,
       micDeviceId: opts.micDeviceId,
       camDeviceId: opts.camDeviceId,
       bubblePosition: opts.bubblePosition,
@@ -290,6 +323,8 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     uploadProgress,
     liveCamStream: recorder.liveCamStream,
     athleteIdForNext,
+    registerPipVideo,
+    enterPipWithStream,
     startRecording,
     stopRecording,
     cancelRecording,
