@@ -14,6 +14,10 @@ interface Props {
   onCreated?: () => void
   buttonClassName?: string
   label?: string
+  /** Controlled open state — when provided, the trigger button is hidden and
+   *  the modal opens/closes based on this prop. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const QUICK_MESSAGES = [
@@ -26,13 +30,19 @@ const QUICK_MESSAGES = [
 
 type Tab = 'text' | 'screen'
 
-export default function NouveauRetourButton({ athleteId, onCreated, buttonClassName, label }: Props) {
+export default function NouveauRetourButton({ athleteId, onCreated, buttonClassName, label, open: controlledOpen, onOpenChange }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const { startRecording, isRecording, isProcessing, isUploading } = useRecorder()
   const supabase = createClient()
 
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v)
+    onOpenChange?.(v)
+  }
   const [tab, setTab] = useState<Tab>('text')
 
   // Screen recording state
@@ -275,14 +285,14 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
 
   return (
     <>
-      <button
+      {!isControlled && <button
         className={buttonClassName ?? 'btn btn-red'}
         onClick={() => setOpen(true)}
         disabled={recordingBusy}
         title={recordingBusy ? 'Un enregistrement est déjà en cours' : undefined}
       >
         <i className="fas fa-video" /> {label ?? 'Nouveau retour'}
-      </button>
+      </button>}
 
       <Modal isOpen={open} onClose={close} title="Nouveau retour">
         <div style={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 480 }}>
