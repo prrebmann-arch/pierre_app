@@ -406,7 +406,6 @@ export default function BilansPage() {
             <i className="fas fa-camera" />
             Importer photos
           </button>
-          <NouveauRetourButton athleteId={params.id} />
         </div>
       </div>
 
@@ -441,12 +440,11 @@ export default function BilansPage() {
         athleteName={(athlete || selectedAthlete) ? `${(athlete || selectedAthlete)!.prenom || ''}_${(athlete || selectedAthlete)!.nom || ''}`.trim() : undefined}
       />
 
-      {bilanTraiteOpen && (athlete || selectedAthlete)?.user_id && (
-        <BilanTraitePopupInline
-          userId={(athlete || selectedAthlete)!.user_id!}
-          prenom={(athlete || selectedAthlete)!.prenom}
+      {(athlete || selectedAthlete)?.id && (
+        <NouveauRetourButton
           athleteId={(athlete || selectedAthlete)!.id}
-          onClose={() => setBilanTraiteOpen(false)}
+          open={bilanTraiteOpen}
+          onOpenChange={setBilanTraiteOpen}
         />
       )}
 

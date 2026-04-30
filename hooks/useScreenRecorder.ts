@@ -12,14 +12,6 @@ export interface StartRecordingOptions {
   withWebcam: boolean
   /** Pre-acquired cam stream (e.g. from modal preview) to avoid re-prompting */
   preAcquiredCamStream?: MediaStream | null
-  /** Pre-acquired mic stream — if provided, mic permission isn't re-asked at start */
-  preAcquiredMicStream?: MediaStream | null
-  /** Optional explicit microphone deviceId (only used if preAcquiredMicStream is null) */
-  micDeviceId?: string
-  /** Optional explicit webcam deviceId (only used if preAcquiredCamStream is null) */
-  camDeviceId?: string
-  /** Webcam bubble position as percent of canvas (0–1). Defaults to bottom-left inset. */
-  bubblePosition?: { xPct: number; yPct: number } | null
 }
 
 export interface RecorderResult {
@@ -118,19 +110,12 @@ export function useScreenRecorder() {
       throw err
     }
 
-    if (opts.preAcquiredMicStream) {
-      micStream = opts.preAcquiredMicStream
-    } else {
-      try {
-        const audioConstraint: MediaTrackConstraints | true = opts.micDeviceId
-          ? { deviceId: { exact: opts.micDeviceId } }
-          : true
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint })
-      } catch (err) {
-        screenStream.getTracks().forEach(t => t.stop())
-        setState({ isRecording: false, seconds: 0, errorMessage: 'Accès au micro refusé.' })
-        throw err
-      }
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch (err) {
+      screenStream.getTracks().forEach(t => t.stop())
+      setState({ isRecording: false, seconds: 0, errorMessage: 'Accès au micro refusé.' })
+      throw err
     }
 
     if (opts.withWebcam) {
@@ -138,10 +123,7 @@ export function useScreenRecorder() {
         camStream = opts.preAcquiredCamStream
       } else {
         try {
-          const videoConstraint: MediaTrackConstraints = opts.camDeviceId
-            ? { deviceId: { exact: opts.camDeviceId }, width: 320, height: 320 }
-            : { width: 320, height: 320 }
-          camStream = await navigator.mediaDevices.getUserMedia({ video: videoConstraint })
+          camStream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 320 } })
         } catch (err) {
           screenStream.getTracks().forEach(t => t.stop())
           micStream.getTracks().forEach(t => t.stop())
@@ -156,26 +138,15 @@ export function useScreenRecorder() {
     camStreamRef.current = camStream
     setLiveCamStream(camStream)
 
-    // Build the output stream
-    let outputVideoStream: MediaStream
-    if (camStream) {
-      try {
-        const composited = await import('./../components/recorder/CanvasCompositor').then(m => m.startCompositing(screenStream, camStream!, opts.bubblePosition || null))
-        compositorStopRef.current = composited.stop
-        outputVideoStream = composited.stream
-        dimensionsRef.current = { width: composited.canvas.width, height: composited.canvas.height }
-      } catch (err) {
-        screenStream.getTracks().forEach(t => t.stop())
-        micStream.getTracks().forEach(t => t.stop())
-        camStream.getTracks().forEach(t => t.stop())
-        setState({ isRecording: false, seconds: 0, errorMessage: 'Erreur composition webcam' })
-        throw err
-      }
-    } else {
-      outputVideoStream = screenStream
-      const settings = screenStream.getVideoTracks()[0]?.getSettings()
-      dimensionsRef.current = { width: settings?.width ?? 1920, height: settings?.height ?? 1080 }
-    }
+    // Output = pure screen capture, no canvas compositing.
+    // The webcam appears in the recording only via the in-page LiveCamBubble
+    // that getDisplayMedia captures (when the coach shares "this tab" or
+    // "entire screen"). This avoids the previous "two bubbles" artifact
+    // where the canvas-composited cam (bottom-left) appeared in addition
+    // to the in-page bubble.
+    const outputVideoStream: MediaStream = screenStream
+    const settings = screenStream.getVideoTracks()[0]?.getSettings()
+    dimensionsRef.current = { width: settings?.width ?? 1920, height: settings?.height ?? 1080 }
 
     // Combine output video + mic audio into a single stream for MediaRecorder
     const combined = new MediaStream([

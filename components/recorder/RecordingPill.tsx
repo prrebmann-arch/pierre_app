@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useRecorder } from '@/contexts/RecorderContext'
 import styles from './RecordingPill.module.css'
 
@@ -13,37 +12,7 @@ function formatTime(seconds: number): string {
 }
 
 export default function RecordingPill() {
-  const {
-    isRecording, seconds, isProcessing, isUploading, uploadProgress,
-    stopRecording, cancelRecording, liveCamStream, enterPipWithStream,
-  } = useRecorder()
-
-  const [pipActive, setPipActive] = useState(false)
-  const [pipBusy, setPipBusy] = useState(false)
-
-  // Track real PiP state via document events (the user can close the
-  // floating window themselves at any time)
-  useEffect(() => {
-    if (typeof document === 'undefined') return
-    const update = () => setPipActive(!!document.pictureInPictureElement)
-    update()
-    document.addEventListener('enterpictureinpicture' as keyof DocumentEventMap, update)
-    document.addEventListener('leavepictureinpicture' as keyof DocumentEventMap, update)
-    return () => {
-      document.removeEventListener('enterpictureinpicture' as keyof DocumentEventMap, update)
-      document.removeEventListener('leavepictureinpicture' as keyof DocumentEventMap, update)
-    }
-  }, [])
-
-  async function handlePipClick() {
-    if (!liveCamStream) return
-    setPipBusy(true)
-    try {
-      await enterPipWithStream(liveCamStream)
-    } finally {
-      setPipBusy(false)
-    }
-  }
+  const { isRecording, seconds, isProcessing, isUploading, uploadProgress, stopRecording, cancelRecording } = useRecorder()
 
   if (!isRecording && !isProcessing && !isUploading) return null
 
@@ -70,24 +39,12 @@ export default function RecordingPill() {
     )
   }
 
-  // isRecording
+  // isRecording — webcam (if enabled) is shown via LiveCamBubble (in-page draggable)
   const isWarning = seconds >= WARNING_AT_S
   return (
     <div className={styles.pill} role="status" aria-live="polite">
       <span className={styles.dot} />
       <span className={`${styles.timer} ${isWarning ? styles.timerWarning : ''}`}>{formatTime(seconds)}</span>
-      {liveCamStream && !pipActive && (
-        <button
-          className={styles.btn}
-          onClick={handlePipClick}
-          disabled={pipBusy}
-          aria-label="Voir ma webcam en fenêtre flottante"
-          title="Ouvrir ma webcam en Picture-in-Picture"
-          style={{ background: 'var(--primary, #5b8dff)', color: '#fff' }}
-        >
-          {pipBusy ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-video" /> Voir ma cam</>}
-        </button>
-      )}
       <button
         className={`${styles.btn} ${styles.btnStop}`}
         onClick={() => { stopRecording() }}

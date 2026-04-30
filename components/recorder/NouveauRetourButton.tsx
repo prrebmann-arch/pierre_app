@@ -14,6 +14,10 @@ interface Props {
   onCreated?: () => void
   buttonClassName?: string
   label?: string
+  /** Controlled open state — when provided, the trigger button is hidden and
+   *  the modal opens/closes based on this prop. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 const QUICK_MESSAGES = [
@@ -24,39 +28,41 @@ const QUICK_MESSAGES = [
   'RAS, on continue sur cette lancée !',
 ]
 
-type Tab = 'screen' | 'text'
+type Tab = 'text' | 'screen'
 
-export default function NouveauRetourButton({ athleteId, onCreated, buttonClassName, label }: Props) {
+export default function NouveauRetourButton({ athleteId, onCreated, buttonClassName, label, open: controlledOpen, onOpenChange }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const { startRecording, isRecording, isProcessing, isUploading } = useRecorder()
   const supabase = createClient()
 
-  const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<Tab>('screen')
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = (v: boolean) => {
+    if (!isControlled) setInternalOpen(v)
+    onOpenChange?.(v)
+  }
+  const [tab, setTab] = useState<Tab>('text')
 
-  // ── Screen recording state ──
+  // Screen recording state
   const [withWebcam, setWithWebcam] = useState(false)
   const [starting, setStarting] = useState(false)
   const [previewCamStream, setPreviewCamStream] = useState<MediaStream | null>(null)
   const [previewMicStream, setPreviewMicStream] = useState<MediaStream | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const previewVideoRef = useRef<HTMLVideoElement | null>(null)
-
-  // Device pickers
+  const handoffRef = useRef(false)
   const [audioDevices, setAudioDevices] = useState<MediaDeviceInfo[]>([])
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([])
   const [selectedMicId, setSelectedMicId] = useState<string>('')
   const [selectedCamId, setSelectedCamId] = useState<string>('')
-
-  // Bubble position fixed at bottom-left (drag UI removed — too complex pre-record;
-  // user can move the live PiP window OS-level instead).
   const bubblePos = { xPct: 0.07, yPct: 0.93 }
 
-  // ── Text/Loom/Audio state ──
-  const [loomUrl, setLoomUrl] = useState('')
+  // Text + audio + Loom state
   const [selectedChip, setSelectedChip] = useState<number>(-1)
   const [customMsg, setCustomMsg] = useState('')
+  const [loomUrl, setLoomUrl] = useState('')
   const [saving, setSaving] = useState(false)
 
   const audio = useAudioRecorder({
@@ -64,19 +70,6 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     pathPrefix: `${user?.id || 'unknown'}/retour_${athleteId}_`,
   })
 
-  function stopAllPreviews() {
-    setPreviewCamStream((prev) => {
-      prev?.getTracks().forEach((t) => t.stop())
-      return null
-    })
-    setPreviewMicStream((prev) => {
-      prev?.getTracks().forEach((t) => t.stop())
-      return null
-    })
-    setPreviewError(null)
-  }
-
-  // Enumerate devices when modal opens
   useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -93,7 +86,6 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, previewCamStream, previewMicStream])
 
-  // Re-acquire cam if device changed mid-preview
   useEffect(() => {
     if (previewCamStream && withWebcam && selectedCamId) {
       const tk = previewCamStream.getVideoTracks()[0]
@@ -106,7 +98,6 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCamId])
 
-  // Re-acquire mic if device changed mid-preview
   useEffect(() => {
     if (previewMicStream && selectedMicId) {
       const tk = previewMicStream.getAudioTracks()[0]
@@ -119,28 +110,21 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedMicId])
 
-  // Acquire cam preview based on webcam toggle (only on screen tab)
   useEffect(() => {
     let cancelled = false
     if (open && tab === 'screen' && withWebcam && !previewCamStream) {
       const constraint: MediaTrackConstraints = selectedCamId
         ? { deviceId: { exact: selectedCamId }, width: 320, height: 320 }
         : { width: 320, height: 320 }
-      navigator.mediaDevices
-        .getUserMedia({ video: constraint })
-        .then((s) => {
-          if (cancelled) {
-            s.getTracks().forEach((t) => t.stop())
-            return
-          }
-          setPreviewCamStream(s)
-        })
-        .catch((err) => {
-          if (cancelled) return
-          setPreviewError(err instanceof Error ? err.message : 'Accès webcam refusé')
-        })
+      navigator.mediaDevices.getUserMedia({ video: constraint }).then((s) => {
+        if (cancelled) { s.getTracks().forEach((t) => t.stop()); return }
+        setPreviewCamStream(s)
+      }).catch((err) => {
+        if (cancelled) return
+        setPreviewError(err instanceof Error ? err.message : 'Accès webcam refusé')
+      })
     }
-    if ((!withWebcam || tab !== 'screen' || !open) && previewCamStream) {
+    if ((!withWebcam || tab !== 'screen' || !open) && previewCamStream && !handoffRef.current) {
       previewCamStream.getTracks().forEach((t) => t.stop())
       setPreviewCamStream(null)
     }
@@ -148,25 +132,18 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, withWebcam, selectedCamId, tab])
 
-  // Pre-acquire mic when on the screen tab — saves a permission prompt at start
   useEffect(() => {
     let cancelled = false
     if (open && tab === 'screen' && !previewMicStream) {
       const constraint: MediaTrackConstraints | true = selectedMicId
         ? { deviceId: { exact: selectedMicId } }
         : true
-      navigator.mediaDevices
-        .getUserMedia({ audio: constraint })
-        .then((s) => {
-          if (cancelled) {
-            s.getTracks().forEach((t) => t.stop())
-            return
-          }
-          setPreviewMicStream(s)
-        })
-        .catch(() => {})
+      navigator.mediaDevices.getUserMedia({ audio: constraint }).then((s) => {
+        if (cancelled) { s.getTracks().forEach((t) => t.stop()); return }
+        setPreviewMicStream(s)
+      }).catch(() => {})
     }
-    if ((tab !== 'screen' || !open) && previewMicStream) {
+    if ((tab !== 'screen' || !open) && previewMicStream && !handoffRef.current) {
       previewMicStream.getTracks().forEach((t) => t.stop())
       setPreviewMicStream(null)
     }
@@ -174,7 +151,6 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, tab, selectedMicId])
 
-  // Bind cam stream to preview <video>
   useEffect(() => {
     const v = previewVideoRef.current
     if (!v) return
@@ -187,7 +163,13 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
   }, [previewCamStream])
 
   function close() {
-    stopAllPreviews()
+    if (!handoffRef.current) {
+      previewCamStream?.getTracks().forEach((t) => t.stop())
+      previewMicStream?.getTracks().forEach((t) => t.stop())
+      setPreviewCamStream(null)
+      setPreviewMicStream(null)
+      setPreviewError(null)
+    }
     if (audio.isRecording) audio.stopRecording()
     audio.clearAudio()
     setOpen(false)
@@ -195,43 +177,35 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
     setSelectedChip(-1)
     setCustomMsg('')
     setWithWebcam(false)
-    setTab('screen')
+    setTab('text')
   }
 
   async function handleStartRecord() {
     setStarting(true)
+    handoffRef.current = true
     try {
       const camHandoff = previewCamStream
       const micHandoff = previewMicStream
       const pos = withWebcam ? bubblePos : null
-
-      // NOTE: We do NOT call enterPipWithStream() here. PiP requires a
-      // user activation; getDisplayMedia (called inside startRecording)
-      // ALSO requires it and consumes it. Two gated APIs in one click
-      // handler = the second fails. PiP is triggered later by the user
-      // via the "Voir ma webcam" button in RecordingPill (fresh gesture).
-
-      // Reset modal state — this also unmounts our local previews,
-      // but we already handed off the streams to the recorder.
       setOpen(false)
       setWithWebcam(false)
       setLoomUrl('')
       setSelectedChip(-1)
       setCustomMsg('')
-      // Don't stop preview streams — they're owned by the recorder now
       setPreviewCamStream(null)
       setPreviewMicStream(null)
       if (audio.isRecording) audio.stopRecording()
       audio.clearAudio()
-
+      // Mic stream is pre-acquired in the modal but the hook on this branch
+      // only accepts a pre-acquired cam stream — release the mic so the
+      // recorder can re-acquire (no extra prompt because perm already granted).
+      micHandoff?.getTracks().forEach((t) => t.stop())
+      // pos is reserved for a future bubble-position option
+      void pos
       await startRecording({
         withWebcam,
         athleteId,
         preAcquiredCamStream: camHandoff,
-        preAcquiredMicStream: micHandoff,
-        micDeviceId: selectedMicId || undefined,
-        camDeviceId: selectedCamId || undefined,
-        bubblePosition: pos,
       })
     } catch (err) {
       previewCamStream?.getTracks().forEach((t) => t.stop())
@@ -240,23 +214,25 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
       toast(msg, 'error')
     } finally {
       setStarting(false)
+      handoffRef.current = false
     }
   }
 
-  async function handleSubmitOther() {
+  async function handleSubmit() {
     const message = customMsg.trim() || (selectedChip >= 0 ? QUICK_MESSAGES[selectedChip] : '')
     const hasLoom = !!loomUrl.trim()
     const hasAudio = !!audio.audioUrl
     const hasMessage = !!message
-
     if (!hasLoom && !hasAudio && !hasMessage) {
-      toast('Ajoute au moins un message, un Loom ou un vocal', 'error')
+      toast('Ajoute un message, un Loom ou un vocal', 'error')
       return
     }
-
     setSaving(true)
-    // Title is auto-derived (no input field anymore)
-    const finalTitre = hasMessage ? message.slice(0, 40) : hasAudio ? 'Message vocal' : hasLoom ? 'Vidéo Loom' : 'Retour'
+    const finalTitre = hasMessage
+      ? message.slice(0, 40)
+      : hasAudio ? 'Message vocal'
+      : hasLoom ? 'Vidéo Loom'
+      : 'Retour'
     const type = hasLoom ? (hasAudio ? 'mixed' : 'loom') : (hasAudio ? 'audio' : 'message')
     const { error } = await supabase.from('bilan_retours').insert({
       athlete_id: athleteId,
@@ -276,7 +252,6 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
       if (hasLoom) meta.loom_url = loomUrl.trim()
       if (hasAudio && audio.audioUrl) meta.audio_url = audio.audioUrl
       if (hasMessage) meta.commentaire = message
-
       const notifTitle = hasAudio ? 'Message vocal de ton coach'
         : hasLoom ? 'Vidéo de ton coach'
         : 'Nouveau retour'
@@ -284,10 +259,8 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
         : hasAudio ? "Ton coach t'a envoyé un message vocal"
         : hasLoom ? "Ton coach t'a envoyé une vidéo"
         : 'Nouveau retour'
-
       await notifyAthlete(ath.user_id, 'retour', notifTitle, notifBody, meta)
     }
-
     toast('Retour envoyé !', 'success')
     close()
     onCreated?.()
@@ -296,67 +269,135 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
   const recordingBusy = isRecording || isProcessing || isUploading
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 
+  const tabBtn = (active: boolean): React.CSSProperties => ({
+    flex: 1,
+    padding: '14px 16px',
+    background: 'transparent',
+    color: active ? 'var(--primary, #5b8dff)' : 'var(--text2)',
+    border: 'none',
+    borderBottom: active ? '2px solid var(--primary, #5b8dff)' : '2px solid transparent',
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 600,
+  })
+
+  const labelStyle: React.CSSProperties = { fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }
+
   return (
     <>
-      <button
+      {!isControlled && <button
         className={buttonClassName ?? 'btn btn-red'}
         onClick={() => setOpen(true)}
         disabled={recordingBusy}
         title={recordingBusy ? 'Un enregistrement est déjà en cours' : undefined}
       >
         <i className="fas fa-video" /> {label ?? 'Nouveau retour'}
-      </button>
+      </button>}
 
       <Modal isOpen={open} onClose={close} title="Nouveau retour">
         <div style={{ padding: 0, display: 'flex', flexDirection: 'column', minHeight: 480 }}>
-          {/* ── Tab bar ── */}
-          <div style={{
-            display: 'flex',
-            borderBottom: '1px solid var(--border, #2a2a2a)',
-            background: 'var(--card-bg, #1a1a1a)',
-          }}>
-            <button
-              onClick={() => setTab('screen')}
-              style={{
-                flex: 1,
-                padding: '14px 16px',
-                background: 'transparent',
-                color: tab === 'screen' ? 'var(--primary, #5b8dff)' : 'var(--text2)',
-                border: 'none',
-                borderBottom: tab === 'screen' ? '2px solid var(--primary, #5b8dff)' : '2px solid transparent',
-                cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              <i className="fas fa-desktop" style={{ marginRight: 6 }} />Enregistrer écran
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border, #2a2a2a)', background: 'var(--card-bg, #1a1a1a)' }}>
+            <button onClick={() => setTab('text')} style={tabBtn(tab === 'text')}>
+              <i className="fas fa-comment-alt" style={{ marginRight: 6 }} />Texte ou vocal
             </button>
-            <button
-              onClick={() => setTab('text')}
-              style={{
-                flex: 1,
-                padding: '14px 16px',
-                background: 'transparent',
-                color: tab === 'text' ? 'var(--primary, #5b8dff)' : 'var(--text2)',
-                border: 'none',
-                borderBottom: tab === 'text' ? '2px solid var(--primary, #5b8dff)' : '2px solid transparent',
-                cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: 600,
-              }}
-            >
-              <i className="fas fa-comment-alt" style={{ marginRight: 6 }} />Texte / Loom / Vocal
+            <button onClick={() => setTab('screen')} style={tabBtn(tab === 'screen')}>
+              <i className="fas fa-desktop" style={{ marginRight: 6 }} />Écran ou Loom
             </button>
           </div>
 
-          {/* ── Tab content ── */}
           <div style={{ padding: 20, flex: 1, display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {tab === 'screen' ? (
+            {tab === 'text' ? (
               <>
-                {/* Devices row */}
+                <div>
+                  <div style={labelStyle}>
+                    <i className="fas fa-comment-dots" style={{ marginRight: 4 }} />Messages rapides
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {QUICK_MESSAGES.map((msg, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => { setSelectedChip(i); setCustomMsg('') }}
+                        style={{
+                          padding: '8px 12px',
+                          borderRadius: 18,
+                          fontSize: 12,
+                          border: '1px solid var(--border, #2a2a2a)',
+                          background: selectedChip === i && !customMsg.trim() ? 'var(--primary, #5b8dff)' : 'transparent',
+                          color: selectedChip === i && !customMsg.trim() ? '#fff' : 'var(--text2)',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {msg}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label style={labelStyle}>
+                    <i className="fas fa-pen" style={{ marginRight: 4 }} />Message libre
+                  </label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    value={customMsg}
+                    onChange={(e) => { setCustomMsg(e.target.value); setSelectedChip(-1) }}
+                    placeholder="Écris ton message…"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ ...labelStyle, marginBottom: 6 }}>
+                    <i className="fas fa-microphone" style={{ marginRight: 4 }} />Message vocal
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => audio.isRecording ? audio.stopRecording() : audio.startRecording()}
+                      disabled={audio.uploading}
+                      style={audio.isRecording ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : undefined}
+                    >
+                      {audio.uploading ? <i className="fas fa-spinner fa-spin" />
+                        : audio.isRecording ? <><i className="fas fa-stop" /> {formatTime(audio.seconds)}</>
+                        : <><i className="fas fa-microphone" /> Enregistrer</>}
+                    </button>
+                    {audio.audioUrl && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
+                        <audio controls src={audio.audioUrl} style={{ height: 32, flex: 1 }} />
+                        <button
+                          type="button"
+                          className="btn btn-outline btn-sm"
+                          onClick={audio.clearAudio}
+                          style={{ padding: '3px 6px', color: 'var(--danger)' }}
+                        >
+                          <i className="fas fa-trash" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ flex: 1 }} />
+
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-outline" onClick={close} disabled={saving || starting}>Annuler</button>
+                  <button
+                    className="btn btn-red"
+                    onClick={handleSubmit}
+                    disabled={saving || starting || audio.isRecording || audio.uploading}
+                    style={{ minWidth: 130 }}
+                  >
+                    {saving ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-paper-plane" /> Envoyer</>}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <div>
-                    <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <label style={labelStyle}>
                       <i className="fas fa-microphone" style={{ marginRight: 4 }} />Micro
                     </label>
                     <select
@@ -372,7 +413,7 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    <label style={labelStyle}>
                       <i className="fas fa-video" style={{ marginRight: 4 }} />Caméra
                     </label>
                     <select
@@ -402,13 +443,11 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
 
                 {withWebcam && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div
-                      style={{
-                        width: 80, height: 80, borderRadius: '50%', overflow: 'hidden',
-                        background: '#000', border: '3px solid var(--primary, #5b8dff)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                      }}
-                    >
+                    <div style={{
+                      width: 80, height: 80, borderRadius: '50%', overflow: 'hidden',
+                      background: '#000', border: '3px solid var(--primary, #5b8dff)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    }}>
                       {previewError ? (
                         <span style={{ fontSize: 9, color: 'var(--danger, #ff6464)', textAlign: 'center', padding: 4 }}>{previewError}</span>
                       ) : previewCamStream ? (
@@ -424,75 +463,25 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
                       )}
                     </div>
                     <span style={{ fontSize: 12, color: 'var(--text3)' }}>
-                      Aperçu webcam — apparaîtra en bas-gauche de la vidéo
+                      Cercle webcam déplaçable visible pendant l&apos;enregistrement
                     </span>
                   </div>
                 )}
 
                 <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>
                   <i className="fas fa-info-circle" style={{ marginRight: 6 }} />
-                  Une fois l&apos;enregistrement lancé, clique sur <b>Voir ma webcam</b> dans la pill pour ouvrir ta cam en fenêtre flottante (Picture-in-Picture). 15 min max.
+                  Durée max : 15 minutes.
                 </p>
 
-                <div style={{ flex: 1 }} />
-
-                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="btn btn-outline" onClick={close} disabled={starting}>Annuler</button>
-                  <button
-                    className="btn btn-red"
-                    onClick={handleStartRecord}
-                    disabled={starting || (withWebcam && !previewCamStream && !previewError)}
-                    style={{ minWidth: 130 }}
-                  >
-                    {starting ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-circle" /> Démarrer</>}
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Quick messages */}
-                <div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    <i className="fas fa-comment-dots" style={{ marginRight: 4 }} />Messages rapides
-                  </div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {QUICK_MESSAGES.map((msg, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => { setSelectedChip(i); setCustomMsg('') }}
-                        style={{
-                          padding: '8px 12px',
-                          borderRadius: 18,
-                          fontSize: 12,
-                          border: '1px solid var(--border, #2a2a2a)',
-                          background: selectedChip === i && !customMsg.trim() ? 'var(--primary, #5b8dff)' : 'transparent',
-                          color: selectedChip === i && !customMsg.trim() ? '#fff' : 'var(--text2)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {msg}
-                      </button>
-                    ))}
-                  </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text3)', fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, margin: '4px 0' }}>
+                  <span style={{ flex: 1, height: 1, background: 'var(--border, #2a2a2a)' }} />
+                  ou coller un Loom
+                  <span style={{ flex: 1, height: 1, background: 'var(--border, #2a2a2a)' }} />
                 </div>
 
                 <div>
-                  <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    <i className="fas fa-pen" style={{ marginRight: 4 }} />Message libre
-                  </label>
-                  <textarea
-                    className="form-control"
-                    rows={3}
-                    value={customMsg}
-                    onChange={(e) => { setCustomMsg(e.target.value); setSelectedChip(-1) }}
-                    placeholder="Écris ton message…"
-                  />
-                </div>
-
-                <div>
-                  <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    <i className="fas fa-link" style={{ marginRight: 4 }} />Lien Loom (optionnel)
+                  <label style={labelStyle}>
+                    <i className="fas fa-link" style={{ marginRight: 4 }} />Lien Loom
                   </label>
                   <input
                     type="url"
@@ -503,54 +492,29 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
                   />
                 </div>
 
-                <div>
-                  <label style={{ fontSize: 11, color: 'var(--text3)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                    <i className="fas fa-microphone" style={{ marginRight: 4 }} />Message vocal
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <button
-                      type="button"
-                      className="btn btn-outline btn-sm"
-                      onClick={() => audio.isRecording ? audio.stopRecording() : audio.startRecording()}
-                      disabled={audio.uploading}
-                      style={audio.isRecording ? { borderColor: 'var(--danger)', color: 'var(--danger)' } : undefined}
-                    >
-                      {audio.uploading ? (
-                        <i className="fas fa-spinner fa-spin" />
-                      ) : audio.isRecording ? (
-                        <><i className="fas fa-stop" /> {formatTime(audio.seconds)}</>
-                      ) : (
-                        <><i className="fas fa-microphone" /> Enregistrer</>
-                      )}
-                    </button>
-                    {audio.audioUrl && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1 }}>
-                        <audio controls src={audio.audioUrl} style={{ height: 32, flex: 1 }} />
-                        <button
-                          type="button"
-                          className="btn btn-outline btn-sm"
-                          onClick={audio.clearAudio}
-                          style={{ padding: '3px 6px', color: 'var(--danger)' }}
-                        >
-                          <i className="fas fa-trash" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
                 <div style={{ flex: 1 }} />
 
                 <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                  <button className="btn btn-outline" onClick={close} disabled={saving || starting}>Annuler</button>
-                  <button
-                    className="btn btn-red"
-                    onClick={handleSubmitOther}
-                    disabled={saving || starting || audio.isRecording || audio.uploading}
-                    style={{ minWidth: 130 }}
-                  >
-                    {saving ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-paper-plane" /> Envoyer</>}
-                  </button>
+                  <button className="btn btn-outline" onClick={close} disabled={starting || saving}>Annuler</button>
+                  {loomUrl.trim() ? (
+                    <button
+                      className="btn btn-red"
+                      onClick={handleSubmit}
+                      disabled={saving || starting}
+                      style={{ minWidth: 140 }}
+                    >
+                      {saving ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-paper-plane" /> Envoyer Loom</>}
+                    </button>
+                  ) : (
+                    <button
+                      className="btn btn-red"
+                      onClick={handleStartRecord}
+                      disabled={starting || (withWebcam && !previewCamStream && !previewError)}
+                      style={{ minWidth: 140 }}
+                    >
+                      {starting ? <i className="fas fa-spinner fa-spin" /> : <><i className="fas fa-circle" /> Démarrer</>}
+                    </button>
+                  )}
                 </div>
               </>
             )}

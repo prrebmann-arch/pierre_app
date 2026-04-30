@@ -13,7 +13,6 @@ import Badge from '@/components/ui/Badge'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import { notifyAthlete } from '@/lib/push'
-import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import styles from '@/styles/athlete-tabs.module.css'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -351,12 +350,9 @@ export default function PosingPage() {
       {/* Toggle + send correction */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, gap: 8, flexWrap: 'wrap' }}>
         <Toggle checked={posingEnabled} onChange={togglePosing} label="Posing active" />
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <NouveauRetourButton athleteId={params.id} />
-          <button className="btn btn-outline btn-sm" onClick={() => { setModalVideoId(null); setShowModal(true) }}>
-            <i className="fas fa-link" style={{ marginRight: 4 }} /> Lien Loom posing
-          </button>
-        </div>
+        <button className="btn btn-red btn-sm" onClick={() => { setModalVideoId(null); setShowModal(true) }}>
+          <i className="fas fa-video" style={{ marginRight: 4 }} /> Envoyer une correction
+        </button>
       </div>
 
       {/* Videos received */}
