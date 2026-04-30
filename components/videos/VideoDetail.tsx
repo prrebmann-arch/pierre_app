@@ -7,6 +7,7 @@ import { useToast } from '@/contexts/ToastContext'
 import { notifyAthlete } from '@/lib/push'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
 import VideoCompare from './VideoCompare'
+import NouveauRetourButton from '@/components/recorder/NouveauRetourButton'
 import styles from '@/styles/videos.module.css'
 
 interface VideoRow {
@@ -223,10 +224,13 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <button className="btn btn-outline btn-sm" onClick={onBack}>
           <i className="fa-solid fa-arrow-left" /> Retour aux videos
         </button>
+        {video.athlete_id && (
+          <NouveauRetourButton athleteId={video.athlete_id} />
+        )}
       </div>
 
       <div
