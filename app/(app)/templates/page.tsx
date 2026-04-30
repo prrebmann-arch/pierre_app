@@ -8,7 +8,8 @@ import Tabs from '@/components/ui/Tabs'
 import Skeleton from '@/components/ui/Skeleton'
 import TrainingTemplatesList from '@/components/templates/TrainingTemplatesList'
 import dynamic from 'next/dynamic'
-import type { MealData } from '@/components/nutrition/MealEditor'
+import type { MealData, FoodItem, MealVariant } from '@/components/nutrition/MealEditor'
+import { getMealFoods } from '@/lib/nutrition'
 
 const ProgramEditor = dynamic(() => import('@/components/training/ProgramEditor'), {
   loading: () => <Skeleton height={400} borderRadius={12} />,
@@ -249,7 +250,19 @@ export default function TemplatesPage() {
     })
   }
 
-  /** Parse a flat array of meals into MealData[] */
+  /** Normalize a single food item from raw JSON. */
+  function normalizeFood(f: Record<string, unknown>): FoodItem {
+    return {
+      aliment: (f.aliment as string) || '',
+      qte: (f.qte as number) || 100,
+      kcal: (f.kcal as number) || 0,
+      p: (f.p as number) || 0,
+      g: (f.g as number) || 0,
+      l: (f.l as number) || 0,
+    }
+  }
+
+  /** Parse a flat array of meals into MealData[] (preserve variants). */
   function parseMealsArray(raw: unknown): MealData[] {
     try {
       const arr = Array.isArray(raw) ? raw : []
@@ -258,26 +271,27 @@ export default function TemplatesPage() {
         if (Array.isArray(meal)) {
           // Legacy format: array of food items directly
           return {
-            foods: meal.map((f: Record<string, unknown>) => ({
-              aliment: (f.aliment as string) || '',
-              qte: (f.qte as number) || 100,
-              kcal: (f.kcal as number) || 0,
-              p: (f.p as number) || 0,
-              g: (f.g as number) || 0,
-              l: (f.l as number) || 0,
-            })),
+            foods: meal.map((f: Record<string, unknown>) => normalizeFood(f)),
           }
         }
         const m = meal as Record<string, unknown>
+        // Multi-variant meal
+        if (Array.isArray(m.variants) && (m.variants as unknown[]).length > 0) {
+          const variants: MealVariant[] = (m.variants as Array<Record<string, unknown>>).map((v) => ({
+            id: (v.id as string) || '',
+            label: (v.label as string) || '',
+            foods: ((v.foods as Array<Record<string, unknown>>) || []).map((f) => normalizeFood(f)),
+          }))
+          return {
+            label: m.label as string | undefined,
+            time: m.time as string | undefined,
+            pre_workout: m.pre_workout as boolean | undefined,
+            variants,
+          }
+        }
+        // Simple meal
         return {
-          foods: ((m.foods as Array<Record<string, unknown>>) || []).map((f) => ({
-            aliment: (f.aliment as string) || '',
-            qte: (f.qte as number) || 100,
-            kcal: (f.kcal as number) || 0,
-            p: (f.p as number) || 0,
-            g: (f.g as number) || 0,
-            l: (f.l as number) || 0,
-          })),
+          foods: ((m.foods as Array<Record<string, unknown>>) || []).map((f) => normalizeFood(f)),
           pre_workout: m.pre_workout as boolean | undefined,
           time: m.time as string | undefined,
         }
@@ -317,7 +331,7 @@ export default function TemplatesPage() {
 
       // jour or repas: flat array
       const meals = parseMealsArray(raw)
-      const hasMeals = meals.some((m) => m.foods.length > 0)
+      const hasMeals = meals.some((m) => getMealFoods(m).length > 0)
       return {
         meals,
         otherTab: null,

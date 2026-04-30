@@ -12,6 +12,7 @@ import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Toggle from '@/components/ui/Toggle'
 import Skeleton from '@/components/ui/Skeleton'
 import { type MealData } from '@/components/nutrition/MealEditor'
+import { getMealFoods } from '@/lib/nutrition'
 import styles from '@/styles/nutrition.module.css'
 
 const MealEditor = dynamic(() => import('@/components/nutrition/MealEditor'), {
@@ -70,6 +71,8 @@ interface PendingChange {
   foodIndex: number
   type: 'replace' | 'extra'
   foodData: any
+  /** Pour les repas multi-variantes : variante choisie par l'athlete dans son log. */
+  chosenVariantId?: string | null
 }
 
 type View = 'list' | 'editor' | 'detail' | 'history'
@@ -323,19 +326,36 @@ export default function NutritionPage() {
         meals = typeof plan.meals_data === 'string' ? JSON.parse(plan.meals_data) : (plan.meals_data || [])
       } catch { meals = [] }
 
-      // Normalize meals to { foods: [...] } format
+      // Normalize meals: preserve variants, otherwise wrap in { foods: [] }
       meals = meals.map((m: any) => {
+        if (m && !Array.isArray(m) && Array.isArray(m.variants) && m.variants.length > 0) return m
         if (m && !Array.isArray(m) && m.foods) return m
         return { foods: Array.isArray(m) ? m : [] }
       })
 
+      /** Get a mutable foods array for the meal at mealIndex, picking the right variant when applicable. */
+      function getFoodsTarget(mealIndex: number, chosenVariantId: string | null | undefined): any[] | null {
+        const meal = meals[mealIndex]
+        if (!meal) return null
+        if (Array.isArray(meal.variants) && meal.variants.length > 0) {
+          // Pick chosen variant or fallback to the first one
+          const variant = (chosenVariantId && meal.variants.find((v: any) => v.id === chosenVariantId)) || meal.variants[0]
+          if (!variant) return null
+          if (!Array.isArray(variant.foods)) variant.foods = []
+          return variant.foods
+        }
+        if (!Array.isArray(meal.foods)) meal.foods = []
+        return meal.foods
+      }
+
       // Apply changes
       planChanges.forEach((change) => {
+        const foodsArr = getFoodsTarget(change.mealIndex, change.chosenVariantId)
+        if (!foodsArr) return
         if (change.type === 'replace') {
-          // Replace the food at the given index with the replacement data
-          if (meals[change.mealIndex]?.foods?.[change.foodIndex]) {
+          if (foodsArr[change.foodIndex]) {
             const repl = change.foodData
-            meals[change.mealIndex].foods[change.foodIndex] = {
+            foodsArr[change.foodIndex] = {
               aliment: repl.aliment || repl.nom || '?',
               qte: repl.qte || 0,
               kcal: repl.kcal || 0,
@@ -345,26 +365,25 @@ export default function NutritionPage() {
             }
           }
         } else if (change.type === 'extra') {
-          // Add extra food to the meal
-          if (meals[change.mealIndex]) {
-            if (!meals[change.mealIndex].foods) meals[change.mealIndex].foods = []
-            const ex = change.foodData
-            meals[change.mealIndex].foods.push({
-              aliment: ex.aliment || ex.nom || '?',
-              qte: ex.qte || 0,
-              kcal: ex.kcal || 0,
-              p: ex.p || 0,
-              g: ex.g || 0,
-              l: ex.l || 0,
-            })
-          }
+          const ex = change.foodData
+          foodsArr.push({
+            aliment: ex.aliment || ex.nom || '?',
+            qte: ex.qte || 0,
+            kcal: ex.kcal || 0,
+            p: ex.p || 0,
+            g: ex.g || 0,
+            l: ex.l || 0,
+          })
         }
       })
 
-      // Recalculate total macros from meals
+      // Recalculate total macros: for variant meals, fall back to first variant (coach default).
       let totalK = 0, totalP = 0, totalG = 0, totalL = 0
       meals.forEach((m: any) => {
-        (m.foods || []).forEach((f: any) => {
+        const foods: any[] = Array.isArray(m.variants) && m.variants.length > 0
+          ? (m.variants[0].foods || [])
+          : (m.foods || [])
+        foods.forEach((f: any) => {
           totalK += parseFloat(f.kcal) || 0
           totalP += parseFloat(f.p) || 0
           totalG += parseFloat(f.g) || 0
@@ -540,8 +559,16 @@ export default function NutritionPage() {
     if (typeof raw === 'string') raw = JSON.parse(raw)
     if (typeof raw === 'string') raw = JSON.parse(raw)
 
-    // Helper: convert any meal-like item to MealData
+    // Helper: convert any meal-like item to MealData (preserve variants)
     const toMeal = (item: any): MealData => {
+      if (item && !Array.isArray(item) && Array.isArray(item.variants) && item.variants.length > 0) {
+        return {
+          label: item.label,
+          time: item.time,
+          pre_workout: item.pre_workout,
+          variants: item.variants,
+        }
+      }
       if (item && !Array.isArray(item) && item.foods) return { foods: item.foods, pre_workout: item.pre_workout, time: item.time }
       if (Array.isArray(item)) return { foods: item }
       return { foods: [] }
@@ -589,17 +616,28 @@ export default function NutritionPage() {
     if (!loadedPlans?.length) { toast('Plan introuvable', 'error'); return }
 
     // Find ON and OFF
-    const tPlan = loadedPlans.find(p => p.meal_type === 'training' || p.meal_type === 'entrainement') || null
-    const rPlan = loadedPlans.find(p => p.meal_type === 'rest' || p.meal_type === 'repos') || null
+    const tPlan = (loadedPlans as NutritionPlan[]).find((p) => p.meal_type === 'training' || p.meal_type === 'entrainement') || null
+    const rPlan = (loadedPlans as NutritionPlan[]).find((p) => p.meal_type === 'rest' || p.meal_type === 'repos') || null
     const primary = tPlan || rPlan
     if (!primary) { toast('Plan introuvable', 'error'); return }
 
     function parseMealsData(plan: any): MealData[] {
       try {
         const parsed = typeof plan.meals_data === 'string' ? JSON.parse(plan.meals_data) : (plan.meals_data || [])
-        const m = (parsed as any[]).map((m: any) => {
-          if (m && !Array.isArray(m) && m.foods) return { foods: m.foods, pre_workout: m.pre_workout, time: m.time }
-          return { foods: Array.isArray(m) ? m : [] }
+        const m = (parsed as any[]).map((meal: any) => {
+          if (meal && !Array.isArray(meal) && Array.isArray(meal.variants) && meal.variants.length > 0) {
+            // Preserve multi-variant meal
+            return {
+              label: meal.label,
+              time: meal.time,
+              pre_workout: meal.pre_workout,
+              variants: meal.variants,
+            } as MealData
+          }
+          if (meal && !Array.isArray(meal) && meal.foods) {
+            return { foods: meal.foods, pre_workout: meal.pre_workout, time: meal.time }
+          }
+          return { foods: Array.isArray(meal) ? meal : [] }
         })
         return m.length ? m : [{ foods: [] }]
       } catch { return [{ foods: [] }] }
@@ -904,7 +942,16 @@ export default function NutritionPage() {
                 </div>
               ) : (
                 meals.map((meal: any, idx: number) => {
-                  const items = (meal && !Array.isArray(meal) && meal.foods) ? meal.foods : (Array.isArray(meal) ? meal : [])
+                  // Normalize legacy formats and route through getMealFoods (variant-aware, fallback to first variant for coach view)
+                  let normalizedMeal: MealData
+                  if (Array.isArray(meal)) {
+                    normalizedMeal = { foods: meal }
+                  } else if (meal && typeof meal === 'object') {
+                    normalizedMeal = meal as MealData
+                  } else {
+                    normalizedMeal = { foods: [] }
+                  }
+                  const items = getMealFoods(normalizedMeal)
                   return (
                     <div key={idx} className={styles.mealRow}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -1155,6 +1202,7 @@ export default function NutritionPage() {
               const mealLabel = meal?.meal_label || `Repas ${mIdx + 1}`
               const foods = meal?.foods || []
               const extras = meal?.extras || []
+              const chosenVariantId: string | null = meal?.chosen_variant_id ?? null
               return (
                 <div key={mIdx} style={{ marginBottom: 12, padding: 12, background: 'var(--bg2)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
                   <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 13 }}>{mealLabel}</div>
@@ -1185,6 +1233,7 @@ export default function NutritionPage() {
                                   foodIndex: fIdx,
                                   type: 'replace',
                                   foodData: f.replacement,
+                                  chosenVariantId,
                                 })}
                               >
                                 <i className="fa-solid fa-check" /> Accepter
@@ -1221,6 +1270,7 @@ export default function NutritionPage() {
                                 foodIndex: exIdx,
                                 type: 'extra',
                                 foodData: ex,
+                                chosenVariantId,
                               })}
                             >
                               <i className="fa-solid fa-check" /> Accepter

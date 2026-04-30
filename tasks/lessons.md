@@ -1,5 +1,9 @@
 # Lessons Learned
 
+[2026-04-29] | `git checkout` ne persiste pas entre les Bash tool calls | Le cwd reset entre commandes mais aussi le HEAD si on ne lock pas la branche. Edits faites sur `main` au lieu de `feature/meal-variants` à cause d'un checkout dans un Bash isolé. RÈGLE : pour un travail multi-commits sur une branche feature, vérifier `git branch --show-current` AU DÉBUT de chaque session de Bash, et faire le checkout dans la même Bash que les premiers edits si possible. Sinon, accepter de stash/pop entre branches.
+
+[2026-04-29] | Parsers meals_data legacy strippent les variants silencieusement | Tous les helpers `parseMealsArray`/`parseMealsData`/`toMeal` dans templates et nutrition pages ne gardaient que `{ foods }` et `pre_workout`/`time`. Quand un repas a `{ variants: [...] }` au lieu de `foods`, ces parsers le convertissaient en `{ foods: [] }` → variantes perdues au prochain save. RÈGLE : tout parseur de meal qui round-trip vers le DB doit préserver `variants` quand présent (test : `Array.isArray(m.variants) && m.variants.length > 0` AVANT le check `m.foods`).
+
 [2026-03-31] | Supabase v2 type incompatibilities with `.catch()` on query builders | The newer `@supabase/supabase-js` returns `PostgrestFilterBuilder` (not a Promise) from `.insert()` etc., so `.catch(() => {})` fails at type-check. Remove the `.catch()` or use try/catch instead.
 
 [2026-03-31] | Pre-existing type errors block build | Always run `npx tsc --noEmit` to verify new code doesn't introduce errors, but be aware pre-existing errors in other files may also surface during `npm run build`.
