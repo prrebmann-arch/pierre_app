@@ -347,18 +347,27 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
         </div>
 
         <div className={styles.vidFeedbackPanel}>
-          {compVideos.length > 0 && (
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Cette vidéo</h3>
+          <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16 }}>
+            Utilise <b>Nouveau retour</b> en haut pour envoyer une correction (texte, vocal, écran ou Loom). Ici tu peux comparer avec une session précédente et marquer la vidéo comme traitée.
+          </p>
+
+          {compVideos.length > 0 ? (
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                marginBottom: 20,
-                paddingBottom: 16,
-                borderBottom: '1px solid var(--border-subtle)',
+                marginBottom: 16,
+                padding: '10px 12px',
+                background: 'var(--bg2, #1a1a1a)',
+                border: '1px solid var(--border-subtle, #2a2a2a)',
+                borderRadius: 8,
               }}
             >
-              <span style={{ fontSize: 13, fontWeight: 600 }}>Vue comparative</span>
+              <span style={{ fontSize: 13, fontWeight: 600 }}>
+                <i className="fa-solid fa-clone" style={{ marginRight: 6 }} />Vue comparative
+              </span>
               <label className="toggle-switch" style={{ margin: 0 }}>
                 <input
                   type="checkbox"
@@ -368,79 +377,12 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
                 <span className="switch" />
               </label>
             </div>
+          ) : (
+            <div style={{ marginBottom: 16, padding: '10px 12px', borderRadius: 8, background: 'var(--bg2, #1a1a1a)', border: '1px solid var(--border-subtle, #2a2a2a)', fontSize: 12, color: 'var(--text3)' }}>
+              <i className="fa-solid fa-clone" style={{ marginRight: 6 }} />
+              Aucune session précédente pour comparer
+            </div>
           )}
-
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 6 }}>Votre correction</h3>
-          <p style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 16 }}>
-            Ajoutez un lien vers une video de feedback et/ou des notes.
-          </p>
-
-          <div className="form-group">
-            <label>
-              <i className="fa-solid fa-link" style={{ marginRight: 6 }} />
-              Lien video (Loom, YouTube, etc.)
-            </label>
-            <input
-              type="url"
-              placeholder="https://www.loom.com/share/..."
-              value={feedbackUrl}
-              onChange={(e) => setFeedbackUrl(e.target.value)}
-            />
-          </div>
-
-          <div className="form-group">
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-              }}
-            >
-              Notes de correction
-              <button
-                type="button"
-                className={`btn btn-outline btn-sm ${isRecording ? styles.micRecording : ''}`}
-                onClick={isRecording ? stopRecording : startRecording}
-                disabled={audioUploading}
-                style={{ padding: '4px 10px', fontSize: 12 }}
-              >
-                {audioUploading ? (
-                  <>
-                    <i className="fa-solid fa-spinner fa-spin" /> Envoi...
-                  </>
-                ) : isRecording ? (
-                  <>
-                    <i className="fa-solid fa-stop" style={{ color: 'var(--danger)' }} />{' '}
-                    {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}
-                  </>
-                ) : (
-                  <>
-                    <i className="fa-solid fa-microphone" /> Vocal
-                  </>
-                )}
-              </button>
-            </label>
-            <textarea
-              rows={4}
-              placeholder="Points a ameliorer, conseils techniques..."
-              value={feedbackNotes}
-              onChange={(e) => setFeedbackNotes(e.target.value)}
-            />
-            {effectiveAudioUrl && (
-              <div className={styles.audioPlayerInline}>
-                <audio controls src={effectiveAudioUrl} />
-                <button
-                  type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={handleRemoveAudio}
-                  style={{ padding: '4px 8px', color: 'var(--danger)' }}
-                  title="Supprimer"
-                >
-                  <i className="fa-solid fa-trash" />
-                </button>
-              </div>
-            )}
-          </div>
 
           <label
             style={{
@@ -457,7 +399,7 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
               checked={markTreated}
               onChange={(e) => setMarkTreated(e.target.checked)}
             />
-            Marquer comme traite
+            Marquer comme traité
           </label>
 
           <button
