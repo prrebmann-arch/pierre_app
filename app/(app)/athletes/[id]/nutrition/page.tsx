@@ -577,10 +577,14 @@ export default function NutritionPage() {
     setShowTemplatePicker(true)
     setLoadingTemplates(true)
     try {
+      // The athlete-level "Depuis un template" button is meant for full diets
+      // only — single-day and single-meal templates are imported from inside
+      // the editor via "Importer journée" / "Importer repas" buttons.
       const { data } = await supabase
         .from('nutrition_templates')
         .select('id, nom, template_type, calories_objectif, proteines, glucides, lipides, meals_data, category')
         .eq('coach_id', user.id)
+        .eq('template_type', 'diete')
         .order('created_at', { ascending: false })
         .limit(100)
       setNutritionTemplates((data || []) as typeof nutritionTemplates)
