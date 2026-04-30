@@ -630,11 +630,104 @@ export default function NutritionPage() {
     return [{ foods: [] }]
   }
 
+  // Parse a 'diete' template (full diet with training+rest stored as `{training: {meals,macros}, rest: {meals,macros}}`).
+  // Returns null if the structure isn't a full diet, so the caller can fall back to the flat-array path.
+  function parseFullDietFromTemplate(mealsData: unknown): {
+    trainingMeals: MealData[]
+    trainingMacros: { calories: number; proteines: number; glucides: number; lipides: number }
+    trainingMacroOnly: boolean
+    restMeals: MealData[]
+    restMacros: { calories: number; proteines: number; glucides: number; lipides: number }
+    restMacroOnly: boolean
+  } | null {
+    let raw = mealsData
+    if (typeof raw === 'string') raw = JSON.parse(raw)
+    if (typeof raw === 'string') raw = JSON.parse(raw)
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null
+    const t = (raw as any).training
+    const r = (raw as any).rest
+    if (!t && !r) return null
+
+    const toMeal = (item: any): MealData => {
+      if (item && !Array.isArray(item) && Array.isArray(item.variants) && item.variants.length > 0) {
+        return {
+          label: item.label,
+          time: item.time,
+          pre_workout: item.pre_workout,
+          variants: item.variants.map((v: any, vi: number) => ({
+            id: (typeof v?.id === 'string' && v.id.trim()) ? v.id : newVariantId(),
+            label: v?.label || `Variante ${vi + 1}`,
+            foods: Array.isArray(v?.foods) ? v.foods : [],
+          })),
+        }
+      }
+      if (item && !Array.isArray(item) && item.foods) return { foods: item.foods, pre_workout: item.pre_workout, time: item.time }
+      if (Array.isArray(item)) return { foods: item }
+      return { foods: [] }
+    }
+
+    const dayFromTab = (tab: any) => {
+      if (!tab) return { meals: [{ foods: [] }] as MealData[], macros: { calories: 0, proteines: 0, glucides: 0, lipides: 0 }, macroOnly: false }
+      const meals = Array.isArray(tab.meals)
+        ? tab.meals.map(toMeal)
+        : Array.isArray(tab) ? tab.map(toMeal) : []
+      const macros = tab.macros || { calories: 0, proteines: 0, glucides: 0, lipides: 0 }
+      return {
+        meals: meals.length ? meals : [{ foods: [] }],
+        macros: {
+          calories: macros.calories || 0,
+          proteines: macros.proteines || 0,
+          glucides: macros.glucides || 0,
+          lipides: macros.lipides || 0,
+        },
+        macroOnly: !!tab.macro_only,
+      }
+    }
+    const trainingTab = dayFromTab(t)
+    const restTab = dayFromTab(r)
+    return {
+      trainingMeals: trainingTab.meals,
+      trainingMacros: trainingTab.macros,
+      trainingMacroOnly: trainingTab.macroOnly,
+      restMeals: restTab.meals,
+      restMacros: restTab.macros,
+      restMacroOnly: restTab.macroOnly,
+    }
+  }
+
   const selectNutritionTemplate = useCallback((tpl: typeof nutritionTemplates[0]) => {
     setShowTemplatePicker(false)
-    const meals = parseMealsFromTemplate(tpl.meals_data)
     setEditPlanId(null)
     setEditPlanName(tpl.nom || '')
+    setEditVariantLabel(null)
+    setEditVariantOrder(0)
+
+    // Full diet template ('diete'): load BOTH training and rest days into the editor
+    if (tpl.template_type === 'diete') {
+      const fullDiet = parseFullDietFromTemplate(tpl.meals_data)
+      if (fullDiet) {
+        setEditMealType('training')
+        setEditMeals(fullDiet.trainingMeals)
+        setEditMacroOnly(fullDiet.trainingMacroOnly)
+        setEditMacros(fullDiet.trainingMacros)
+        // Pre-load rest day into MealEditor's other-tab buffer so switching to
+        // OFF in the editor doesn't show an empty form
+        setEditOtherTab({
+          type: 'rest',
+          id: '',
+          meals: fullDiet.restMeals,
+          macros: fullDiet.restMacros,
+          variantLabel: null,
+          variantOrder: 0,
+        })
+        setView('editor')
+        return
+      }
+      // If the structure didn't match, fall through to the flat-array path
+    }
+
+    // Single day or single meal templates ('jour' / 'repas'): flat array
+    const meals = parseMealsFromTemplate(tpl.meals_data)
     setEditMealType('training')
     setEditMeals(meals)
     setEditMacroOnly(tpl.macro_only || false)
@@ -645,8 +738,6 @@ export default function NutritionPage() {
       lipides: tpl.lipides || 0,
     })
     setEditOtherTab(null)
-    setEditVariantLabel(null)
-    setEditVariantOrder(0)
     setView('editor')
   }, [])
 
