@@ -56,7 +56,11 @@ interface MealEditorProps {
   /** Initial macro targets (for macro-only mode) */
   initialMacros?: { calories: number; proteines: number; glucides: number; lipides: number }
   /** Pre-loaded other tab data (ON if editing OFF, or vice versa) */
-  initialOtherTab?: { type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number } } | null
+  initialOtherTab?: { type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number }; variantLabel?: string | null; variantOrder?: number } | null
+  /** Day-variant label of the plan being edited (Push, Pull, Standard...). null/undefined = singleton plan. */
+  variantLabel?: string | null
+  /** Day-variant ordering position. */
+  variantOrder?: number
   /** Called after save */
   onSaved: () => void
   /** Called on back */
@@ -285,6 +289,7 @@ export default function MealEditor({
   initialMeals, macroOnly: initMacroOnly, initialMacros, initialOtherTab, onSaved, onBack,
   templateMode = false, templateId = null, templateCategory: initCategory = '', existingCategories: initExistingCategories = [],
   templateType,
+  variantLabel = null, variantOrder = 0,
 }: MealEditorProps) {
   const supabase = createClient()
   const { user } = useAuth()
@@ -594,9 +599,27 @@ export default function MealEditor({
         // ── ATHLETE MODE: save to nutrition_plans ──
         const today = new Date().toISOString().split('T')[0]
 
-        await supabase.from('nutrition_plans').update({ actif: false }).eq('athlete_id', athleteId).eq('meal_type', mealType)
+        // Day variants : si on édite une variante de jour (variant_label set), on ne désactive
+        // QUE les versions précédentes de cette variante (même nom + même variant_label).
+        // Sinon (plan singleton legacy), on désactive comme avant tous les plans du même meal_type.
+        if (variantLabel) {
+          await supabase
+            .from('nutrition_plans')
+            .update({ actif: false })
+            .eq('athlete_id', athleteId)
+            .eq('meal_type', mealType)
+            .eq('nom', planName.trim())
+            .eq('variant_label', variantLabel)
+        } else {
+          await supabase
+            .from('nutrition_plans')
+            .update({ actif: false })
+            .eq('athlete_id', athleteId)
+            .eq('meal_type', mealType)
+            .is('variant_label', null)
+        }
 
-        const payload = {
+        const payload: Record<string, any> = {
           nom: planName.trim(),
           meal_type: mealType,
           meals_data: JSON.stringify(mealsData),
@@ -609,6 +632,9 @@ export default function MealEditor({
           athlete_id: athleteId,
           coach_id: user.id,
           macro_only: isMacroOnly || false,
+          // Préserver day-variant label/order pour ne pas écraser une variante en "Standard".
+          variant_label: variantLabel ?? null,
+          variant_order: variantOrder ?? 0,
         }
 
         const { error } = await supabase.from('nutrition_plans').insert(payload)
@@ -623,7 +649,23 @@ export default function MealEditor({
           const hasMacros = !!(otherMacros.calories || otherMacros.proteines || otherMacros.glucides || otherMacros.lipides)
           // Save if user filled foods OR (macro-only) entered any macro values
           if (hasFood || (isMacroOnly && hasMacros)) {
-            await supabase.from('nutrition_plans').update({ actif: false }).eq('athlete_id', athleteId).eq('meal_type', otherType)
+            // Comme pour la tab principale : si la complémentaire a un variant_label, scoper la deactivation.
+            if (variantLabel) {
+              await supabase
+                .from('nutrition_plans')
+                .update({ actif: false })
+                .eq('athlete_id', athleteId)
+                .eq('meal_type', otherType)
+                .eq('nom', planName.trim())
+                .eq('variant_label', variantLabel)
+            } else {
+              await supabase
+                .from('nutrition_plans')
+                .update({ actif: false })
+                .eq('athlete_id', athleteId)
+                .eq('meal_type', otherType)
+                .is('variant_label', null)
+            }
 
             const otherWithFreshMacros: MealData[] = otherTemp.meals.map((m) => {
               if (hasVariants(m)) {
@@ -673,6 +715,9 @@ export default function MealEditor({
               athlete_id: athleteId,
               coach_id: user.id,
               macro_only: isMacroOnly || false,
+              // Apparier la variante de jour côté complémentaire (Push ↔ Push, etc.).
+              variant_label: variantLabel ?? null,
+              variant_order: variantOrder ?? 0,
             })
           }
         }
