@@ -38,7 +38,7 @@ CREATE TRIGGER trg_workout_logs_set_locked_at
 
 -- 3. Backfill existing rows
 UPDATE workout_logs
-  SET locked_at = COALESCE(started_at, created_at) + INTERVAL '7 days'
+  SET locked_at = COALESCE(started_at, created_at, now()) + INTERVAL '7 days'
   WHERE locked_at IS NULL;
 
 -- Assumption: workout_logs.athlete_id is the auth.users(id) of the athlete.
