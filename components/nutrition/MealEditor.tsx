@@ -1320,7 +1320,7 @@ export default function MealEditor({
 
       {/* ── Template import picker modal ── */}
       {importPickerType !== null && (
-        <div className="modal-overlay" onClick={closeImportPicker}>
+        <div className="modal-overlay open" onClick={closeImportPicker}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="modal-header">
               <h3 className="modal-title">
