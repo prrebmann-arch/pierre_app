@@ -372,7 +372,7 @@ export default function VideoDetail({ videoId, allVideoIds, onBack, onNavigate }
           ) : null}
 
           {video.athlete_id && (
-            <NouveauRetourPanel athleteId={video.athlete_id} />
+            <NouveauRetourPanel athleteId={video.athlete_id} videoId={video.id} />
           )}
 
           <label
