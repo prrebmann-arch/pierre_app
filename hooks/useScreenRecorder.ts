@@ -51,9 +51,12 @@ function pickMimeType() {
 
 export function useScreenRecorder() {
   const [state, setState] = useState<ScreenRecorderState>({ isRecording: false, seconds: 0, errorMessage: null })
-  // Exposed live cam stream during recording — used for Picture-in-Picture preview.
-  // Sharing the same MediaStream across multiple <video> elements is supported.
+  // Exposed live cam stream during recording.
+  // - In screen mode: powers the LiveCamBubble (in-page draggable circle).
+  // - In selfie mode: powers a portrait preview panel so the coach sees themselves
+  //   while recording (the cam IS the video, but the user still wants live feedback).
   const [liveCamStream, setLiveCamStream] = useState<MediaStream | null>(null)
+  const [liveMode, setLiveMode] = useState<'screen' | 'selfie' | null>(null)
 
   const recorderRef = useRef<MediaRecorder | null>(null)
   const screenStreamRef = useRef<MediaStream | null>(null)
@@ -84,6 +87,7 @@ export function useScreenRecorder() {
     micStreamRef.current = null
     recorderRef.current = null
     setLiveCamStream(null)
+    setLiveMode(null)
   }, [])
 
   const startRecording = useCallback(async (opts: StartRecordingOptions) => {
@@ -158,8 +162,11 @@ export function useScreenRecorder() {
     screenStreamRef.current = screenStream
     micStreamRef.current = micStream
     camStreamRef.current = camStream
-    // Live cam bubble is only useful in screen mode (in selfie the cam IS the video)
-    setLiveCamStream(mode === 'screen' ? camStream : null)
+    // Expose the cam stream + current mode so the live preview UI knows what to render:
+    // - screen mode → LiveCamBubble (circular, draggable)
+    // - selfie mode → portrait panel so the coach sees themselves while recording
+    setLiveCamStream(camStream)
+    setLiveMode(mode)
 
     // Output stream:
     // - 'screen' → pure screen capture (cam appears via in-page LiveCamBubble if shared)
@@ -307,6 +314,7 @@ export function useScreenRecorder() {
     errorMessage: state.errorMessage,
     autoStoppedAt,
     liveCamStream,
+    liveMode,
     startRecording,
     stopRecording,
     cancelRecording,

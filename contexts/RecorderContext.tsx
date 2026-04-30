@@ -75,8 +75,9 @@ interface RecorderContextValue {
   isUploading: boolean
   uploadProgress: number
 
-  // live cam stream during recording (for PiP preview)
+  // live cam stream + mode during recording (drives in-page live preview UI)
   liveCamStream: MediaStream | null
+  liveMode: 'screen' | 'selfie' | null
 
   // intent state
   athleteIdForNext: string | null
@@ -322,6 +323,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     isUploading,
     uploadProgress,
     liveCamStream: recorder.liveCamStream,
+    liveMode: recorder.liveMode,
     athleteIdForNext,
     registerPipVideo,
     enterPipWithStream,

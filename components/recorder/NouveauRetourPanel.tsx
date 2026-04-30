@@ -437,13 +437,13 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <label style={labelStyle}>
                   <i className="fas fa-microphone" style={{ marginRight: 4 }} />Micro
                 </label>
                 <select
                   className="form-control"
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 12, width: '100%', maxWidth: '100%' }}
                   value={selectedMicId}
                   onChange={(e) => setSelectedMicId(e.target.value)}
                 >
@@ -453,13 +453,13 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
                   ))}
                 </select>
               </div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <label style={labelStyle}>
                   <i className="fas fa-video" style={{ marginRight: 4 }} />Caméra
                 </label>
                 <select
                   className="form-control"
-                  style={{ fontSize: 12 }}
+                  style={{ fontSize: 12, width: '100%', maxWidth: '100%' }}
                   value={selectedCamId}
                   onChange={(e) => setSelectedCamId(e.target.value)}
                   disabled={recordMode === 'screen' && !withWebcam}
