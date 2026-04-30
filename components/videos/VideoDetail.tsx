@@ -1,14 +1,25 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { notifyAthlete } from '@/lib/push'
 import { useAudioRecorder } from '@/hooks/useAudioRecorder'
-import VideoCompare from './VideoCompare'
 import NouveauRetourPanel from '@/components/recorder/NouveauRetourPanel'
 import styles from '@/styles/videos.module.css'
+
+// Heavy comparison + edit panel: lazy-load so the videos detail chunk
+// stays light when the coach just clicks through the grid.
+const VideoCompare = dynamic(() => import('./VideoCompare'), {
+  ssr: false,
+  loading: () => (
+    <div style={{ textAlign: 'center', padding: 30 }}>
+      <i className="fa-solid fa-spinner fa-spin" />
+    </div>
+  ),
+})
 
 interface VideoRow {
   id: string

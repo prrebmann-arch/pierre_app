@@ -1,5 +1,28 @@
 # Prochaine session — Priorites
 
+## Perf audit follow-up (2026-04-30)
+
+### Phase 1 — quick wins (low risk, additive, no UX change)
+- [ ] COACH `contexts/RecorderContext.tsx` — useMemo le value object (eviter re-renders 1Hz pendant rec)
+- [ ] COACH `components/videos/VideoCompare.tsx` — `loadTraining` deps: `[video]` -> primitives `[video.id, video.athlete_id, video.session_id, video.session_name, video.exercise_name, video.date]`. Cause: refire 3 queries par keystroke dans le formulaire de retour
+- [ ] COACH `components/nutrition/MealEditor.tsx` — useMemo totals + skip aliments fetch si cache existe (sauf foodRefreshKey>0)
+- [ ] ATHLETE `src/screens/EditWorkoutLogScreen.js` — remplacer JSON.stringify isDirty par flag ref (input lag sur sessions longues)
+- [ ] ATHLETE `src/hooks/usePushNotifications.js` — defer registration via InteractionManager.runAfterInteractions
+- [ ] ATHLETE `src/screens/DashboardScreen.js` loadSuppStatus — ajouter debounce 60s (meme pattern que loadNutrition)
+
+Test: build COACH ok, typecheck ok, ouvrir un retour video -> formulaire sans lag, recording -> RecordingPill ticke. ATHLETE : EditWorkoutLog input fluide.
+
+### Phase 2 — gains moyens (memos / consolidation)
+- [ ] COACH `components/videos/VideoDetail.tsx` — `dynamic()` import de VideoCompare (chunk plus petit sur grille videos)
+- [ ] ATHLETE `src/screens/NutritionScreen.js` — React.memo sur MealCardTracking + FoodStatusRow + planMeals stable
+- [ ] ATHLETE `src/screens/DashboardScreen.js` — consolider loadNutrition dans useDashboard (eviter refetch storm sur focus)
+
+Test: build COACH ok, /videos detail s'ouvre + edit panel render, NutritionScreen : edit reps food doit pas re-render tous les meals, Dashboard tab switch < 200ms.
+
+### Phase 3 — skipped (UX-altering ou hors-scope)
+- Gate edit column derriere bouton "Modifier" (UX change, demander avant)
+- Cold start parallel queries optim (gros refactor, deferer)
+
 ## COACH — Templates unifies (2026-04-03)
 - [x] Training templates: ProgramEditor avec templateMode=true (ExerciseLibrary, sets, supersets, dropsets)
 - [x] Nutrition templates: MealEditor avec templateMode=true (FoodSearch, repas, macros)

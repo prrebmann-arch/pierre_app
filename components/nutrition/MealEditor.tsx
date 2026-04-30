@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -343,8 +343,9 @@ export default function MealEditor({
     setMealType(newType)
   }
 
-  // Load aliments cache
+  // Load aliments cache — skip when cache exists unless caller bumped foodRefreshKey
   useEffect(() => {
+    if (alimentsCache && foodRefreshKey === 0) return
     async function load() {
       const { data } = await supabase.from('aliments_db').select('id, nom, calories, proteines, glucides, lipides, coach_id').order('nom', { ascending: true }).limit(1000)
       alimentsCache = (data || []) as Aliment[]
@@ -352,14 +353,14 @@ export default function MealEditor({
     load()
   }, [foodRefreshKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Compute grand totals
-  const totals = meals.reduce(
+  // Compute grand totals — memoized to avoid O(meals × foods) on every keystroke
+  const totals = useMemo(() => meals.reduce(
     (acc, meal, mealIdx) => {
       const mt = calcMealTotals(getEditableFoods(meal, activeVariantIdByMeal[mealIdx]))
       return { kcal: acc.kcal + mt.kcal, p: acc.p + mt.p, g: acc.g + mt.g, l: acc.l + mt.l }
     },
     { kcal: 0, p: 0, g: 0, l: 0 },
-  )
+  ), [meals, activeVariantIdByMeal])
 
   // Add food to active meal
   const addFood = useCallback((aliment: Aliment) => {

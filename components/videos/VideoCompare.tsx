@@ -226,7 +226,9 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
     } finally {
       setLoading(false)
     }
-  }, [video]) // eslint-disable-line react-hooks/exhaustive-deps
+    // Use primitive deps to avoid re-running on every parent render that
+    // re-creates the `video` object (e.g. notes textarea keystrokes).
+  }, [video.id, video.athlete_id, video.session_id, video.session_name, video.exercise_name, video.date]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadTraining()
