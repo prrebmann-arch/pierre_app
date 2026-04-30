@@ -400,6 +400,83 @@ export default function MealEditor({
     setActiveMealIdx(meals.length)
   }
 
+  // ── Import-from-template state ──
+  const [importPickerType, setImportPickerType] = useState<'jour' | 'repas' | null>(null)
+  const [importTemplates, setImportTemplates] = useState<Array<{ id: string; nom: string; meals_data: unknown; calories_objectif: number | null; macro_only?: boolean }>>([])
+  const [importLoading, setImportLoading] = useState(false)
+
+  const openImportPicker = useCallback(async (type: 'jour' | 'repas') => {
+    if (!user?.id) return
+    setImportPickerType(type)
+    setImportLoading(true)
+    try {
+      const { data } = await supabase
+        .from('nutrition_templates')
+        .select('id, nom, meals_data, calories_objectif, macro_only')
+        .eq('coach_id', user.id)
+        .eq('template_type', type)
+        .order('created_at', { ascending: false })
+        .limit(100)
+      setImportTemplates((data || []) as typeof importTemplates)
+    } finally {
+      setImportLoading(false)
+    }
+  }, [supabase, user?.id])
+
+  const closeImportPicker = useCallback(() => {
+    setImportPickerType(null)
+    setImportTemplates([])
+  }, [])
+
+  // Parse a template's meals_data — same logic as the nutrition page
+  function parseTemplateMeals(mealsData: unknown): MealData[] {
+    let raw = mealsData
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw) } catch {} }
+    if (typeof raw === 'string') { try { raw = JSON.parse(raw) } catch {} }
+    const toMeal = (item: any): MealData => {
+      if (item && !Array.isArray(item) && Array.isArray(item.variants) && item.variants.length > 0) {
+        return {
+          label: item.label,
+          time: item.time,
+          pre_workout: item.pre_workout,
+          variants: item.variants.map((v: any, vi: number) => ({
+            id: (typeof v?.id === 'string' && v.id.trim()) ? v.id : newVariantId(),
+            label: v?.label || `Variante ${vi + 1}`,
+            foods: Array.isArray(v?.foods) ? v.foods : [],
+          })),
+        }
+      }
+      if (item && !Array.isArray(item) && item.foods) return { foods: item.foods, pre_workout: item.pre_workout, time: item.time }
+      if (Array.isArray(item)) return { foods: item }
+      return { foods: [] }
+    }
+    if (Array.isArray(raw)) return raw.map(toMeal)
+    // Defensive: if a 'jour' template was incorrectly stored as { training: ... }
+    if (raw && typeof raw === 'object' && (raw as any).training) {
+      const t = (raw as any).training
+      const tMeals = t.meals || (Array.isArray(t) ? t : [])
+      return (tMeals as any[]).map(toMeal)
+    }
+    return []
+  }
+
+  function applyImport(tpl: typeof importTemplates[number]) {
+    const tplMeals = parseTemplateMeals(tpl.meals_data)
+    if (importPickerType === 'jour') {
+      // Replace the entire current day's meals
+      setMeals(tplMeals.length ? tplMeals : [{ foods: [] }])
+      setActiveMealIdx(0)
+      toast(`Journée "${tpl.nom}" importée`, 'success')
+    } else if (importPickerType === 'repas') {
+      // Append the meal(s) from the template at the end
+      const toAppend = tplMeals.length ? tplMeals : [{ foods: [] } as MealData]
+      setMeals((prev) => [...prev, ...toAppend])
+      setActiveMealIdx(meals.length) // first newly appended
+      toast(`Repas "${tpl.nom}" ajouté`, 'success')
+    }
+    closeImportPicker()
+  }
+
   // Copy meal — duplicate an existing meal's foods
   function copyMeal(sourceIdx: number) {
     setMeals((prev) => {
@@ -1203,10 +1280,29 @@ export default function MealEditor({
 
             {/* Hide add-meal button for repas template (single meal only) */}
             {!(templateMode && templateType === 'repas') && (
-              <div className={styles.mealsFooter}>
+              <div className={styles.mealsFooter} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-outline" onClick={addMeal}>
                   <i className="fa-solid fa-plus" /> Repas
                 </button>
+                {/* Import-from-template buttons — hidden in template mode */}
+                {!templateMode && (
+                  <>
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => openImportPicker('jour')}
+                      title="Remplacer la journée courante par une journée template"
+                    >
+                      <i className="fa-solid fa-calendar-day" /> Importer journée
+                    </button>
+                    <button
+                      className="btn btn-outline"
+                      onClick={() => openImportPicker('repas')}
+                      title="Ajouter un repas depuis un template"
+                    >
+                      <i className="fa-solid fa-utensils" /> Importer repas
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1221,6 +1317,61 @@ export default function MealEditor({
           </div>
         )}
       </div>
+
+      {/* ── Template import picker modal ── */}
+      {importPickerType !== null && (
+        <div className="modal-overlay" onClick={closeImportPicker}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <i className={`fa-solid ${importPickerType === 'jour' ? 'fa-calendar-day' : 'fa-utensils'}`} style={{ marginRight: 8 }} />
+                Importer un{importPickerType === 'jour' ? 'e journée' : ' repas'} depuis template
+              </h3>
+              <button className="modal-close" onClick={closeImportPicker}>
+                <i className="fa-solid fa-xmark" />
+              </button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: 420, overflowY: 'auto' }}>
+              {importLoading ? (
+                <div style={{ textAlign: 'center', padding: 24 }}>
+                  <i className="fa-solid fa-spinner fa-spin" />
+                </div>
+              ) : importTemplates.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: 24, color: 'var(--text3)' }}>
+                  <p>Aucun template {importPickerType === 'jour' ? 'journée' : 'repas'}</p>
+                  <p style={{ fontSize: 12, marginTop: 4 }}>Crée des templates dans la section Templates → Nutrition</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {importTemplates.map((tpl) => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => applyImport(tpl)}
+                      style={{
+                        textAlign: 'left',
+                        padding: '10px 12px',
+                        borderRadius: 8,
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg2)',
+                        color: 'var(--text)',
+                        cursor: 'pointer',
+                        fontSize: 13,
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{tpl.nom}</div>
+                      {tpl.calories_objectif != null && (
+                        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                          {tpl.calories_objectif} kcal
+                        </div>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
