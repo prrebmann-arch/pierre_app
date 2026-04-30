@@ -167,7 +167,11 @@ export default function NutritionPage() {
   const [editMeals, setEditMeals] = useState<MealData[]>([{ foods: [] }])
   const [editMacroOnly, setEditMacroOnly] = useState(false)
   const [editMacros, setEditMacros] = useState({ calories: 0, proteines: 0, glucides: 0, lipides: 0 })
-  const [editOtherTab, setEditOtherTab] = useState<{ type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number } } | null>(null)
+  const [editOtherTab, setEditOtherTab] = useState<{ type: 'training' | 'rest'; id: string; meals: MealData[]; macros: { calories: number; proteines: number; glucides: number; lipides: number }; variantLabel?: string | null; variantOrder?: number } | null>(null)
+  // Day-variant context of the plan being edited — must round-trip through MealEditor so saves
+  // don't accidentally drop the variant_label and re-deactivate sibling Push/Pull/etc.
+  const [editVariantLabel, setEditVariantLabel] = useState<string | null>(null)
+  const [editVariantOrder, setEditVariantOrder] = useState<number>(0)
 
   // Detail view
   const [detailPlan, setDetailPlan] = useState<NutritionPlan | null>(null)
@@ -561,6 +565,9 @@ export default function NutritionPage() {
     setEditMeals([{ foods: [] }])
     setEditMacroOnly(false)
     setEditMacros({ calories: 0, proteines: 0, glucides: 0, lipides: 0 })
+    setEditVariantLabel(null)
+    setEditVariantOrder(0)
+    setEditOtherTab(null)
     setView('editor')
   }, [])
 
@@ -638,6 +645,8 @@ export default function NutritionPage() {
       lipides: tpl.lipides || 0,
     })
     setEditOtherTab(null)
+    setEditVariantLabel(null)
+    setEditVariantOrder(0)
     setView('editor')
   }, [])
 
@@ -646,7 +655,7 @@ export default function NutritionPage() {
     // Load both ON and OFF plans
     const idsToLoad = [tId, rId].filter(Boolean) as string[]
     if (!idsToLoad.length) return
-    const { data: loadedPlans } = await supabase.from('nutrition_plans').select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, created_at, macro_only, meal_times').in('id', idsToLoad)
+    const { data: loadedPlans } = await supabase.from('nutrition_plans').select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, created_at, macro_only, meal_times, variant_label, variant_order').in('id', idsToLoad)
     if (!loadedPlans?.length) { toast('Plan introuvable', 'error'); return }
 
     // Find ON and OFF
@@ -694,13 +703,22 @@ export default function NutritionPage() {
       glucides: primary.glucides || 0,
       lipides: primary.lipides || 0,
     })
+    setEditVariantLabel((primary as any).variant_label ?? null)
+    setEditVariantOrder((primary as any).variant_order ?? 0)
 
     // Pre-load the other tab's data into MealEditor's tempMeals
     const otherPlan = primary === tPlan ? rPlan : tPlan
     if (otherPlan) {
       const otherMeals = parseMealsData(otherPlan)
       const otherType = (otherPlan.meal_type === 'rest' || otherPlan.meal_type === 'repos') ? 'rest' : 'training'
-      setEditOtherTab({ type: otherType, id: otherPlan.id, meals: otherMeals, macros: { calories: otherPlan.calories_objectif || 0, proteines: otherPlan.proteines || 0, glucides: otherPlan.glucides || 0, lipides: otherPlan.lipides || 0 } })
+      setEditOtherTab({
+        type: otherType,
+        id: otherPlan.id,
+        meals: otherMeals,
+        macros: { calories: otherPlan.calories_objectif || 0, proteines: otherPlan.proteines || 0, glucides: otherPlan.glucides || 0, lipides: otherPlan.lipides || 0 },
+        variantLabel: (otherPlan as any).variant_label ?? null,
+        variantOrder: (otherPlan as any).variant_order ?? 0,
+      })
     } else {
       setEditOtherTab(null)
     }
@@ -851,6 +869,8 @@ export default function NutritionPage() {
         macroOnly={editMacroOnly}
         initialMacros={editMacros}
         initialOtherTab={editOtherTab}
+        variantLabel={editVariantLabel}
+        variantOrder={editVariantOrder}
         onSaved={() => { setView('list'); loadPlans() }}
         onBack={() => setView('list')}
       />
