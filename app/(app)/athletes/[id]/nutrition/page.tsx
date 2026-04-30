@@ -12,7 +12,7 @@ import { useRefetchOnResume } from '@/hooks/useRefetchOnResume'
 import Toggle from '@/components/ui/Toggle'
 import Skeleton from '@/components/ui/Skeleton'
 import { type MealData } from '@/components/nutrition/MealEditor'
-import { getMealFoods } from '@/lib/nutrition'
+import { getMealFoods, newVariantId } from '@/lib/nutrition'
 import styles from '@/styles/nutrition.module.css'
 
 const MealEditor = dynamic(() => import('@/components/nutrition/MealEditor'), {
@@ -315,7 +315,7 @@ export default function NutritionPage() {
       // Fetch current plan
       const { data: plan } = await supabase
         .from('nutrition_plans')
-        .select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, macro_only, meal_times')
+        .select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, macro_only, meal_times, variant_label, variant_order')
         .eq('id', planId)
         .single()
       if (!plan) continue
@@ -406,6 +406,9 @@ export default function NutritionPage() {
         valid_from: new Date().toISOString().split('T')[0],
         macro_only: plan.macro_only || false,
         meal_times: plan.meal_times,
+        // Conserver la variante de jour si la source en était une (sinon la nouvelle version perd son label).
+        variant_label: (plan as any).variant_label ?? null,
+        variant_order: (plan as any).variant_order ?? 0,
       })
 
       if (error) {
@@ -416,19 +419,42 @@ export default function NutritionPage() {
           await supabase.from('nutrition_plans').update({ actif: false }).eq('id', planId)
         }
 
-        // Duplicate the complementary plan (ON<->OFF) so the version pair stays complete
+        // Duplicate the complementary plan (ON<->OFF) so the version pair stays complete.
+        // Si la source est une variante de jour (variant_label), on cherche d'abord le complémentaire
+        // avec le même variant_label pour préserver l'appairage Push/Push, Pull/Pull, etc.
         const isTraining = plan.meal_type === 'training' || plan.meal_type === 'entrainement'
         const complementaryTypes = isTraining ? ['rest', 'repos'] : ['training', 'entrainement']
-        const { data: compPlan } = await supabase
-          .from('nutrition_plans')
-          .select('id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, macro_only, meal_times')
-          .eq('athlete_id', plan.athlete_id)
-          .eq('nom', plan.nom)
-          .eq('actif', true)
-          .in('meal_type', complementaryTypes)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single()
+        const sourceLabel = (plan as any).variant_label ?? null
+        const compSelect = 'id, nom, athlete_id, coach_id, meal_type, calories_objectif, proteines, glucides, lipides, meals_data, actif, valid_from, macro_only, meal_times, variant_label, variant_order'
+
+        let compPlan: any = null
+        if (sourceLabel) {
+          const { data } = await supabase
+            .from('nutrition_plans')
+            .select(compSelect)
+            .eq('athlete_id', plan.athlete_id)
+            .eq('nom', plan.nom)
+            .eq('actif', true)
+            .eq('variant_label', sourceLabel)
+            .in('meal_type', complementaryTypes)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          compPlan = data
+        }
+        if (!compPlan) {
+          const { data } = await supabase
+            .from('nutrition_plans')
+            .select(compSelect)
+            .eq('athlete_id', plan.athlete_id)
+            .eq('nom', plan.nom)
+            .eq('actif', true)
+            .in('meal_type', complementaryTypes)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          compPlan = data
+        }
 
         if (compPlan) {
           const { error: compError } = await supabase.from('nutrition_plans').insert({
@@ -445,6 +471,9 @@ export default function NutritionPage() {
             valid_from: new Date().toISOString().split('T')[0],
             macro_only: compPlan.macro_only || false,
             meal_times: compPlan.meal_times,
+            // Préserver le couple variant_label/variant_order pour ne pas casser l'appairage Push/Pull.
+            variant_label: compPlan.variant_label ?? null,
+            variant_order: compPlan.variant_order ?? 0,
           })
           if (!compError) {
             // Deactivate the old complementary plan
@@ -566,7 +595,12 @@ export default function NutritionPage() {
           label: item.label,
           time: item.time,
           pre_workout: item.pre_workout,
-          variants: item.variants,
+          // Heal: assigner un id stable si absent pour éviter les collisions côté UI.
+          variants: item.variants.map((v: any, vi: number) => ({
+            id: (typeof v?.id === 'string' && v.id.trim()) ? v.id : newVariantId(),
+            label: v?.label || `Variante ${vi + 1}`,
+            foods: Array.isArray(v?.foods) ? v.foods : [],
+          })),
         }
       }
       if (item && !Array.isArray(item) && item.foods) return { foods: item.foods, pre_workout: item.pre_workout, time: item.time }
@@ -626,12 +660,16 @@ export default function NutritionPage() {
         const parsed = typeof plan.meals_data === 'string' ? JSON.parse(plan.meals_data) : (plan.meals_data || [])
         const m = (parsed as any[]).map((meal: any) => {
           if (meal && !Array.isArray(meal) && Array.isArray(meal.variants) && meal.variants.length > 0) {
-            // Preserve multi-variant meal
+            // Preserve multi-variant meal — heal des id manquants pour MealEditor.
             return {
               label: meal.label,
               time: meal.time,
               pre_workout: meal.pre_workout,
-              variants: meal.variants,
+              variants: meal.variants.map((v: any, vi: number) => ({
+                id: (typeof v?.id === 'string' && v.id.trim()) ? v.id : newVariantId(),
+                label: v?.label || `Variante ${vi + 1}`,
+                foods: Array.isArray(v?.foods) ? v.foods : [],
+              })),
             } as MealData
           }
           if (meal && !Array.isArray(meal) && meal.foods) {
@@ -729,7 +767,8 @@ export default function NutritionPage() {
       glucides: full.glucides,
       lipides: full.lipides,
       meals_data: full.meals_data,
-      actif: true,
+      // Inherit actif from source: si la diète source est inactive, la nouvelle variante l'est aussi.
+      actif: !!full.actif,
       valid_from: todayStr,
       macro_only: full.macro_only,
       meal_times: full.meal_times,
