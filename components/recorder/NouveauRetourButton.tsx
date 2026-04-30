@@ -252,11 +252,25 @@ export default function NouveauRetourButton({ athleteId, onCreated, buttonClassN
       const meta: Record<string, string> = { titre: finalTitre }
       if (hasLoom) meta.loom_url = loomUrl.trim()
       if (hasAudio && audio.audioUrl) meta.audio_url = audio.audioUrl
-      await notifyAthlete(
-        ath.user_id, 'retour', 'Nouveau retour',
-        `Votre coach vous a envoyé un retour : ${finalTitre}`,
-        meta,
-      )
+      if (hasMessage) meta.commentaire = message
+
+      // Body construction — match BilanTraitePopupInline pattern: include the
+      // message when there is one so the athlete can read it from the iPhone
+      // lock-screen notification without opening the app.
+      const notifTitle = hasAudio
+        ? 'Message vocal de ton coach'
+        : hasLoom
+        ? 'Vidéo de ton coach'
+        : 'Nouveau retour'
+      const notifBody = hasMessage
+        ? message
+        : hasAudio
+        ? `Ton coach t'a envoyé un message vocal — ${finalTitre}`
+        : hasLoom
+        ? `Ton coach t'a envoyé une vidéo — ${finalTitre}`
+        : `Nouveau retour : ${finalTitre}`
+
+      await notifyAthlete(ath.user_id, 'retour', notifTitle, notifBody, meta)
     }
 
     toast('Retour envoyé !', 'success')

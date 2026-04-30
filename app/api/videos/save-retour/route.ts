@@ -128,7 +128,7 @@ export async function POST(request: Request) {
         user_id: athlete.user_id,
         type: 'retour',
         title: 'Nouveau retour vidéo',
-        body: `Votre coach vous a envoyé : ${titre}`,
+        body: commentaire ? `${titre} — ${commentaire}` : `Nouvelle vidéo de ton coach : ${titre}`,
         metadata: { retour_id: retourId, has_video: true, titre, commentaire: commentaire ?? null },
       })
       if (notifErr) console.error('[save-retour] notification insert failed:', notifErr)
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
           to: t.token,
           sound: 'default',
           title: 'Nouveau retour vidéo',
-          body: `Votre coach vous a envoyé : ${titre}`,
+          body: commentaire ? `${titre} — ${commentaire}` : `Nouvelle vidéo de ton coach : ${titre}`,
           data: { type: 'retour', retour_id: retourId, has_video: true, titre, commentaire: commentaire ?? null },
         }))
         const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
