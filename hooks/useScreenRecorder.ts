@@ -12,7 +12,9 @@ export interface StartRecordingOptions {
   withWebcam: boolean
   /** Pre-acquired cam stream (e.g. from modal preview) to avoid re-prompting */
   preAcquiredCamStream?: MediaStream | null
-  /** Optional explicit microphone deviceId */
+  /** Pre-acquired mic stream — if provided, mic permission isn't re-asked at start */
+  preAcquiredMicStream?: MediaStream | null
+  /** Optional explicit microphone deviceId (only used if preAcquiredMicStream is null) */
   micDeviceId?: string
   /** Optional explicit webcam deviceId (only used if preAcquiredCamStream is null) */
   camDeviceId?: string
@@ -116,15 +118,19 @@ export function useScreenRecorder() {
       throw err
     }
 
-    try {
-      const audioConstraint: MediaTrackConstraints | true = opts.micDeviceId
-        ? { deviceId: { exact: opts.micDeviceId } }
-        : true
-      micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint })
-    } catch (err) {
-      screenStream.getTracks().forEach(t => t.stop())
-      setState({ isRecording: false, seconds: 0, errorMessage: 'Accès au micro refusé.' })
-      throw err
+    if (opts.preAcquiredMicStream) {
+      micStream = opts.preAcquiredMicStream
+    } else {
+      try {
+        const audioConstraint: MediaTrackConstraints | true = opts.micDeviceId
+          ? { deviceId: { exact: opts.micDeviceId } }
+          : true
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraint })
+      } catch (err) {
+        screenStream.getTracks().forEach(t => t.stop())
+        setState({ isRecording: false, seconds: 0, errorMessage: 'Accès au micro refusé.' })
+        throw err
+      }
     }
 
     if (opts.withWebcam) {
