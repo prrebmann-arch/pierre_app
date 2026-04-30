@@ -15,6 +15,10 @@ interface Props {
   onAfter?: () => void
   /** Whether the panel is "active" (mounted and visible) — drives device acquisition */
   active?: boolean
+  /** Optional execution_videos.id — when set, the push notif metadata
+   *  carries video_id + coach_notes so the athlete app routes the tap to
+   *  VideoRetour with the source exercise video instead of the dashboard. */
+  videoId?: string
 }
 
 const QUICK_MESSAGES = [
@@ -27,7 +31,7 @@ const QUICK_MESSAGES = [
 
 type Tab = 'text' | 'screen'
 
-export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, active = true }: Props) {
+export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, active = true, videoId }: Props) {
   const { user } = useAuth()
   const { toast } = useToast()
   const { startRecording, isRecording, isProcessing, isUploading } = useRecorder()
@@ -231,9 +235,24 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
       const meta: Record<string, string> = {}
       if (hasLoom) meta.loom_url = loomUrl.trim()
       if (hasAudio && audio.audioUrl) meta.audio_url = audio.audioUrl
-      if (hasMessage) meta.commentaire = message
-      const notifTitle = hasAudio ? 'Message vocal de ton coach'
-        : hasLoom ? 'Vidéo de ton coach'
+      if (hasMessage) {
+        meta.commentaire = message
+        // Athlete app reads `coach_notes` for the body shown on the retour
+        // detail screen (matches the legacy field used by the old correction flow).
+        meta.coach_notes = message
+      }
+      // When the retour was triggered from a specific exercise video page,
+      // include video_id so the athlete app routes the notif tap to the
+      // VideoRetour screen with the source video instead of the dashboard.
+      if (videoId) meta.video_id = videoId
+
+      const ctxLabel = videoId ? 'sur ton exercice' : ''
+      const notifTitle = hasAudio
+        ? `Message vocal de ton coach${ctxLabel ? ' ' + ctxLabel : ''}`
+        : hasLoom
+        ? `Vidéo de ton coach${ctxLabel ? ' ' + ctxLabel : ''}`
+        : videoId
+        ? 'Retour sur ton exercice'
         : 'Nouveau retour'
       const notifBody = hasMessage ? message
         : hasAudio ? "Ton coach t'a envoyé un message vocal"
