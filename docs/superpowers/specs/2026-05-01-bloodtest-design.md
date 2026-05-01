@@ -70,32 +70,29 @@ Sources de vérité dupliquées (parité testée en CI, pattern FODMAP) :
 
 #### 3.2.1. Framework de zones
 
-Deux types de zones selon le marqueur :
+**Vocabulaire de zone dépend du type de marqueur.** Le code partage la logique de classification (which zone for value X), mais les labels affichés varient par catégorie. Chaque marker définit ses zones explicitement dans le catalog.
 
-**Type `four_zone` — pour micronutriments + métaboliques** (cadre clinique du coach) :
-- `optimal` (au-dessus du seuil de déficience)
-- `deficience` (légère insuffisance)
-- `carence` (insuffisance moyenne)
-- `avitaminose` (insuffisance sévère)
+**Vocabulaires par catégorie :**
 
-Exemple Vit D `higher_is_better` :
-- `optimal` : ≥ 30 ng/mL
-- `deficience` : 20–30 ng/mL
-- `carence` : 10–20 ng/mL
-- `avitaminose` : < 10 ng/mL
+| Catégorie | Vocabulaire de zones | Direction typique |
+|---|---|---|
+| `vitamin`, `mineral`, `iron` | `optimal` / `deficience` / `carence` / `avitaminose` | higher_is_better |
+| `hormone_sex`, `thyroid` | `low` / `normal` / `high` | range_is_normal (avec phase du cycle pour hormones féminines) |
+| `inflammation` (CRP us) | `optimal` / `leger` / `modere` / `severe` | lower_is_better |
+| `metabolism` (créatinine, glycémie, HbA1c) | `bas` / `normal` / `eleve` / `tres_eleve` | range_is_normal ou lower_is_better selon |
+| `liver` (ASAT, ALAT, GGT) | `optimal` / `leger` / `modere` / `severe` | lower_is_better |
+| `lipid` (Chol, LDL, TG) | `optimal` / `borderline` / `eleve` / `tres_eleve` | lower_is_better (sauf HDL : higher_is_better) |
+| `hema` (Hb, Ht) | `bas` / `normal` / `haut` | range_is_normal (sex-specific) |
 
-Exemple CRP `lower_is_better` (zones inversées) :
-- `optimal` : ≤ 1 mg/L
-- `deficience` : 1–3 mg/L (équivaut à "légère hausse")
-- `carence` : 3–10 mg/L
-- `avitaminose` : > 10 mg/L
+Exemples concrets :
 
-**Type `range` — pour hormones** (plages physiologiques) :
-- `low` : sous la borne basse
-- `normal` : entre les deux bornes
-- `high` : au-dessus de la borne haute
+- **Vit D** (vitamin, higher_is_better) : optimal ≥ 30 ng/mL · deficience 20–30 · carence 10–20 · avitaminose < 10
+- **CRP us** (inflammation, lower_is_better) : optimal ≤ 1 mg/L · leger 1–3 · modere 3–10 · severe > 10
+- **Estradiol** (hormone_sex, range, F-folliculaire) : low < 30 pg/mL · normal 30–120 · high > 120
+- **ASAT** (liver, lower_is_better) : optimal < 25 UI/L · leger 25–35 · modere 35–60 · severe > 60
+- **HbA1c** (metabolism, lower_is_better) : optimal < 5.4% · leger 5.4–5.7 · modere 5.7–6.5 · severe > 6.5
 
-Pour les hormones féminines variables selon le cycle (Œstradiol, Progestérone, LH, FSH), zones `range` exposent une variante par phase (folliculaire / ovulatoire / lutéale / ménopause). Choix de la phase = champ libre lors du log côté coach (pas auto-detecté).
+**Hormones féminines à phase variable** (Œstradiol, Progestérone, LH, FSH, 17-OH-prog) : zones définies par phase (`folliculaire | ovulatoire | luteale | menopause`). Le coach saisit la phase manuellement à la validation (pas d'auto-détection).
 
 #### 3.2.2. Structure TypeScript
 
@@ -106,10 +103,25 @@ export type BloodtestCategory =
   | 'hema' | 'iron' | 'vitamin' | 'mineral'
   | 'hormone_sex' | 'thyroid' | 'inflammation' | 'metabolism' | 'liver' | 'lipid'
 
-export type ZoneConfig =
-  | { type: 'four_zone'; direction: 'higher_is_better' | 'lower_is_better'
-    ; deficience_min: number; carence_min: number; avitaminose_min: number }
-  | { type: 'range'; normal_min: number; normal_max: number; phase?: string }
+export type ZoneSeverity = 1 | 2 | 3 | 4   // 1=best/optimal, 4=worst/critical
+
+export type ZoneBand = {
+  label: string                              // 'optimal' | 'deficience' | 'low' | 'normal' | 'high' | 'severe' | etc.
+  severity: ZoneSeverity                     // for color mapping
+  min?: number                               // inclusive lower bound (omit for "below all" band)
+  max?: number                               // exclusive upper bound (omit for "above all" band)
+}
+
+export type ZoneConfig = {
+  direction: 'higher_is_better' | 'lower_is_better' | 'range_is_normal'
+  bands: ZoneBand[]                          // ordered, contiguous, cover the value space
+}
+
+export type SexSpecificZones = {
+  male?: ZoneConfig
+  female?: ZoneConfig
+  female_by_phase?: Partial<Record<'folliculaire' | 'ovulatoire' | 'luteale' | 'menopause', ZoneConfig>>
+}
 
 export type BloodtestMarker = {
   key: string
@@ -117,7 +129,7 @@ export type BloodtestMarker = {
   unit_canonical: string
   unit_aliases: string[]
   category: BloodtestCategory
-  zones: ZoneConfig | { sex_specific: { male?: ZoneConfig; female?: ZoneConfig | { phases: ZoneConfig[] } } }
+  zones: ZoneConfig | { sex_specific: SexSpecificZones }
   presets: BloodtestPreset[]
   supplementation?: {
     forms: string[]
@@ -125,6 +137,60 @@ export type BloodtestMarker = {
     timing: string
   }
   notes?: string
+}
+```
+
+Exemples :
+
+```ts
+// Vit D : higher_is_better, vocab vitamine
+{
+  key: 'vitamine_d', label: 'Vitamine D', unit_canonical: 'ng/mL', /* ... */
+  zones: {
+    direction: 'higher_is_better',
+    bands: [
+      { label: 'optimal',     severity: 1, min: 30 },
+      { label: 'deficience',  severity: 2, min: 20, max: 30 },
+      { label: 'carence',     severity: 3, min: 10, max: 20 },
+      { label: 'avitaminose', severity: 4,          max: 10 },
+    ],
+  },
+}
+
+// CRP us : lower_is_better, vocab inflammation
+{
+  key: 'crp_us', label: 'CRP ultrasensible', unit_canonical: 'mg/L', /* ... */
+  zones: {
+    direction: 'lower_is_better',
+    bands: [
+      { label: 'optimal', severity: 1,         max: 1 },
+      { label: 'leger',   severity: 2, min: 1,  max: 3 },
+      { label: 'modere',  severity: 3, min: 3,  max: 10 },
+      { label: 'severe',  severity: 4, min: 10 },
+    ],
+  },
+}
+
+// Estradiol femme par phase : sex_specific avec female_by_phase
+{
+  key: 'estradiol_e2', label: 'Estradiol (E2)', unit_canonical: 'pg/mL', /* ... */
+  zones: { sex_specific: {
+    male: { direction: 'range_is_normal', bands: [
+      { label: 'low',    severity: 3,        max: 10 },
+      { label: 'normal', severity: 1, min: 10, max: 40 },
+      { label: 'high',   severity: 3, min: 40 },
+    ]},
+    female_by_phase: {
+      folliculaire: { direction: 'range_is_normal', bands: [
+        { label: 'low',    severity: 3,         max: 30 },
+        { label: 'normal', severity: 1, min: 30,  max: 120 },
+        { label: 'high',   severity: 3, min: 120 },
+      ]},
+      ovulatoire:   { direction: 'range_is_normal', bands: [/* 130–370 */] },
+      luteale:      { direction: 'range_is_normal', bands: [/* 70–250 */] },
+      menopause:    { direction: 'range_is_normal', bands: [/* 5–30 */] },
+    },
+  }},
 }
 ```
 
@@ -194,8 +260,8 @@ Bilan complet check-up annuel ou si hormonal+ pas concluant :
 ```ts
 export function getMarker(key: string): BloodtestMarker | undefined
 export function getPresetMarkers(preset: BloodtestPreset): BloodtestMarker[]
-export function deriveSeverity(marker: BloodtestMarker, value: number, ctx?: { sex?: 'M'|'F'; phase?: string }): 'optimal'|'deficience'|'carence'|'avitaminose'|'low'|'normal'|'high'
-export function severityColor(sev: string): string  // hex code pour la zone
+export function classifyValue(marker: BloodtestMarker, value: number, ctx?: { sex?: 'M'|'F'; phase?: 'folliculaire'|'ovulatoire'|'luteale'|'menopause' }): { band: ZoneBand; zone_config: ZoneConfig } | { error: 'missing_phase' | 'missing_sex' | 'no_zones_for_context' }
+export function severityColor(severity: ZoneSeverity): string  // 1=#22c55e, 2=#eab308, 3=#f97316, 4=#ef4444
 ```
 
 ### 3.3. Database
