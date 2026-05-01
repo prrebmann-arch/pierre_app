@@ -17,6 +17,7 @@ const TABS = [
   { label: 'Videos', route: 'videos', icon: 'fa-video' },
   { label: 'Retours', route: 'retours', icon: 'fa-comments' },
   { label: 'Posing', route: 'posing', icon: 'fa-person' },
+  { label: 'FODMAP', route: 'fodmap', icon: 'fa-vial' },
   { label: 'Quest.', route: 'questionnaires', icon: 'fa-clipboard-list' },
   { label: 'Suppl.', route: 'supplements', icon: 'fa-capsules' },
   { label: 'Routine', route: 'routine', icon: 'fa-sun' },

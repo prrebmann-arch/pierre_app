@@ -40,6 +40,7 @@ All routes inside `(app)` are protected by `app/(app)/layout.tsx` (auth gate, pr
 | `/athletes/[id]/videos` | technique videos tab | Athlete-uploaded execution videos |
 | `/athletes/[id]/retours` | coach feedback tab | List + send retours (video/loom/audio/msg) |
 | `/athletes/[id]/posing` | posing videos tab | — |
+| `/athletes/[id]/fodmap` | fodmap test tab | FODMAP reintro tracking |
 | `/athletes/[id]/questionnaires` | quest. assignments | — |
 | `/athletes/[id]/supplements` | suppl. tracking | — |
 | `/athletes/[id]/routine` | morning routine | — |
@@ -200,6 +201,8 @@ Source of truth = SQL migrations in `sql/*.sql` + observed SELECTs.
 - `supplements`, `athlete_supplements`, `supplement_logs`, `supplement_dosage_history`.
 - `routine_items`, `routine_logs` — morning routine.
 - `menstrual_logs`.
+- `athlete_fodmap_logs` — FODMAP reintro tracking. Cols: `id, athlete_id, group_key, food_key, portion_size enum (S/M/L), rating, note, logged_at, iso_week_start GENERATED, archived_at`. RPC `update_fodmap_log_with_cascade(log_id, new_rating, new_note)` for athlete edits with cascade-delete of later portions when rating becomes red.
+- `athletes.fodmap_enabled` — boolean toggle (mirror posing). Default false.
 
 ### Notif & push
 - `notifications` — `user_id` (athlete auth uid), `type, title, body, metadata jsonb`.
@@ -328,6 +331,9 @@ useRefetchOnResume(load, loading)
 | Admin pages (sub-app at `/admin`) | `app/admin/{athletes,coaches,payments,metrics}/page.tsx` |
 | Add a new RLS policy | `sql/rls_*.sql` patterns; remember coach_id = auth.uid() |
 | Migrate DB | Add `sql/<descriptive>.sql`, run manually in Supabase SQL Editor |
+| Modify FODMAP coach UI | `app/(app)/athletes/[id]/fodmap/page.tsx` |
+| Modify FODMAP catalog (8 groups, 24 foods, 72 portions) | `lib/fodmapCatalog.ts` (mirror in ATHLETE/src/utils/fodmapCatalog.js) |
+| Modify FODMAP status derivation / ISO week helpers | `lib/fodmap.ts` |
 
 ---
 
