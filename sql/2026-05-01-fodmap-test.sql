@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS athlete_fodmap_logs (
   rating          text NOT NULL CHECK (rating IN ('green','yellow','red')),
   note            text,
   logged_at       timestamptz NOT NULL DEFAULT now(),
-  iso_week_start  date GENERATED ALWAYS AS (date_trunc('week', logged_at)::date) STORED,
+  iso_week_start  date GENERATED ALWAYS AS ((date_trunc('week', logged_at AT TIME ZONE 'UTC'))::date) STORED,
   archived_at     timestamptz,
   created_at      timestamptz NOT NULL DEFAULT now(),
   UNIQUE (athlete_id, iso_week_start, portion_size)
