@@ -37,8 +37,8 @@ export async function POST(req: NextRequest) {
   if (!upload_id) return NextResponse.json({ error: 'missing upload_id' }, { status: 400 })
 
   const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
   )
 
   const { data: upload, error: upErr } = await admin

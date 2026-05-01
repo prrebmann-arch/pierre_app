@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
   if (!upload_id || !validated_data) return NextResponse.json({ error: 'missing fields' }, { status: 400 })
 
   const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!,
   )
 
   const { data: row } = await admin
