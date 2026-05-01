@@ -1,0 +1,7 @@
+{"type":"server-started","port":64000,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:64000","screen_dir":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/content","state_dir":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/state"}
+{"type":"screen-added","file":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/content/welcome.html"}
+{"type":"screen-added","file":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/content/athlete-main.html"}
+{"type":"screen-added","file":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/content/athlete-flows.html"}
+{"type":"screen-added","file":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/content/coach-tab.html"}
+{"type":"screen-added","file":"/Users/pierrerebmann/MOMENTUM/COACH/.superpowers/brainstorm/6704-1777647318/content/waiting.html"}
+{"type":"server-stopped","reason":"idle timeout"}
