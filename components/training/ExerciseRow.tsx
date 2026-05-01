@@ -34,9 +34,13 @@ interface ExerciseDB {
   muscle_principal: string | null
 }
 
-// Module-level cache shared across all ExerciseRow instances
+// Module-level cache shared across all ExerciseRow instances.
+// Flushed on signOut so coach B doesn't read coach A's exercise library.
+import { registerCacheClearer } from '@/lib/clientCaches'
+
 let exercisesCache: ExerciseDB[] | null = null
 let exercisesCachePromise: Promise<ExerciseDB[]> | null = null
+registerCacheClearer(() => { exercisesCache = null; exercisesCachePromise = null })
 
 async function fetchExercises(): Promise<ExerciseDB[]> {
   if (exercisesCache) return exercisesCache

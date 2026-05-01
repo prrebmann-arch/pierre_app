@@ -77,8 +77,11 @@ interface MealEditorProps {
   templateType?: 'diete' | 'jour' | 'repas'
 }
 
-/** Local aliment DB cache */
+/** Local aliment DB cache. Flushed on signOut so coach B doesn't read coach A's library. */
+import { registerCacheClearer } from '@/lib/clientCaches'
+
 let alimentsCache: Aliment[] | null = null
+registerCacheClearer(() => { alimentsCache = null })
 
 function findAliment(name: string): Aliment | null {
   if (!alimentsCache) return null
@@ -545,32 +548,35 @@ export default function MealEditor({
   async function handleSave() {
     if (!planName.trim()) { toast('Le nom est obligatoire', 'error'); return }
     if (!user) return
-    setSaving(true)
 
-    // Recompute macros on each food before serialization, so DB always reflects
-    // the latest aliments_db values (qty changes, food edits, etc.).
-    const mealsWithFreshMacros: MealData[] = meals.map((m) => {
-      if (hasVariants(m)) {
+    // setSaving inside the try so a throw in macro recompute / serializer
+    // still hits the finally and re-enables the button.
+    try {
+      setSaving(true)
+
+      // Recompute macros on each food before serialization, so DB always reflects
+      // the latest aliments_db values (qty changes, food edits, etc.).
+      const mealsWithFreshMacros: MealData[] = meals.map((m) => {
+        if (hasVariants(m)) {
+          return {
+            ...m,
+            variants: m.variants!.map((v) => ({
+              ...v,
+              foods: v.foods.map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
+            })),
+          }
+        }
         return {
           ...m,
-          variants: m.variants!.map((v) => ({
-            ...v,
-            foods: v.foods.map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
-          })),
+          foods: (m.foods ?? []).map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
         }
-      }
-      return {
-        ...m,
-        foods: (m.foods ?? []).map((f) => ({ ...f, ...calcFoodMacros(f), allow_conversion: f.allow_conversion || false })),
-      }
-    })
-    const mealsData = isMacroOnly ? [] : serializeMealsForSave(mealsWithFreshMacros)
+      })
+      const mealsData = isMacroOnly ? [] : serializeMealsForSave(mealsWithFreshMacros)
 
-    const finalTotals = isMacroOnly ? manualMacros : {
-      calories: totals.kcal, proteines: Math.round(totals.p), glucides: Math.round(totals.g), lipides: Math.round(totals.l),
-    }
+      const finalTotals = isMacroOnly ? manualMacros : {
+        calories: totals.kcal, proteines: Math.round(totals.p), glucides: Math.round(totals.g), lipides: Math.round(totals.l),
+      }
 
-    try {
       if (templateMode) {
         // ── TEMPLATE MODE: save to nutrition_templates ──
         let tplMealsPayload: any

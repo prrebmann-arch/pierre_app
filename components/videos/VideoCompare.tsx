@@ -369,31 +369,33 @@ export default function VideoCompare({ video, compVideos, compIdx, showCompare =
       toast('Ajoutez au moins un exercice', 'warning')
       return
     }
-    const payload = exercises.map((e) => {
-      const base: Record<string, unknown> = {
-        nom: e.nom,
-        exercice_id: e.exercice_id || null,
-        muscle_principal: e.muscle_principal || '',
-        sets: e.sets,
-      }
-      if (e.superset_id) base.superset_id = e.superset_id
-      return base
-    })
     setSavingEdit(true)
-    const { error } = await supabase
-      .from('workout_sessions')
-      .update({ nom: editSessionName.trim(), exercices: JSON.stringify(payload) })
-      .eq('id', matchedSession.id)
-    if (error) {
-      console.error('[VideoCompare.saveSession]', error)
-      toast(`Erreur: ${error.message}`, 'error')
+    try {
+      const payload = exercises.map((e) => {
+        const base: Record<string, unknown> = {
+          nom: e.nom,
+          exercice_id: e.exercice_id || null,
+          muscle_principal: e.muscle_principal || '',
+          sets: e.sets,
+        }
+        if (e.superset_id) base.superset_id = e.superset_id
+        return base
+      })
+      const { error } = await supabase
+        .from('workout_sessions')
+        .update({ nom: editSessionName.trim(), exercices: JSON.stringify(payload) })
+        .eq('id', matchedSession.id)
+      if (error) {
+        console.error('[VideoCompare.saveSession]', error)
+        toast(`Erreur: ${error.message}`, 'error')
+        return
+      }
+      setSessionName(editSessionName.trim())
+      setSessionExs(payload)
+      toast('Seance modifiee !', 'success')
+    } finally {
       setSavingEdit(false)
-      return
     }
-    setSessionName(editSessionName.trim())
-    setSessionExs(payload)
-    toast('Seance modifiee !', 'success')
-    setSavingEdit(false)
   }
 
   const navigatePrev = (dir: number) => {

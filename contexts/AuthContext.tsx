@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef, ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { clearAllCaches } from '@/lib/clientCaches'
 import type { User, CoachProfile } from '@/lib/types'
 
 const CACHE_KEY_USER = 'coach_cached_user'
@@ -272,6 +273,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAccessToken(null)
     localStorage.removeItem(CACHE_KEY_USER)
     localStorage.removeItem(CACHE_KEY_PROFILE)
+    // Module-level caches (aliments_db, exercices) survive auth events;
+    // flush them so the next coach login doesn't see the previous coach's data.
+    clearAllCaches()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

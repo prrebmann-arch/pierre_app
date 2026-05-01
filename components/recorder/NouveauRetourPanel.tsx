@@ -230,59 +230,64 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
       toast('Ajoute un message, un Loom ou un vocal', 'error')
       return
     }
-    setSaving(true)
-    const finalTitre = hasMessage
-      ? message.slice(0, 40)
-      : hasAudio ? 'Message vocal'
-      : hasLoom ? 'Vidéo Loom'
-      : 'Retour'
-    const type = hasLoom ? (hasAudio ? 'mixed' : 'loom') : (hasAudio ? 'audio' : 'message')
-    const { error } = await supabase.from('bilan_retours').insert({
-      athlete_id: athleteId,
-      coach_id: user?.id,
-      titre: finalTitre,
-      commentaire: message || null,
-      loom_url: hasLoom ? loomUrl.trim() : null,
-      audio_url: hasAudio ? audio.audioUrl : null,
-      type,
-    })
-    setSaving(false)
-    if (error) { toast("Erreur lors de l'envoi", 'error'); return }
+    // try/finally guarantees the button re-enables even if a sync throw
+    // occurs before the manual setSaving(false) below (network drop on insert).
+    try {
+      setSaving(true)
+      const finalTitre = hasMessage
+        ? message.slice(0, 40)
+        : hasAudio ? 'Message vocal'
+        : hasLoom ? 'Vidéo Loom'
+        : 'Retour'
+      const type = hasLoom ? (hasAudio ? 'mixed' : 'loom') : (hasAudio ? 'audio' : 'message')
+      const { error } = await supabase.from('bilan_retours').insert({
+        athlete_id: athleteId,
+        coach_id: user?.id,
+        titre: finalTitre,
+        commentaire: message || null,
+        loom_url: hasLoom ? loomUrl.trim() : null,
+        audio_url: hasAudio ? audio.audioUrl : null,
+        type,
+      })
+      if (error) { toast("Erreur lors de l'envoi", 'error'); return }
 
-    const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', athleteId).single()
-    if (ath?.user_id) {
-      const meta: Record<string, string> = {}
-      if (hasLoom) meta.loom_url = loomUrl.trim()
-      if (hasAudio && audio.audioUrl) meta.audio_url = audio.audioUrl
-      if (hasMessage) {
-        meta.commentaire = message
-        // Athlete app reads `coach_notes` for the body shown on the retour
-        // detail screen (matches the legacy field used by the old correction flow).
-        meta.coach_notes = message
+      const { data: ath } = await supabase.from('athletes').select('user_id').eq('id', athleteId).single()
+      if (ath?.user_id) {
+        const meta: Record<string, string> = {}
+        if (hasLoom) meta.loom_url = loomUrl.trim()
+        if (hasAudio && audio.audioUrl) meta.audio_url = audio.audioUrl
+        if (hasMessage) {
+          meta.commentaire = message
+          // Athlete app reads `coach_notes` for the body shown on the retour
+          // detail screen (matches the legacy field used by the old correction flow).
+          meta.coach_notes = message
+        }
+        // When the retour was triggered from a specific exercise video page,
+        // include video_id so the athlete app routes the notif tap to the
+        // VideoRetour screen with the source video instead of the dashboard.
+        if (videoId) meta.video_id = videoId
+
+        const ctxLabel = videoId ? 'sur ton exercice' : ''
+        const notifTitle = hasAudio
+          ? `Message vocal de ton coach${ctxLabel ? ' ' + ctxLabel : ''}`
+          : hasLoom
+          ? `Vidéo de ton coach${ctxLabel ? ' ' + ctxLabel : ''}`
+          : videoId
+          ? 'Retour sur ton exercice'
+          : 'Nouveau retour'
+        const notifBody = hasMessage ? message
+          : hasAudio ? "Ton coach t'a envoyé un message vocal"
+          : hasLoom ? "Ton coach t'a envoyé une vidéo"
+          : 'Nouveau retour'
+        await notifyAthlete(ath.user_id, 'retour', notifTitle, notifBody, meta)
       }
-      // When the retour was triggered from a specific exercise video page,
-      // include video_id so the athlete app routes the notif tap to the
-      // VideoRetour screen with the source video instead of the dashboard.
-      if (videoId) meta.video_id = videoId
-
-      const ctxLabel = videoId ? 'sur ton exercice' : ''
-      const notifTitle = hasAudio
-        ? `Message vocal de ton coach${ctxLabel ? ' ' + ctxLabel : ''}`
-        : hasLoom
-        ? `Vidéo de ton coach${ctxLabel ? ' ' + ctxLabel : ''}`
-        : videoId
-        ? 'Retour sur ton exercice'
-        : 'Nouveau retour'
-      const notifBody = hasMessage ? message
-        : hasAudio ? "Ton coach t'a envoyé un message vocal"
-        : hasLoom ? "Ton coach t'a envoyé une vidéo"
-        : 'Nouveau retour'
-      await notifyAthlete(ath.user_id, 'retour', notifTitle, notifBody, meta)
+      toast('Retour envoyé !', 'success')
+      reset()
+      onCreated?.()
+      onAfter?.()
+    } finally {
+      setSaving(false)
     }
-    toast('Retour envoyé !', 'success')
-    reset()
-    onCreated?.()
-    onAfter?.()
   }
 
   const recordingBusy = isRecording || isProcessing || isUploading
