@@ -1,0 +1,138 @@
+<h2>Coach — Onglet Test FODMAP par athlète</h2>
+<p class="subtitle">Nouvelle route <code>/athletes/[id]/fodmap</code> (parallèle à <code>/posing</code>). Vue desktop.</p>
+
+<div class="mockup">
+  <div class="mockup-header">💻 COACH · /athletes/&lt;id&gt;/fodmap</div>
+  <div class="mockup-body" style="padding:0;background:#0a0a0a">
+    <div style="background:#0f0f0f;color:#fff;padding:24px;font-family:-apple-system,sans-serif;max-width:880px;margin:0 auto">
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-bottom:14px;border-bottom:1px solid #222">
+        <div>
+          <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1.5px;font-weight:600">Apercu · Infos · Training · Nutrition · Bilans · Vidéos · Retours · Posing · <span style="color:#fff">FODMAP</span> · ...</div>
+          <h3 style="margin:8px 0 0;font-size:22px;font-weight:700">Test FODMAP</h3>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:13px;color:#5fc77a;font-weight:600">● Activé</span>
+          <div style="width:38px;height:22px;background:#B30808;border-radius:11px;position:relative">
+            <div style="position:absolute;right:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:9px"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:#1a1a1a;border:1px solid #222;border-radius:12px;padding:16px;margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:13px;color:#999">Progression</span>
+          <span style="font-size:13px;color:#fff;font-weight:600">3 / 8 groupes complétés</span>
+        </div>
+        <div style="background:#2a2a2a;height:8px;border-radius:4px;overflow:hidden">
+          <div style="background:#B30808;width:37.5%;height:100%"></div>
+        </div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,rgba(179,8,8,0.15),rgba(179,8,8,0.05));border:1px solid #B30808;border-radius:12px;padding:18px;margin-bottom:24px">
+        <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:14px">
+          <div>
+            <div style="font-size:11px;color:#B30808;text-transform:uppercase;letter-spacing:1.5px;font-weight:700;margin-bottom:4px">Semaine en cours · W18 (4-10 mai 2026)</div>
+            <div style="font-size:18px;font-weight:700">Fructanes (Légumes) · 🧄 Ail</div>
+          </div>
+          <button style="background:transparent;color:#aaa;border:1px solid #444;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer">↻ Ré-armer</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:12px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;font-weight:600">Lun 4 mai · 1/4 gousse</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <span style="font-size:18px">🟢</span>
+              <span style="font-size:13px;font-weight:600;color:#5fc77a">Aucun problème</span>
+            </div>
+            <div style="font-size:11px;color:#888;margin-top:6px;font-style:italic">"RAS, bien digéré"</div>
+          </div>
+          <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:12px;opacity:0.5">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;font-weight:600">Mer 6 mai · 1/2 gousse</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <span style="font-size:18px">⏳</span>
+              <span style="font-size:13px;color:#888">En attente</span>
+            </div>
+          </div>
+          <div style="background:#1a1a1a;border:1px solid #2a2a2a;border-radius:10px;padding:12px;opacity:0.5">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;font-weight:600">Ven 8 mai · 1 gousse</div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:8px">
+              <span style="font-size:18px">⏳</span>
+              <span style="font-size:13px;color:#888">En attente</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:12px">Historique des semaines complétées</div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+
+        <div style="background:#1a1a1a;border:1px solid #2a8a3a;border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+            <div>
+              <span style="font-size:14px;font-weight:700">✅ Lactose</span>
+              <span style="font-size:11px;color:#888;margin-left:8px">W15 · Lait</span>
+            </div>
+            <button style="background:transparent;color:#888;border:1px solid #333;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer">↻ Ré-armer</button>
+          </div>
+          <div style="display:flex;gap:8px;font-size:11px;color:#aaa">
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🟢 Lun · "Aucun pb"</span>
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🟢 Mer · ""</span>
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🟢 Ven · ""</span>
+          </div>
+        </div>
+
+        <div style="background:#1a1a1a;border:1px solid #8a8a2a;border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+            <div>
+              <span style="font-size:14px;font-weight:700">⚠️ Fructose</span>
+              <span style="font-size:11px;color:#888;margin-left:8px">W16 · Miel</span>
+            </div>
+            <button style="background:transparent;color:#888;border:1px solid #333;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer">↻ Ré-armer</button>
+          </div>
+          <div style="display:flex;gap:8px;font-size:11px;color:#aaa;flex-wrap:wrap">
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🟢 Lun · ""</span>
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🟡 Mer · "Léger ballonnement"</span>
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🔴 Ven · "Trop, mal au ventre"</span>
+          </div>
+        </div>
+
+        <div style="background:#1a1a1a;border:1px solid #8a2a2a;border-radius:10px;padding:14px">
+          <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px">
+            <div>
+              <span style="font-size:14px;font-weight:700">🚫 GOS</span>
+              <span style="font-size:11px;color:#888;margin-left:8px">W17 · Amandes · stoppé à la petite portion</span>
+            </div>
+            <button style="background:transparent;color:#888;border:1px solid #333;padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer">↻ Ré-armer</button>
+          </div>
+          <div style="display:flex;gap:8px;font-size:11px;color:#aaa">
+            <span style="background:#222;padding:4px 8px;border-radius:6px">🔴 Lun · "Très mal au ventre direct"</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="font-size:12px;color:#888;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:10px">Pas encore testé · 4 groupes</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span style="background:#1a1a1a;border:1px dashed #333;padding:8px 12px;border-radius:8px;font-size:12px;color:#888">Fructanes (Fruits)</span>
+        <span style="background:#1a1a1a;border:1px dashed #333;padding:8px 12px;border-radius:8px;font-size:12px;color:#888">Fructanes (Pains)</span>
+        <span style="background:#1a1a1a;border:1px dashed #333;padding:8px 12px;border-radius:8px;font-size:12px;color:#888">Polyols (sorbitol)</span>
+        <span style="background:#1a1a1a;border:1px dashed #333;padding:8px 12px;border-radius:8px;font-size:12px;color:#888">Polyols (mannitol)</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;font-size:14px;line-height:1.6">
+  <p><strong>Layout coach :</strong></p>
+  <ol style="padding-left:20px;color:#bbb">
+    <li>Header avec breadcrumb tabs + toggle Activé/Désactivé (mirror posing)</li>
+    <li>Barre de progression X/8</li>
+    <li><strong>Carte semaine en cours</strong> (rouge) : groupe + aliment, 3 colonnes Lun/Mer/Ven avec rating + note (en attente si pas loggé), bouton "Ré-armer"</li>
+    <li><strong>Historique</strong> : 1 card par groupe complété, codée couleur (vert ✅ / jaune ⚠️ / rouge 🚫), affiche les 3 ratings inline + notes, bouton "Ré-armer" par card</li>
+    <li><strong>Pas encore testé</strong> : tags des groupes restants</li>
+  </ol>
+  <p style="color:#888"><strong>Re-armer (confirmation modale)</strong> : marque <code>archived_at = now()</code> sur les rows de cette semaine. Athlète peut redémarrer le groupe lundi prochain. Audit conservé.</p>
+</div>
