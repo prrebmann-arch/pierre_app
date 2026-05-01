@@ -208,6 +208,7 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
         athleteId,
         preAcquiredCamStream: camHandoff,
         mode: modeAtStart,
+        executionVideoId: videoId,
       })
       onAfter?.()
     } catch (err) {
@@ -248,6 +249,10 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
         loom_url: hasLoom ? loomUrl.trim() : null,
         audio_url: hasAudio ? audio.audioUrl : null,
         type,
+        // Link to the originating exercise video so the athlete's Guide tab
+        // (in ExerciseDetailScreen) can surface this retour while practicing
+        // the same exercise.
+        execution_video_id: videoId || null,
       })
       if (error) { toast("Erreur lors de l'envoi", 'error'); return }
 

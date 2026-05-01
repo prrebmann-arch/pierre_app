@@ -24,6 +24,8 @@ interface SaveBody {
   mimeType?: string
   titre?: string
   commentaire?: string | null
+  /** Optional execution_videos.id when triggered from a video page. */
+  executionVideoId?: string | null
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -44,12 +46,15 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { retourId, athleteId, videoPath, thumbnailPath, durationS, width, height, mimeType, titre, commentaire } = body
+  const { retourId, athleteId, videoPath, thumbnailPath, durationS, width, height, mimeType, titre, commentaire, executionVideoId } = body
   if (!retourId || !athleteId || !videoPath || !thumbnailPath || !mimeType || !titre) {
     return Response.json({ error: 'Missing required fields' }, { status: 400 })
   }
   if (!UUID_RE.test(retourId) || !UUID_RE.test(athleteId)) {
     return Response.json({ error: 'Invalid UUID format' }, { status: 400 })
+  }
+  if (executionVideoId && !UUID_RE.test(executionVideoId)) {
+    return Response.json({ error: 'Invalid executionVideoId format' }, { status: 400 })
   }
 
   // Path validation: must be under the caller's coach folder
@@ -98,6 +103,21 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Uploaded files not found in storage' }, { status: 400 })
   }
 
+  // If linking to an execution_video, verify it belongs to the same athlete
+  // (defends against cross-athlete linking via a stolen video id).
+  let safeExecutionVideoId: string | null = null
+  if (executionVideoId) {
+    const { data: vid } = await supabase
+      .from('execution_videos')
+      .select('id')
+      .eq('id', executionVideoId)
+      .eq('athlete_id', athleteId)
+      .maybeSingle()
+    if (vid) safeExecutionVideoId = executionVideoId
+    // If the video doesn't belong to this athlete, drop the link silently
+    // rather than failing the whole insert.
+  }
+
   // Insert bilan_retours row
   const { data: inserted, error: insErr } = await supabase
     .from('bilan_retours')
@@ -113,6 +133,7 @@ export async function POST(request: Request) {
       width: width ?? null,
       height: height ?? null,
       mime_type: mimeType,
+      execution_video_id: safeExecutionVideoId,
     })
     .select()
     .single()

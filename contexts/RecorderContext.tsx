@@ -55,6 +55,8 @@ export interface PendingRecording {
   athleteId: string
   videoPath: string
   thumbnailPath: string
+  /** Optional execution_videos.id when recorded from a video page. */
+  executionVideoId?: string
 }
 
 interface FinalizeArgs {
@@ -97,6 +99,10 @@ interface RecorderContextValue {
     bubblePosition?: { xPct: number; yPct: number } | null
     /** 'screen' (default) = screen capture + optional cam bubble; 'selfie' = portrait cam only */
     mode?: 'screen' | 'selfie'
+    /** Optional execution_videos.id when triggered from a specific exercise
+     *  video page. Stored on the resulting bilan_retours row so the
+     *  athlete's Guide tab can surface the retour. */
+    executionVideoId?: string
   }) => Promise<void>
   stopRecording: () => Promise<void>
   cancelRecording: () => void
@@ -123,6 +129,10 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [athleteIdForNext, setAthleteIdForNext] = useState<string | null>(null)
+  // Carry the originating execution_videos.id (if recording started from a
+  // video detail page) through the async stop / finalize chain so the
+  // resulting bilan_retours row can link to it.
+  const [executionVideoIdForNext, setExecutionVideoIdForNext] = useState<string | null>(null)
   const cancelledRef = useRef(false)
   const progressTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -161,9 +171,11 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     camDeviceId?: string
     bubblePosition?: { xPct: number; yPct: number } | null
     mode?: 'screen' | 'selfie'
+    executionVideoId?: string
   }) => {
     cancelledRef.current = false
     setAthleteIdForNext(opts.athleteId)
+    setExecutionVideoIdForNext(opts.executionVideoId ?? null)
     await recorder.startRecording({
       withWebcam: opts.withWebcam,
       preAcquiredCamStream: opts.preAcquiredCamStream,
@@ -218,9 +230,10 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
       athleteId: athleteIdForNext ?? '',
       videoPath,
       thumbnailPath,
+      executionVideoId: executionVideoIdForNext ?? undefined,
     })
     setIsProcessing(false)
-  }, [recorder, user, toast, athleteIdForNext])
+  }, [recorder, user, toast, athleteIdForNext, executionVideoIdForNext])
 
   const cancelRecording = useCallback(() => {
     cancelledRef.current = true
@@ -228,11 +241,13 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
     setIsProcessing(false)
     setPending(null)
     setAthleteIdForNext(null)
+    setExecutionVideoIdForNext(null)
   }, [recorder])
 
   const discardPending = useCallback(() => {
     setPending(null)
     setAthleteIdForNext(null)
+    setExecutionVideoIdForNext(null)
   }, [])
 
   // Auto-pickup: if recorder stopped without user clicking Stop (browser-end or hard-cap),
@@ -292,6 +307,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
           mimeType: pending.mimeType,
           titre,
           commentaire: commentaire || null,
+          executionVideoId: pending.executionVideoId || null,
         }),
       })
 
@@ -304,6 +320,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
       toast('Retour vidéo envoyé !', 'success')
       setPending(null)
       setAthleteIdForNext(null)
+      setExecutionVideoIdForNext(null)
     } catch (err) {
       console.error('[recorder] finalize failed:', err)
       toast(err instanceof Error ? err.message : 'Erreur envoi retour', 'error')
