@@ -32,9 +32,20 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
-  const { data: signed, error } = await admin.storage
-    .from('coach-bloodtest')
-    .createSignedUrl(row.file_path, 3600)
-  if (error || !signed?.signedUrl) return NextResponse.json({ error: 'sign failed' }, { status: 500 })
-  return NextResponse.json({ url: signed.signedUrl })
+  const paths: string[] = (row.file_path || '').split('|').filter((p: string) => p.length > 0)
+  if (paths.length === 0) return NextResponse.json({ error: 'no file_path' }, { status: 500 })
+
+  const urls: { path: string; url: string; mediaType: string }[] = []
+  for (const p of paths) {
+    const { data: signed, error } = await admin.storage
+      .from('coach-bloodtest')
+      .createSignedUrl(p, 3600)
+    if (error || !signed?.signedUrl) return NextResponse.json({ error: `sign failed for ${p}` }, { status: 500 })
+    const ext = (p.split('.').pop() || '').toLowerCase()
+    const mediaType = ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : 'image/jpeg'
+    urls.push({ path: p, url: signed.signedUrl, mediaType })
+  }
+
+  // Backward compat : keep single `url` field for first file.
+  return NextResponse.json({ url: urls[0].url, urls })
 }

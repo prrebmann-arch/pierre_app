@@ -16,8 +16,9 @@ export default function BloodtestValidatePage() {
   const { toast } = useToast()
   const supabase = createClient()
 
+  type SignedFile = { path: string; url: string; mediaType: string }
   const [upload, setUpload] = useState<BloodtestUploadRow | null>(null)
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [signedFiles, setSignedFiles] = useState<SignedFile[]>([])
   const [editedMarkers, setEditedMarkers] = useState<ExtractedMarker[]>([])
   const [datedAt, setDatedAt] = useState('')
   const [saving, setSaving] = useState(false)
@@ -33,7 +34,12 @@ export default function BloodtestValidatePage() {
       ])
       if (!row) { toast('Upload introuvable', 'error'); return }
       setUpload(row as BloodtestUploadRow)
-      setPdfUrl(urlRes.url)
+      const files: SignedFile[] = Array.isArray(urlRes.urls) && urlRes.urls.length > 0
+        ? urlRes.urls
+        : urlRes.url
+          ? [{ path: '', url: urlRes.url, mediaType: 'application/pdf' }]
+          : []
+      setSignedFiles(files)
       const data = (row.validated_data || row.extracted_data) as ExtractedData | null
       setEditedMarkers(data?.markers || [])
       setDatedAt(row.dated_at || (data?.detected_dated_at || ''))
@@ -70,7 +76,7 @@ export default function BloodtestValidatePage() {
   }
 
   async function rejectUpload() {
-    if (!confirm('Rejeter ce PDF ?')) return
+    if (!confirm('Rejeter ce bilan ?')) return
     const { error } = await supabase.from('bloodtest_uploads').update({ archived_at: new Date().toISOString() }).eq('id', params.upload_id)
     if (error) { toast(`Erreur: ${error.message}`, 'error'); return }
     toast('Rejeté', 'success')
@@ -87,13 +93,21 @@ export default function BloodtestValidatePage() {
       <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
         <button className="btn btn-outline btn-sm" onClick={() => router.back()}><i className="fas fa-arrow-left" /> Retour</button>
         <h2 style={{ fontSize: 18, fontWeight: 700 }}>Valider le bilan</h2>
+        <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 'auto' }}>{signedFiles.length} fichier{signedFiles.length > 1 ? 's' : ''}</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(360px, 480px)', gap: 16, alignItems: 'start' }}>
-        <div>
-          {pdfUrl ? (
-            <iframe src={pdfUrl} style={{ width: '100%', height: '80vh', border: '1px solid var(--border)', borderRadius: 8 }} title="PDF" />
-          ) : <div>Chargement PDF...</div>}
+        <div style={{ maxHeight: '85vh', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8, padding: 8, background: 'var(--bg2)', borderRadius: 8 }}>
+          {signedFiles.length === 0 && <div style={{ color: 'var(--text3)' }}>Chargement des fichiers...</div>}
+          {signedFiles.map((f, i) => (
+            f.mediaType === 'application/pdf' ? (
+              <iframe key={i} src={f.url} style={{ width: '100%', height: '80vh', border: '1px solid var(--border)', borderRadius: 6 }} title={`PDF ${i + 1}`} />
+            ) : (
+              <a key={i} href={f.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block' }}>
+                <img src={f.url} alt={`Screenshot ${i + 1}`} style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border)', display: 'block' }} />
+              </a>
+            )
+          ))}
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -123,7 +137,7 @@ export default function BloodtestValidatePage() {
           </div>
 
           <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-outline" onClick={rejectUpload}>Rejeter le PDF</button>
+            <button className="btn btn-outline" onClick={rejectUpload}>Rejeter le bilan</button>
             <button className="btn btn-red" onClick={submit} disabled={saving} style={{ flex: 1 }}>{saving ? 'Validation...' : 'Valider et publier'}</button>
           </div>
         </div>
