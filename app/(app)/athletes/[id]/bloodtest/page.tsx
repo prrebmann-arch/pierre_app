@@ -131,7 +131,24 @@ export default function BloodtestPage() {
   }
 
   const pendingValidation = uploads.filter((u) => u.extracted_data && !u.validated_at)
+  const pendingExtraction = uploads.filter((u) => !u.extracted_data && !u.validated_at)
   const validated = uploads.filter((u) => u.validated_at)
+
+  async function triggerExtract(uploadId: string) {
+    const res = await fetch('/api/bloodtest/extract', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ upload_id: uploadId }),
+    })
+    const json = await res.json()
+    if (!res.ok) {
+      console.error('[bloodtest] extract', json)
+      toast(`Erreur extraction: ${json.error || 'unknown'}`, 'error')
+      return
+    }
+    toast('Extraction terminée', 'success')
+    loadData()
+  }
   const allMarkers = [...MARKERS, ...customMarkers.map((cm) => ({
     key: cm.marker_key, label: cm.label, unit_canonical: cm.unit_canonical, unit_aliases: [],
     category: cm.category as any, zones: cm.zones, presets: [] as BloodtestPreset[],
@@ -167,9 +184,31 @@ export default function BloodtestPage() {
         </div>
       </div>
 
-      {pendingValidation.length > 0 && (
+      {pendingExtraction.length > 0 && (
         <>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 10 }}>
+            <i className="fas fa-cog" style={{ color: 'var(--text3)', marginRight: 6 }} />En attente d'extraction ({pendingExtraction.length})
+          </h3>
+          {pendingExtraction.map((u) => {
+            const fileCount = (u.file_path || '').split('|').filter((p: string) => p).length
+            return (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 12, background: 'var(--bg2)', borderLeft: '3px solid var(--text3)', borderRadius: 8, marginBottom: 8, gap: 8, flexWrap: 'wrap' }}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>Upload {u.uploaded_by} · {new Date(u.uploaded_at).toLocaleDateString('fr-FR')}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)' }}>{fileCount} fichier{fileCount > 1 ? 's' : ''} · pas encore analysé{fileCount > 1 ? 's' : ''}</div>
+                </div>
+                <button className="btn btn-red btn-sm" onClick={() => triggerExtract(u.id)}>
+                  <i className="fas fa-play" /> Lancer extraction
+                </button>
+              </div>
+            )
+          })}
+        </>
+      )}
+
+      {pendingValidation.length > 0 && (
+        <>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 10, marginTop: 16 }}>
             <i className="fas fa-hourglass-half" style={{ color: 'var(--warning)', marginRight: 6 }} />À valider ({pendingValidation.length})
           </h3>
           {pendingValidation.map((u) => (
