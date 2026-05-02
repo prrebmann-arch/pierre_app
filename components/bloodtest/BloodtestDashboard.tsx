@@ -65,6 +65,35 @@ export default function BloodtestDashboard({
     return m
   }, [allMarkers])
 
+  // Synthetic markers for keys not in catalog (AI-invented keys, legacy data) — built from first sighting in validated_data
+  const orphanMarkers = useMemo(() => {
+    const map = new Map<string, BloodtestMarker>()
+    for (const up of uploads) {
+      const data = up.validated_data as ExtractedData | null
+      if (!data?.markers) continue
+      for (const m of data.markers) {
+        if (!m.marker_key || markerByKey.has(m.marker_key) || map.has(m.marker_key)) continue
+        const label = m.raw_label || m.marker_key
+        map.set(m.marker_key, {
+          key: m.marker_key,
+          label,
+          unit_canonical: m.unit_canonical || m.unit || '',
+          unit_aliases: [],
+          category: 'metabolism',
+          presets: [],
+          zones: { direction: 'range_is_normal', bands: [] },
+        })
+      }
+    }
+    return map
+  }, [uploads, markerByKey])
+
+  const fullMarkerByKey = useMemo(() => {
+    const m = new Map(markerByKey)
+    for (const [k, v] of orphanMarkers) m.set(k, v)
+    return m
+  }, [markerByKey, orphanMarkers])
+
   const seriesByKey = useMemo(() => {
     const map = new Map<string, ValidatedPoint[]>()
     const sortedUps = [...uploads].sort((a, b) => {
@@ -105,20 +134,20 @@ export default function BloodtestDashboard({
   const displayedKeys = useMemo(() => {
     const set = new Set<string>(tracked)
     for (const [key] of seriesByKey) set.add(key)
-    return Array.from(set).filter((k) => markerByKey.has(k))
-  }, [seriesByKey, tracked, markerByKey])
+    return Array.from(set).filter((k) => fullMarkerByKey.has(k))
+  }, [seriesByKey, tracked, fullMarkerByKey])
 
   const grouped = useMemo(() => {
     const map = new Map<BloodtestCategory, string[]>()
     for (const key of displayedKeys) {
-      const m = markerByKey.get(key)
+      const m = fullMarkerByKey.get(key)
       if (!m) continue
       const arr = map.get(m.category) || []
       arr.push(key)
       map.set(m.category, arr)
     }
     return map
-  }, [displayedKeys, markerByKey])
+  }, [displayedKeys, fullMarkerByKey])
 
   const categoryScores = useMemo(() => {
     const scores = new Map<BloodtestCategory, { optimal: number; outOfRange: number; total: number }>()
@@ -216,7 +245,7 @@ export default function BloodtestDashboard({
       {tab === 'snapshot' && (
         <SnapshotView
           grouped={grouped}
-          markerByKey={markerByKey}
+          markerByKey={fullMarkerByKey}
           seriesByKey={seriesByKey}
           tracked={tracked}
           categoryScores={categoryScores}
@@ -229,7 +258,7 @@ export default function BloodtestDashboard({
       {tab === 'trends' && (
         <TrendsView
           grouped={grouped}
-          markerByKey={markerByKey}
+          markerByKey={fullMarkerByKey}
           seriesByKey={seriesByKey}
           athleteSex={athleteSex}
           filterCat={filterCat}
@@ -241,9 +270,9 @@ export default function BloodtestDashboard({
       )}
 
       {/* Marker detail modal */}
-      {detailMarker && markerByKey.get(detailMarker) && (
+      {detailMarker && fullMarkerByKey.get(detailMarker) && (
         <MarkerDetailModal
-          marker={markerByKey.get(detailMarker)!}
+          marker={fullMarkerByKey.get(detailMarker)!}
           series={seriesByKey.get(detailMarker) || []}
           athleteSex={athleteSex}
           onClose={() => setDetailMarker(null)}

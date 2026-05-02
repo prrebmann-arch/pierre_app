@@ -898,6 +898,496 @@ export const MARKERS: BloodtestMarker[] = [
     },
     notes: 'Bas < 20% = carence martiale probable. Haut > 40% = surcharge en fer possible (hémochromatose).',
   },
+
+  // ==================== Hémogramme étendu (CBC) ====================
+  {
+    key: 'hematocrite',
+    label: 'Hématocrite',
+    unit_canonical: '%',
+    unit_aliases: [],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      sex_specific: {
+        male: {
+          direction: 'range_is_normal',
+          bands: [
+            { label: 'bas', severity: 3, max: 40 },
+            { label: 'normal', severity: 1, min: 40, max: 50 },
+            { label: 'haut', severity: 3, min: 50 },
+          ],
+        },
+        female: {
+          direction: 'range_is_normal',
+          bands: [
+            { label: 'bas', severity: 3, max: 36 },
+            { label: 'normal', severity: 1, min: 36, max: 46 },
+            { label: 'haut', severity: 3, min: 46 },
+          ],
+        },
+      },
+    },
+  },
+  {
+    key: 'vgm',
+    label: 'VGM (volume globulaire moyen)',
+    unit_canonical: 'fl',
+    unit_aliases: ['µm³', 'fL'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'microcytose', severity: 3, max: 80 },
+        { label: 'normal', severity: 1, min: 80, max: 100 },
+        { label: 'macrocytose', severity: 3, min: 100 },
+      ],
+    },
+  },
+  {
+    key: 'tcmh',
+    label: 'TCMH (teneur corpusculaire moyenne en Hb)',
+    unit_canonical: 'pg',
+    unit_aliases: [],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'bas', severity: 3, max: 27 },
+        { label: 'normal', severity: 1, min: 27, max: 33 },
+        { label: 'haut', severity: 3, min: 33 },
+      ],
+    },
+  },
+  {
+    key: 'ccmh',
+    label: 'CCMH (concentration corpusculaire moyenne en Hb)',
+    unit_canonical: 'g/dL',
+    unit_aliases: ['g/dl'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'bas', severity: 3, max: 32 },
+        { label: 'normal', severity: 1, min: 32, max: 36 },
+        { label: 'haut', severity: 3, min: 36 },
+      ],
+    },
+  },
+  {
+    key: 'idr',
+    label: 'IDR (indice de distribution érythrocytaire)',
+    unit_canonical: '%',
+    unit_aliases: ['RDW'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'normal', severity: 1, max: 15 },
+        { label: 'haut', severity: 3, min: 15 },
+      ],
+    },
+  },
+  {
+    key: 'leucocytes',
+    label: 'Leucocytes (globules blancs)',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l', '10^9/L', '/mm³'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'leucopénie', severity: 3, max: 4 },
+        { label: 'normal', severity: 1, min: 4, max: 11 },
+        { label: 'leucocytose', severity: 3, min: 11 },
+      ],
+    },
+  },
+  {
+    key: 'neutrophiles',
+    label: 'Polynucléaires neutrophiles',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'bas', severity: 3, max: 1.8 },
+        { label: 'normal', severity: 1, min: 1.8, max: 7 },
+        { label: 'haut', severity: 3, min: 7 },
+      ],
+    },
+  },
+  {
+    key: 'eosinophiles',
+    label: 'Polynucléaires éosinophiles',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'normal', severity: 1, max: 0.5 },
+        { label: 'éosinophilie', severity: 3, min: 0.5 },
+      ],
+    },
+  },
+  {
+    key: 'basophiles',
+    label: 'Polynucléaires basophiles',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'normal', severity: 1, max: 0.2 },
+        { label: 'haut', severity: 3, min: 0.2 },
+      ],
+    },
+  },
+  {
+    key: 'lymphocytes',
+    label: 'Lymphocytes',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'lymphopénie', severity: 3, max: 1 },
+        { label: 'normal', severity: 1, min: 1, max: 4 },
+        { label: 'lymphocytose', severity: 3, min: 4 },
+      ],
+    },
+  },
+  {
+    key: 'monocytes',
+    label: 'Monocytes',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'bas', severity: 2, max: 0.2 },
+        { label: 'normal', severity: 1, min: 0.2, max: 1 },
+        { label: 'monocytose', severity: 3, min: 1 },
+      ],
+    },
+  },
+  {
+    key: 'plaquettes',
+    label: 'Plaquettes',
+    unit_canonical: 'G/L',
+    unit_aliases: ['G/l', '10^9/L'],
+    category: 'hema',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'thrombopénie', severity: 3, max: 150 },
+        { label: 'normal', severity: 1, min: 150, max: 400 },
+        { label: 'thrombocytose', severity: 3, min: 400 },
+      ],
+    },
+  },
+
+  // ==================== Métabolisme glucidique ====================
+  {
+    key: 'glycemie',
+    label: 'Glycémie à jeun',
+    unit_canonical: 'g/L',
+    unit_aliases: ['g/l', 'mmol/L', 'mmol/l'],
+    category: 'metabolism',
+    presets: ['basic', 'hormonal_plus', 'total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'hypoglycémie', severity: 3, max: 0.7 },
+        { label: 'optimal', severity: 1, min: 0.7, max: 1 },
+        { label: 'pré-diabète', severity: 2, min: 1, max: 1.26 },
+        { label: 'diabète', severity: 4, min: 1.26 },
+      ],
+    },
+  },
+
+  // ==================== Bilan lipidique ====================
+  {
+    key: 'cholesterol_total',
+    label: 'Cholestérol total',
+    unit_canonical: 'g/L',
+    unit_aliases: ['g/l', 'mmol/L'],
+    category: 'lipid',
+    presets: ['basic', 'hormonal_plus', 'total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'optimal', severity: 1, max: 2 },
+        { label: 'limite', severity: 2, min: 2, max: 2.4 },
+        { label: 'haut', severity: 3, min: 2.4 },
+      ],
+    },
+  },
+  {
+    key: 'hdl',
+    label: 'HDL Cholestérol',
+    unit_canonical: 'g/L',
+    unit_aliases: ['g/l'],
+    category: 'lipid',
+    presets: ['basic', 'hormonal_plus', 'total'],
+    zones: {
+      sex_specific: {
+        male: {
+          direction: 'higher_is_better',
+          bands: [
+            { label: 'bas', severity: 3, max: 0.4 },
+            { label: 'normal', severity: 2, min: 0.4, max: 0.6 },
+            { label: 'optimal', severity: 1, min: 0.6 },
+          ],
+        },
+        female: {
+          direction: 'higher_is_better',
+          bands: [
+            { label: 'bas', severity: 3, max: 0.5 },
+            { label: 'normal', severity: 2, min: 0.5, max: 0.7 },
+            { label: 'optimal', severity: 1, min: 0.7 },
+          ],
+        },
+      },
+    },
+  },
+  {
+    key: 'ldl',
+    label: 'LDL Cholestérol',
+    unit_canonical: 'g/L',
+    unit_aliases: ['g/l'],
+    category: 'lipid',
+    presets: ['basic', 'hormonal_plus', 'total'],
+    zones: {
+      direction: 'lower_is_better',
+      bands: [
+        { label: 'optimal', severity: 1, max: 1 },
+        { label: 'limite', severity: 2, min: 1, max: 1.6 },
+        { label: 'haut', severity: 3, min: 1.6 },
+      ],
+    },
+  },
+  {
+    key: 'non_hdl',
+    label: 'NON-HDL Cholestérol',
+    unit_canonical: 'g/L',
+    unit_aliases: ['g/l'],
+    category: 'lipid',
+    presets: ['total'],
+    zones: {
+      direction: 'lower_is_better',
+      bands: [
+        { label: 'optimal', severity: 1, max: 1.3 },
+        { label: 'limite', severity: 2, min: 1.3, max: 1.9 },
+        { label: 'haut', severity: 3, min: 1.9 },
+      ],
+    },
+  },
+  {
+    key: 'triglycerides',
+    label: 'Triglycérides',
+    unit_canonical: 'g/L',
+    unit_aliases: ['g/l'],
+    category: 'lipid',
+    presets: ['basic', 'hormonal_plus', 'total'],
+    zones: {
+      direction: 'lower_is_better',
+      bands: [
+        { label: 'optimal', severity: 1, max: 1.5 },
+        { label: 'limite', severity: 2, min: 1.5, max: 2 },
+        { label: 'haut', severity: 3, min: 2 },
+      ],
+    },
+  },
+
+  // ==================== Fonction rénale ====================
+  {
+    key: 'creatinine',
+    label: 'Créatinine',
+    unit_canonical: 'mg/L',
+    unit_aliases: ['mg/l', 'µmol/L', 'umol/l'],
+    category: 'metabolism',
+    presets: ['total'],
+    zones: {
+      sex_specific: {
+        male: {
+          direction: 'range_is_normal',
+          bands: [
+            { label: 'bas', severity: 2, max: 7 },
+            { label: 'normal', severity: 1, min: 7, max: 12 },
+            { label: 'haut', severity: 3, min: 12 },
+          ],
+        },
+        female: {
+          direction: 'range_is_normal',
+          bands: [
+            { label: 'bas', severity: 2, max: 5.5 },
+            { label: 'normal', severity: 1, min: 5.5, max: 10 },
+            { label: 'haut', severity: 3, min: 10 },
+          ],
+        },
+      },
+    },
+  },
+  {
+    key: 'dfg',
+    label: 'DFG (débit de filtration glomérulaire)',
+    unit_canonical: 'mL/min/1.73m²',
+    unit_aliases: ['ml/min/1.73m2', 'mL/min'],
+    category: 'metabolism',
+    presets: ['total'],
+    zones: {
+      direction: 'higher_is_better',
+      bands: [
+        { label: 'sévère', severity: 4, max: 30 },
+        { label: 'modérée', severity: 3, min: 30, max: 60 },
+        { label: 'légère', severity: 2, min: 60, max: 90 },
+        { label: 'normal', severity: 1, min: 90 },
+      ],
+    },
+  },
+
+  // ==================== Ionogramme ====================
+  {
+    key: 'sodium',
+    label: 'Sodium (natrémie)',
+    unit_canonical: 'mmol/L',
+    unit_aliases: ['mmol/l', 'mEq/L'],
+    category: 'mineral',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'hyponatrémie', severity: 3, max: 135 },
+        { label: 'normal', severity: 1, min: 135, max: 145 },
+        { label: 'hypernatrémie', severity: 3, min: 145 },
+      ],
+    },
+  },
+  {
+    key: 'potassium',
+    label: 'Potassium (kaliémie)',
+    unit_canonical: 'mmol/L',
+    unit_aliases: ['mmol/l', 'mEq/L'],
+    category: 'mineral',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'hypokaliémie', severity: 3, max: 3.5 },
+        { label: 'normal', severity: 1, min: 3.5, max: 5 },
+        { label: 'hyperkaliémie', severity: 3, min: 5 },
+      ],
+    },
+  },
+
+  // ==================== Bilan hépatique ====================
+  {
+    key: 'asat',
+    label: 'ASAT (transaminase GOT)',
+    unit_canonical: 'U/L',
+    unit_aliases: ['U/l', 'UI/L', 'IU/L'],
+    category: 'liver',
+    presets: ['total'],
+    zones: {
+      direction: 'lower_is_better',
+      bands: [
+        { label: 'normal', severity: 1, max: 50 },
+        { label: 'élevé', severity: 3, min: 50 },
+      ],
+    },
+  },
+  {
+    key: 'alat',
+    label: 'ALAT (transaminase GPT)',
+    unit_canonical: 'U/L',
+    unit_aliases: ['U/l', 'UI/L', 'IU/L'],
+    category: 'liver',
+    presets: ['total'],
+    zones: {
+      direction: 'lower_is_better',
+      bands: [
+        { label: 'normal', severity: 1, max: 50 },
+        { label: 'élevé', severity: 3, min: 50 },
+      ],
+    },
+  },
+  {
+    key: 'gamma_gt',
+    label: 'Gamma GT',
+    unit_canonical: 'U/L',
+    unit_aliases: ['U/l', 'UI/L'],
+    category: 'liver',
+    presets: ['total'],
+    zones: {
+      sex_specific: {
+        male: {
+          direction: 'lower_is_better',
+          bands: [
+            { label: 'normal', severity: 1, max: 55 },
+            { label: 'élevé', severity: 3, min: 55 },
+          ],
+        },
+        female: {
+          direction: 'lower_is_better',
+          bands: [
+            { label: 'normal', severity: 1, max: 38 },
+            { label: 'élevé', severity: 3, min: 38 },
+          ],
+        },
+      },
+    },
+  },
+  {
+    key: 'phosphatase_alcaline',
+    label: 'Phosphatase alcaline',
+    unit_canonical: 'U/L',
+    unit_aliases: ['U/l', 'UI/L'],
+    category: 'liver',
+    presets: ['total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'bas', severity: 2, max: 40 },
+        { label: 'normal', severity: 1, min: 40, max: 130 },
+        { label: 'haut', severity: 3, min: 130 },
+      ],
+    },
+  },
+
+  // ==================== Cortisol ====================
+  {
+    key: 'cortisol_matin',
+    label: 'Cortisol matinal',
+    unit_canonical: 'nmol/L',
+    unit_aliases: ['nmol/l', 'µg/dL', 'ng/mL'],
+    category: 'metabolism',
+    presets: ['hormonal_plus', 'total'],
+    zones: {
+      direction: 'range_is_normal',
+      bands: [
+        { label: 'bas', severity: 3, max: 170 },
+        { label: 'normal', severity: 1, min: 170, max: 540 },
+        { label: 'haut', severity: 3, min: 540 },
+      ],
+    },
+    notes: 'Prélèvement matinal entre 7h et 9h.',
+  },
 ]
 
 export const PRESETS: Record<BloodtestPreset, string[]> = {
