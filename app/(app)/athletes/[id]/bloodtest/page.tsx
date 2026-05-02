@@ -283,8 +283,10 @@ function BloodtestHistoryGraphs({ uploads, tracked, allMarkers }: { uploads: Blo
       const date = up.dated_at || up.uploaded_at.slice(0, 10)
       for (const m of data.markers) {
         if (!m.marker_key || m.value == null || m.ignored) continue
+        // Préférer la valeur canonique si disponible
+        const v = m.value_canonical ?? m.value
         const arr = map.get(m.marker_key) || []
-        arr.push({ date, value: m.value })
+        arr.push({ date, value: v })
         map.set(m.marker_key, arr)
       }
     }
@@ -292,12 +294,19 @@ function BloodtestHistoryGraphs({ uploads, tracked, allMarkers }: { uploads: Blo
     return map
   }, [uploads])
 
+  const keysToGraph = useMemo(() => {
+    const all = new Set<string>(tracked)
+    for (const [key] of perMarker) all.add(key)
+    return Array.from(all)
+  }, [perMarker, tracked])
+
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
-      {tracked.map((key) => {
+      {keysToGraph.map((key) => {
         const marker = allMarkers.find((m) => m.key === key)
         if (!marker) return null
         const series = perMarker.get(key) || []
+        const isExtra = !tracked.includes(key)
         const W = 240, H = 50
         let pts = ''
         if (series.length >= 2) {
@@ -307,8 +316,11 @@ function BloodtestHistoryGraphs({ uploads, tracked, allMarkers }: { uploads: Blo
         }
         const last = series[series.length - 1]
         return (
-          <div key={key} style={{ padding: 12, background: 'var(--bg2)', borderRadius: 10 }}>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>{marker.label}</div>
+          <div key={key} style={{ padding: 12, background: 'var(--bg2)', borderRadius: 10, border: isExtra ? '1px dashed var(--border)' : 'none' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{marker.label}</div>
+              {isExtra && <span style={{ fontSize: 9, padding: '1px 5px', background: 'var(--bg3)', borderRadius: 3, color: 'var(--text3)' }}>EXTRA</span>}
+            </div>
             <div style={{ fontSize: 11, color: 'var(--text3)' }}>{marker.unit_canonical} · {series.length} valeur(s)</div>
             {series.length === 0 && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>Aucune donnée</div>}
             {series.length === 1 && <div style={{ fontSize: 24, fontWeight: 700, marginTop: 6 }}>{last.value}</div>}
