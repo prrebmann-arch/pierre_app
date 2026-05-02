@@ -375,6 +375,30 @@ export default function ProfilePage() {
         <i className="fas fa-user-cog" /> Profil & Parametres
       </h1>
 
+      {/* Quick links */}
+      <Card title="Outils" className={styles.section}>
+        <div className={styles.cardBody}>
+          <a
+            href="/profile/marqueurs-sanguins"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px', textDecoration: 'none',
+              background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 10,
+              color: 'var(--text)',
+            }}
+          >
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <i className="fas fa-flask-vial" style={{ color: '#ef4444', fontSize: 14 }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>Plages cliniques bloodtest</div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>Personnalise les zones optimal/limite/hors zone par marqueur</div>
+            </div>
+            <i className="fas fa-chevron-right" style={{ color: 'var(--text3)', fontSize: 11 }} />
+          </a>
+        </div>
+      </Card>
+
       {/* Personal Info */}
       <Card
         title="Informations personnelles"

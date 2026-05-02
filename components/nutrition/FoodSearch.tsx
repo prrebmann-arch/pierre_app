@@ -61,19 +61,22 @@ export default function FoodSearch({ onSelect, refreshKey }: FoodSearchProps) {
       setOffLoading(true)
       offTimerRef.current = setTimeout(async () => {
         try {
-          const url = `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=20&fields=product_name,nutriments,brands&lc=fr&cc=fr`
-          const resp = await fetch(url)
+          const url = `https://search.openfoodfacts.org/search?q=${encodeURIComponent(query)}&page_size=20&langs=fr&fields=product_name,nutriments,brands,code`
+          const resp = await fetch(url, { headers: { 'User-Agent': 'MOMENTUM-Coach/1.0 (web)', Accept: 'application/json' } })
           const data = await resp.json()
-          const results: Aliment[] = (data.products || [])
+          const results: Aliment[] = (data.hits || [])
             .filter((p: any) => p.product_name && p.nutriments?.['energy-kcal_100g'] != null)
-            .map((p: any) => ({
-              nom: p.product_name + (p.brands ? ` — ${p.brands}` : ''),
-              calories: Math.round(p.nutriments['energy-kcal_100g'] || 0),
-              proteines: Math.round(p.nutriments['proteins_100g'] || 0),
-              glucides: Math.round(p.nutriments['carbohydrates_100g'] || 0),
-              lipides: Math.round(p.nutriments['fat_100g'] || 0),
-              source: 'openfoodfacts' as const,
-            }))
+            .map((p: any) => {
+              const brand = Array.isArray(p.brands) ? p.brands[0] : (p.brands || '')
+              return {
+                nom: p.product_name + (brand ? ` — ${brand}` : ''),
+                calories: Math.round(p.nutriments['energy-kcal_100g'] || 0),
+                proteines: Math.round(p.nutriments['proteins_100g'] || 0),
+                glucides: Math.round(p.nutriments['carbohydrates_100g'] || 0),
+                lipides: Math.round(p.nutriments['fat_100g'] || 0),
+                source: 'openfoodfacts' as const,
+              }
+            })
           setOffResults(results)
         } catch {
           setOffResults([])

@@ -111,6 +111,9 @@ All non-cron endpoints use `verifyAuth(request)` from `lib/api/auth.ts` (Bearer 
 - `VideoCompare.tsx` (758 l) — side-by-side comparison.
 - `RetourVideoPlayer.tsx` — player for coach-recorded retours; uses `useAuth().accessToken` to fetch signed URL via `/api/videos/retour-signed-url`.
 
+### `bloodtest/`
+- `BloodtestAnalysisProgress.tsx` — barre de chargement animée pendant l'analyse Claude (ETA basée sur historique, états dégradés stale/error/done).
+
 ### `bilans/`
 - `BilansOverview.tsx` — `/bilans` page body. Pulls `daily_reports`.
 - `BilanAccordion.tsx` — single-day expanded view.
@@ -209,7 +212,7 @@ Source of truth = SQL migrations in `sql/*.sql` + observed SELECTs.
 - `menstrual_logs`.
 - `athlete_fodmap_logs` — FODMAP reintro tracking. Cols: `id, athlete_id, group_key, food_key, portion_size enum (S/M/L), rating, note, logged_at, iso_week_start GENERATED, archived_at`. RPC `update_fodmap_log_with_cascade(log_id, new_rating, new_note)` for athlete edits with cascade-delete of later portions when rating becomes red.
 - `athletes.fodmap_enabled` — boolean toggle (mirror posing). Default false.
-- `bloodtest_uploads` (`id, athlete_id, uploaded_by, file_path, dated_at, uploaded_at, validated_at, validated_by, extracted_data jsonb, validated_data jsonb, ai_extraction_meta jsonb, archived_at`). Workflow extract→validate.
+- `bloodtest_uploads` (`id, athlete_id, uploaded_by, file_path, dated_at, uploaded_at, validated_at, validated_by, extracted_data jsonb, validated_data jsonb, ai_extraction_meta jsonb, archived_at`). Workflow extract→validate. **`extracted_data.markers[]` inclut depuis 2026-05-02 les champs `marker_key, value_canonical, unit_canonical, matched_by_ai, confirmed_by_coach`** alimentés par Claude. Anciens uploads : ces champs sont absents → l'UI tombe en mode "non identifiés".
 - `coach_custom_markers` (`coach_id, marker_key, label, unit_canonical, category, zones jsonb`). Per-coach custom markers.
 - `athletes.bloodtest_enabled` (bool toggle), `athletes.bloodtest_tracked_markers` (jsonb array).
 
@@ -342,6 +345,8 @@ useRefetchOnResume(load, loading)
 | Modify bloodtest validation queue | `app/(app)/athletes/[id]/bloodtest/validate/[upload_id]/page.tsx` |
 | Modify bloodtest catalog | `lib/bloodtestCatalog.ts` (mirror in ATHLETE/src/utils/bloodtestCatalog.js) |
 | Modify Claude extraction prompt or model | `app/api/bloodtest/extract/route.ts` |
+| Modify bloodtest analysis progress UI / loading bar | `components/bloodtest/BloodtestAnalysisProgress.tsx` |
+| Modify splitMarkers logic (3-section split) | `lib/bloodtest.ts` (`splitMarkers`) |
 | Modify zone classification logic | `lib/bloodtest.ts` (`classifyValue`) |
 | Admin pages (sub-app at `/admin`) | `app/admin/{athletes,coaches,payments,metrics}/page.tsx` |
 | Add a new RLS policy | `sql/rls_*.sql` patterns; remember coach_id = auth.uid() |
