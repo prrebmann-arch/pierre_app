@@ -120,6 +120,16 @@ export default function BloodtestPage() {
     }
   }
 
+  const analysisEtaMs = useMemo(() => {
+    const durations = uploads
+      .map((u) => u.ai_extraction_meta?.duration_ms)
+      .filter((d): d is number => typeof d === 'number' && d > 0)
+      .slice(0, 10)
+    if (durations.length === 0) return 12_000
+    const avg = durations.reduce((a, b) => a + b, 0) / durations.length
+    return Math.max(5_000, Math.min(45_000, avg))
+  }, [uploads])
+
   if (loading) return <Skeleton height={400} borderRadius={12} />
 
   if (!enabled) {
@@ -135,16 +145,6 @@ export default function BloodtestPage() {
   const pendingValidation = uploads.filter((u) => u.extracted_data && !u.validated_at)
   const pendingExtraction = uploads.filter((u) => !u.extracted_data && !u.validated_at)
   const validated = uploads.filter((u) => u.validated_at)
-
-  const analysisEtaMs = useMemo(() => {
-    const durations = uploads
-      .map((u) => u.ai_extraction_meta?.duration_ms)
-      .filter((d): d is number => typeof d === 'number' && d > 0)
-      .slice(0, 10)
-    if (durations.length === 0) return 12_000
-    const avg = durations.reduce((a, b) => a + b, 0) / durations.length
-    return Math.max(5_000, Math.min(45_000, avg))
-  }, [uploads])
 
   async function triggerExtract(uploadId: string) {
     setAnalyzing({ uploadId, status: 'running' })
