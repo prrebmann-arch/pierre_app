@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
 
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
+      max_tokens: 16_000,
       system: `${SYSTEM_INSTRUCTIONS}\n\n${catalogBlock}`,
       messages: [{ role: 'user', content: userContent }],
     })
@@ -141,11 +141,18 @@ export async function POST(req: NextRequest) {
     aiMeta.cache_creation_input_tokens = (response.usage as any).cache_creation_input_tokens || 0
     aiMeta.cache_read_input_tokens = (response.usage as any).cache_read_input_tokens || 0
 
+    if (response.stop_reason === 'max_tokens') {
+      throw new Error(`Réponse tronquée (${response.usage.output_tokens} tokens output) — bilan trop long, réduire le nombre de screenshots ou splitter en plusieurs uploads`)
+    }
     const textBlock = response.content.find((b) => b.type === 'text')
     if (!textBlock || textBlock.type !== 'text') throw new Error('no text in claude response')
     let txt = textBlock.text.trim()
     if (txt.startsWith('```')) txt = txt.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '')
-    extracted = JSON.parse(txt)
+    try {
+      extracted = JSON.parse(txt)
+    } catch (parseErr: any) {
+      throw new Error(`JSON invalide de Claude: ${parseErr.message} — extrait: ${txt.slice(0, 200)}…`)
+    }
     if (!extracted || !Array.isArray(extracted.markers)) throw new Error('invalid JSON shape from claude')
   } catch (e: any) {
     console.error('[bloodtest/extract] claude error', e)
