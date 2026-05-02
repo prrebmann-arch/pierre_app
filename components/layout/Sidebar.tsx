@@ -25,6 +25,7 @@ const navGroups: { label?: string; items: NavItem[] }[] = [
     items: [
       { label: 'Bilans', icon: 'fa-clipboard-check', route: '/bilans' },
       { label: 'Vidéos', icon: 'fa-video', route: '/videos' },
+      { label: 'Annonces', icon: 'fa-bullhorn', route: '/annonces' },
     ],
   },
   {
