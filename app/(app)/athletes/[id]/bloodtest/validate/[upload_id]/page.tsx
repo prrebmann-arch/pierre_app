@@ -12,9 +12,23 @@ import { splitMarkers, classifyValue, severityColor, type BloodtestUploadRow, ty
 type CustomMarkerOpt = { key: string; label: string; unit_canonical: string }
 type SignedFile = { path: string; url: string; mediaType: string }
 
+const CATEGORY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'hema', label: 'Hématologie' },
+  { value: 'iron', label: 'Fer' },
+  { value: 'vitamin', label: 'Vitamine' },
+  { value: 'mineral', label: 'Minéral' },
+  { value: 'hormone_sex', label: 'Hormone sexuelle' },
+  { value: 'thyroid', label: 'Thyroïde' },
+  { value: 'inflammation', label: 'Inflammation' },
+  { value: 'metabolism', label: 'Métabolisme' },
+  { value: 'liver', label: 'Hépatique' },
+  { value: 'lipid', label: 'Lipide' },
+]
+
 export default function BloodtestValidatePage() {
   const params = useParams<{ id: string; upload_id: string }>()
   const router = useRouter()
+  const { user } = useAuth()
   const { accessToken } = useAuth()
   const { toast } = useToast()
   const supabase = createClient()
@@ -29,6 +43,7 @@ export default function BloodtestValidatePage() {
   const [customMarkers, setCustomMarkers] = useState<CustomMarkerOpt[]>([])
   const [showUnidentified, setShowUnidentified] = useState(false)
   const [collapsePdf, setCollapsePdf] = useState(false)
+  const [creatingFor, setCreatingFor] = useState<ExtractedMarker | null>(null)
 
   const load = useCallback(async () => {
     try {
@@ -87,6 +102,26 @@ export default function BloodtestValidatePage() {
 
   function bulkIgnoreUnidentified() {
     setEditedMarkers((prev) => prev.map((m) => (m.marker_key ? m : { ...m, ignored: true })))
+  }
+
+  async function createCustomFromRow(target: ExtractedMarker, payload: { label: string; unit_canonical: string; category: string }) {
+    if (!user?.id) { toast('Session expirée', 'error'); return }
+    const key = payload.label.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '')
+    if (!key) { toast('Label invalide', 'error'); return }
+    if (allMarkerOptions.some((o) => o.key === key)) { toast('Un marqueur avec cette clé existe déjà', 'error'); return }
+    const { error } = await supabase.from('coach_custom_markers').insert({
+      coach_id: user.id,
+      marker_key: key,
+      label: payload.label.trim(),
+      unit_canonical: payload.unit_canonical.trim() || (target.unit_canonical || target.unit || ''),
+      category: payload.category,
+      zones: { direction: 'range_is_normal', bands: [] },
+    })
+    if (error) { toast(`Erreur: ${error.message}`, 'error'); return }
+    setCustomMarkers((prev) => [...prev, { key, label: payload.label.trim(), unit_canonical: payload.unit_canonical.trim() || (target.unit_canonical || target.unit || '') }])
+    setEditedMarkers((prev) => prev.map((m) => (m === target ? { ...m, marker_key: key, matched_by_ai: false, ignored: false, confirmed_by_coach: true } : m)))
+    setCreatingFor(null)
+    toast('Marqueur custom créé et assigné', 'success')
   }
 
   async function submit() {
@@ -181,6 +216,7 @@ export default function BloodtestValidatePage() {
               tracked={tracked}
               allOptions={allMarkerOptions}
               onUpdate={updateMarkerByRef}
+              onCreateCustom={(m) => setCreatingFor(m)}
             />
           </SectionCard>
 
@@ -207,6 +243,7 @@ export default function BloodtestValidatePage() {
                 tracked={tracked}
                 allOptions={allMarkerOptions}
                 onUpdate={updateMarkerByRef}
+                onCreateCustom={(m) => setCreatingFor(m)}
               />
             </SectionCard>
           )}
@@ -237,6 +274,7 @@ export default function BloodtestValidatePage() {
                   tracked={tracked}
                   allOptions={allMarkerOptions}
                   onUpdate={updateMarkerByRef}
+                  onCreateCustom={(m) => setCreatingFor(m)}
                 />
               )}
             </SectionCard>
@@ -246,6 +284,89 @@ export default function BloodtestValidatePage() {
             <button className="btn btn-outline" onClick={rejectUpload}>Rejeter le bilan</button>
             <button className="btn btn-red" onClick={submit} disabled={saving} style={{ flex: 1 }}>
               {saving ? 'Validation...' : `Valider et publier (${totalIncluded} marker${totalIncluded > 1 ? 's' : ''})`}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {creatingFor && (
+        <CreateCustomMarkerModal
+          target={creatingFor}
+          onClose={() => setCreatingFor(null)}
+          onSubmit={(payload) => createCustomFromRow(creatingFor, payload)}
+        />
+      )}
+    </div>
+  )
+}
+
+function CreateCustomMarkerModal({
+  target, onClose, onSubmit,
+}: {
+  target: ExtractedMarker
+  onClose: () => void
+  onSubmit: (payload: { label: string; unit_canonical: string; category: string }) => void
+}) {
+  const [label, setLabel] = useState(target.raw_label || '')
+  const [unit, setUnit] = useState(target.unit_canonical || target.unit || '')
+  const [category, setCategory] = useState('metabolism')
+  const [submitting, setSubmitting] = useState(false)
+
+  async function handleSubmit() {
+    if (!label.trim()) return
+    setSubmitting(true)
+    try { await onSubmit({ label, unit_canonical: unit, category }) }
+    finally { setSubmitting(false) }
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1100,
+        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: 'var(--bg)', borderRadius: 14, maxWidth: 460, width: '100%',
+          border: '1px solid var(--border)', boxShadow: '0 25px 50px rgba(0,0,0,0.4)',
+        }}
+      >
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <i className="fas fa-plus-circle" style={{ color: 'var(--primary)' }} />
+          <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0, flex: 1 }}>Créer un marqueur custom</h3>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text3)', padding: 4 }}>
+            <i className="fas fa-times" />
+          </button>
+        </div>
+        <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <label style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 700 }}>Nom du marqueur</label>
+            <input className="form-control" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="ex: Hématocrite" autoFocus style={{ marginTop: 4 }} />
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 700 }}>Unité</label>
+              <input className="form-control" value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="g/L, %, mmol/L..." style={{ marginTop: 4 }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: 0.4, fontWeight: 700 }}>Catégorie</label>
+              <select className="form-control" value={category} onChange={(e) => setCategory(e.target.value)} style={{ marginTop: 4 }}>
+                {CATEGORY_OPTIONS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', padding: 10, background: 'var(--bg2)', borderRadius: 6, lineHeight: 1.5 }}>
+            <i className="fas fa-info-circle" style={{ marginRight: 6 }} />
+            Les plages cliniques (optimal/limite/hors zone) seront définissables plus tard depuis la page <strong>Paramètres &gt; Marqueurs sanguins</strong>.
+          </div>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 4 }}>
+            <button className="btn btn-outline" onClick={onClose} disabled={submitting}>Annuler</button>
+            <button className="btn btn-red" onClick={handleSubmit} disabled={submitting || !label.trim()}>
+              {submitting ? '…' : 'Créer et assigner'}
             </button>
           </div>
         </div>
@@ -298,12 +419,13 @@ type Row =
   | { kind: 'unidentified'; marker: ExtractedMarker; label: string; catalogMarker?: any }
 
 function MarkerTable({
-  rows, tracked, allOptions, onUpdate,
+  rows, tracked, allOptions, onUpdate, onCreateCustom,
 }: {
   rows: Row[]
   tracked: string[]
   allOptions: { key: string; label: string; unit_canonical: string }[]
   onUpdate: (target: ExtractedMarker, patch: Partial<ExtractedMarker>) => void
+  onCreateCustom: (target: ExtractedMarker) => void
 }) {
   return (
     <div style={{ overflow: 'auto' }}>
@@ -320,7 +442,7 @@ function MarkerTable({
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <MarkerRow key={i} row={row} tracked={tracked} allOptions={allOptions} onUpdate={onUpdate} />
+            <MarkerRow key={i} row={row} tracked={tracked} allOptions={allOptions} onUpdate={onUpdate} onCreateCustom={onCreateCustom} />
           ))}
         </tbody>
       </table>
@@ -346,12 +468,13 @@ const td: React.CSSProperties = {
 }
 
 function MarkerRow({
-  row, tracked, allOptions, onUpdate,
+  row, tracked, allOptions, onUpdate, onCreateCustom,
 }: {
   row: Row
   tracked: string[]
   allOptions: { key: string; label: string; unit_canonical: string }[]
   onUpdate: (target: ExtractedMarker, patch: Partial<ExtractedMarker>) => void
+  onCreateCustom: (target: ExtractedMarker) => void
 }) {
   const [editingKey, setEditingKey] = useState(false)
   const [editingValue, setEditingValue] = useState(false)
@@ -406,12 +529,16 @@ function MarkerRow({
             className="form-control"
             autoFocus
             value={m.marker_key || ''}
-            onChange={(e) => { onUpdate(m, { marker_key: e.target.value || null, matched_by_ai: false }); setEditingKey(false) }}
+            onChange={(e) => {
+              if (e.target.value === '__create__') { setEditingKey(false); onCreateCustom(m); return }
+              onUpdate(m, { marker_key: e.target.value || null, matched_by_ai: false }); setEditingKey(false)
+            }}
             onBlur={() => setEditingKey(false)}
             style={{ minWidth: 200, fontSize: 12 }}
           >
             <option value="">—</option>
             {allOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+            <option value="__create__">＋ Créer un nouveau marqueur…</option>
           </select>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, minHeight: 24 }}>
