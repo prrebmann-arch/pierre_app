@@ -10,6 +10,12 @@ import { notifyAthlete } from '@/lib/push'
 
 interface Props {
   athleteId: string
+  /** When set (non-empty), the panel switches to broadcast mode :
+   *  - Submits go to /api/annonces/broadcast (N rows bilan_retours).
+   *  - Audio path uses `${user.id}/annonce_${ts}_` (no athleteId).
+   *  - Screen recording calls /api/annonces/broadcast after upload.
+   *  - athleteId is ignored (pass empty string when broadcasting). */
+  broadcastIds?: string[]
   onCreated?: () => void
   /** Called after a successful submit/start so the parent can close a modal */
   onAfter?: () => void
@@ -31,8 +37,9 @@ const QUICK_MESSAGES = [
 
 type Tab = 'text' | 'screen'
 
-export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, active = true, videoId }: Props) {
-  const { user } = useAuth()
+export default function NouveauRetourPanel({ athleteId, broadcastIds, onCreated, onAfter, active = true, videoId }: Props) {
+  const isBroadcast = !!(broadcastIds && broadcastIds.length > 0)
+  const { user, accessToken } = useAuth()
   const { toast } = useToast()
   const { startRecording, isRecording, isProcessing, isUploading } = useRecorder()
   const supabase = createClient()
@@ -64,7 +71,9 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
 
   const audio = useAudioRecorder({
     bucket: 'coach-audio',
-    pathPrefix: `${user?.id || 'unknown'}/retour_${athleteId}_`,
+    pathPrefix: isBroadcast
+      ? `${user?.id || 'unknown'}/annonce_`
+      : `${user?.id || 'unknown'}/retour_${athleteId}_`,
   })
 
   useEffect(() => {
@@ -205,10 +214,11 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
       micHandoff?.getTracks().forEach((t) => t.stop())
       await startRecording({
         withWebcam: modeAtStart === 'selfie' ? true : !!camHandoff,
-        athleteId,
+        athleteId: isBroadcast ? '' : athleteId,
+        broadcastIds: isBroadcast ? broadcastIds : undefined,
         preAcquiredCamStream: camHandoff,
         mode: modeAtStart,
-        executionVideoId: videoId,
+        executionVideoId: isBroadcast ? undefined : videoId,
       })
       onAfter?.()
     } catch (err) {
@@ -241,6 +251,33 @@ export default function NouveauRetourPanel({ athleteId, onCreated, onAfter, acti
         : hasLoom ? 'Vidéo Loom'
         : 'Retour'
       const type = hasLoom ? (hasAudio ? 'mixed' : 'loom') : (hasAudio ? 'audio' : 'message')
+
+      // Broadcast mode : single API call to /api/annonces/broadcast (N inserts + 1 push batch)
+      if (isBroadcast) {
+        const res = await fetch('/api/annonces/broadcast', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({
+            athlete_ids: broadcastIds,
+            type,
+            titre: finalTitre,
+            commentaire: message || null,
+            audio_url: hasAudio ? audio.audioUrl : null,
+            loom_url: hasLoom ? loomUrl.trim() : null,
+          }),
+        })
+        const json = await res.json()
+        if (!res.ok) { toast(`Erreur: ${json.error || res.status}`, 'error'); return }
+        toast(`Envoyé à ${json.inserted} athlète${json.inserted > 1 ? 's' : ''} !`, 'success')
+        reset()
+        onCreated?.()
+        onAfter?.()
+        return
+      }
+
       const { error } = await supabase.from('bilan_retours').insert({
         athlete_id: athleteId,
         coach_id: user?.id,

@@ -53,6 +53,9 @@ export interface PendingRecording {
   mimeType: string
   ext: 'mp4' | 'webm'
   athleteId: string
+  /** When set, the recording is broadcast to N athletes instead of saved
+   *  for a single one. `athleteId` is ignored in that case. */
+  broadcastIds?: string[]
   videoPath: string
   thumbnailPath: string
   /** Optional execution_videos.id when recorded from a video page. */
@@ -92,6 +95,9 @@ interface RecorderContextValue {
   startRecording: (opts: {
     withWebcam: boolean
     athleteId: string
+    /** When set, the recording is broadcast to N athletes (page /annonces).
+     *  athleteId is ignored in that case (pass empty string). */
+    broadcastIds?: string[]
     preAcquiredCamStream?: MediaStream | null
     preAcquiredMicStream?: MediaStream | null
     micDeviceId?: string
@@ -129,6 +135,9 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [athleteIdForNext, setAthleteIdForNext] = useState<string | null>(null)
+  // When non-null, the next stopRecording will produce a broadcast pending
+  // (multi-athlete) instead of a single-athlete one.
+  const [broadcastIdsForNext, setBroadcastIdsForNext] = useState<string[] | null>(null)
   // Carry the originating execution_videos.id (if recording started from a
   // video detail page) through the async stop / finalize chain so the
   // resulting bilan_retours row can link to it.
@@ -165,6 +174,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   const startRecording = useCallback(async (opts: {
     withWebcam: boolean
     athleteId: string
+    broadcastIds?: string[]
     preAcquiredCamStream?: MediaStream | null
     preAcquiredMicStream?: MediaStream | null
     micDeviceId?: string
@@ -175,6 +185,7 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
   }) => {
     cancelledRef.current = false
     setAthleteIdForNext(opts.athleteId)
+    setBroadcastIdsForNext(opts.broadcastIds && opts.broadcastIds.length > 0 ? opts.broadcastIds : null)
     setExecutionVideoIdForNext(opts.executionVideoId ?? null)
     await recorder.startRecording({
       withWebcam: opts.withWebcam,
@@ -228,12 +239,13 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
       mimeType: result.mimeType,
       ext: result.ext,
       athleteId: athleteIdForNext ?? '',
+      broadcastIds: broadcastIdsForNext ?? undefined,
       videoPath,
       thumbnailPath,
       executionVideoId: executionVideoIdForNext ?? undefined,
     })
     setIsProcessing(false)
-  }, [recorder, user, toast, athleteIdForNext, executionVideoIdForNext])
+  }, [recorder, user, toast, athleteIdForNext, broadcastIdsForNext, executionVideoIdForNext])
 
   const cancelRecording = useCallback(() => {
     cancelledRef.current = true
@@ -262,8 +274,9 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
 
   const finalizeRecording = useCallback(async ({ titre, commentaire, athleteId }: FinalizeArgs) => {
     if (!pending || !user) { toast('Aucun enregistrement en attente', 'error'); return }
+    const isBroadcast = !!(pending.broadcastIds && pending.broadcastIds.length > 0)
     const targetAthleteId = athleteId || pending.athleteId
-    if (!targetAthleteId) { toast('Athlète manquant', 'error'); return }
+    if (!isBroadcast && !targetAthleteId) { toast('Athlète manquant', 'error'); return }
 
     setIsUploading(true)
     setUploadProgress(0)
@@ -289,37 +302,66 @@ export function RecorderProvider({ children }: { children: ReactNode }) {
 
       setUploadProgress(95)
 
-      // Save metadata via API route
-      const res = await fetch('/api/videos/save-retour', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        },
-        body: JSON.stringify({
-          retourId: pending.retourId,
-          athleteId: targetAthleteId,
-          videoPath: pending.videoPath,
-          thumbnailPath: pending.thumbnailPath,
-          durationS: pending.durationS,
-          width: pending.width,
-          height: pending.height,
-          mimeType: pending.mimeType,
-          titre,
-          commentaire: commentaire || null,
-          executionVideoId: pending.executionVideoId || null,
-        }),
-      })
-
-      if (!res.ok) {
-        const body = await res.text()
-        throw new Error(`save-retour failed: ${res.status} ${body}`)
+      // Branch on broadcast vs single
+      if (isBroadcast) {
+        const res = await fetch('/api/annonces/broadcast', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({
+            athlete_ids: pending.broadcastIds,
+            type: 'video',
+            titre,
+            commentaire: commentaire || null,
+            video_path: pending.videoPath,
+            thumbnail_path: pending.thumbnailPath,
+            duration_s: pending.durationS,
+            width: pending.width,
+            height: pending.height,
+            mime_type: pending.mimeType,
+          }),
+        })
+        if (!res.ok) {
+          const body = await res.text()
+          throw new Error(`broadcast failed: ${res.status} ${body}`)
+        }
+        const json = await res.json()
+        setUploadProgress(100)
+        toast(`Retour vidéo envoyé à ${json.inserted} athlète${json.inserted > 1 ? 's' : ''} !`, 'success')
+      } else {
+        const res = await fetch('/api/videos/save-retour', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          },
+          body: JSON.stringify({
+            retourId: pending.retourId,
+            athleteId: targetAthleteId,
+            videoPath: pending.videoPath,
+            thumbnailPath: pending.thumbnailPath,
+            durationS: pending.durationS,
+            width: pending.width,
+            height: pending.height,
+            mimeType: pending.mimeType,
+            titre,
+            commentaire: commentaire || null,
+            executionVideoId: pending.executionVideoId || null,
+          }),
+        })
+        if (!res.ok) {
+          const body = await res.text()
+          throw new Error(`save-retour failed: ${res.status} ${body}`)
+        }
+        setUploadProgress(100)
+        toast('Retour vidéo envoyé !', 'success')
       }
 
-      setUploadProgress(100)
-      toast('Retour vidéo envoyé !', 'success')
       setPending(null)
       setAthleteIdForNext(null)
+      setBroadcastIdsForNext(null)
       setExecutionVideoIdForNext(null)
     } catch (err) {
       console.error('[recorder] finalize failed:', err)
