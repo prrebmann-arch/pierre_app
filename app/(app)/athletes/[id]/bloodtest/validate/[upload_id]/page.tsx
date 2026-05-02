@@ -1,13 +1,16 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import Skeleton from '@/components/ui/Skeleton'
 import { MARKERS } from '@/lib/bloodtestCatalog'
-import type { BloodtestUploadRow, ExtractedData, ExtractedMarker } from '@/lib/bloodtest'
+import { splitMarkers, type BloodtestUploadRow, type ExtractedData, type ExtractedMarker } from '@/lib/bloodtest'
+
+type CustomMarkerOpt = { key: string; label: string; unit_canonical: string }
+type SignedFile = { path: string; url: string; mediaType: string }
 
 export default function BloodtestValidatePage() {
   const params = useParams<{ id: string; upload_id: string }>()
@@ -16,14 +19,15 @@ export default function BloodtestValidatePage() {
   const { toast } = useToast()
   const supabase = createClient()
 
-  type SignedFile = { path: string; url: string; mediaType: string }
   const [upload, setUpload] = useState<BloodtestUploadRow | null>(null)
   const [signedFiles, setSignedFiles] = useState<SignedFile[]>([])
   const [editedMarkers, setEditedMarkers] = useState<ExtractedMarker[]>([])
+  const [tracked, setTracked] = useState<string[]>([])
   const [datedAt, setDatedAt] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [customMarkers, setCustomMarkers] = useState<{ key: string; label: string; unit_canonical: string }[]>([])
+  const [customMarkers, setCustomMarkers] = useState<CustomMarkerOpt[]>([])
+  const [showUnidentified, setShowUnidentified] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -34,33 +38,51 @@ export default function BloodtestValidatePage() {
       ])
       if (!row) { toast('Upload introuvable', 'error'); return }
       setUpload(row as BloodtestUploadRow)
+      const { data: ath } = await supabase.from('athletes').select('bloodtest_tracked_markers').eq('id', (row as any).athlete_id).single()
+      setTracked(((ath as any)?.bloodtest_tracked_markers as string[]) || [])
       const files: SignedFile[] = Array.isArray(urlRes.urls) && urlRes.urls.length > 0
         ? urlRes.urls
-        : urlRes.url
-          ? [{ path: '', url: urlRes.url, mediaType: 'application/pdf' }]
-          : []
+        : urlRes.url ? [{ path: '', url: urlRes.url, mediaType: 'application/pdf' }] : []
       setSignedFiles(files)
-      const data = (row.validated_data || row.extracted_data) as ExtractedData | null
+      const data = ((row as any).validated_data || (row as any).extracted_data) as ExtractedData | null
       setEditedMarkers(data?.markers || [])
-      setDatedAt(row.dated_at || (data?.detected_dated_at || ''))
+      setDatedAt((row as any).dated_at || (data?.detected_dated_at || ''))
       setCustomMarkers((cms || []).map((c: any) => ({ key: c.marker_key, label: c.label, unit_canonical: c.unit_canonical })))
     } finally { setLoading(false) }
   }, [params.upload_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
-  function updateMarker(idx: number, patch: Partial<ExtractedMarker>) {
-    setEditedMarkers((prev) => prev.map((m, i) => (i === idx ? { ...m, ...patch } : m)))
-  }
-  function toggleIgnore(idx: number) {
-    setEditedMarkers((prev) => prev.map((m, i) => (i === idx ? { ...m, ignored: !m.ignored } : m)))
+  const allMarkerOptions = useMemo(
+    () => [...MARKERS.map((m) => ({ key: m.key, label: m.label, unit_canonical: m.unit_canonical })), ...customMarkers],
+    [customMarkers],
+  )
+  const labelByKey = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const o of allMarkerOptions) m.set(o.key, o.label)
+    return m
+  }, [allMarkerOptions])
+
+  const split = useMemo(() => splitMarkers(editedMarkers, tracked), [editedMarkers, tracked])
+
+  function updateMarkerByRef(target: ExtractedMarker, patch: Partial<ExtractedMarker>) {
+    setEditedMarkers((prev) => prev.map((m) => (m === target ? { ...m, ...patch } : m)))
   }
 
   async function submit() {
     if (!datedAt) { toast('Date du bilan requise', 'error'); return }
+    const finalMarkers = editedMarkers.filter((m) => {
+      if (!m.marker_key) return false
+      if (m.value == null) return false
+      if (m.ignored) return false
+      // Pour les extras, on n'inclut QUE ceux explicitement confirmés par le coach.
+      const isExtra = m.marker_key && !tracked.includes(m.marker_key)
+      if (isExtra && !m.confirmed_by_coach) return false
+      return true
+    })
     setSaving(true)
     try {
-      const validated_data: ExtractedData = { detected_dated_at: datedAt, markers: editedMarkers }
+      const validated_data: ExtractedData = { detected_dated_at: datedAt, markers: finalMarkers }
       const res = await fetch('/api/bloodtest/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
@@ -85,8 +107,6 @@ export default function BloodtestValidatePage() {
 
   if (loading) return <Skeleton height={400} />
   if (!upload) return <div>Upload introuvable</div>
-
-  const allMarkerOptions = [...MARKERS.map((m) => ({ key: m.key, label: m.label, unit_canonical: m.unit_canonical })), ...customMarkers]
 
   return (
     <div>
@@ -116,32 +136,238 @@ export default function BloodtestValidatePage() {
             <input type="date" className="form-control" value={datedAt} onChange={(e) => setDatedAt(e.target.value)} />
           </div>
 
-          <div style={{ maxHeight: '70vh', overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {editedMarkers.map((m, i) => (
-              <div key={i} style={{ padding: 10, background: m.ignored ? 'var(--bg3)' : 'var(--bg2)', opacity: m.ignored ? 0.5 : 1, borderRadius: 8, border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Raw : {m.raw_label}</div>
-                <select className="form-control" style={{ marginBottom: 6 }} value={m.marker_key || ''} onChange={(e) => updateMarker(i, { marker_key: e.target.value || null })}>
-                  <option value="">-- Choisir un marker --</option>
-                  {allMarkerOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
-                </select>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <input className="form-control" type="number" step="any" placeholder="Valeur" value={m.value ?? ''} onChange={(e) => updateMarker(i, { value: e.target.value ? parseFloat(e.target.value) : null })} />
-                  <input className="form-control" placeholder="Unité" value={m.unit || ''} onChange={(e) => updateMarker(i, { unit: e.target.value })} style={{ maxWidth: 100 }} />
-                </div>
-                <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>Plage labo : {m.lab_reference_range || '—'}</div>
-                <button className="btn btn-outline btn-sm" style={{ marginTop: 6 }} onClick={() => toggleIgnore(i)}>
-                  {m.ignored ? 'Ré-inclure' : 'Ignorer cette ligne'}
-                </button>
-              </div>
+          {/* SECTION ATTENDUS */}
+          <SectionHeader icon="fa-bullseye" label={`Attendus (${split.expected.length})`} subLabel="markers suivis pour cet athlète" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {split.expected.map((row) => (
+              <ExpectedMarkerRow
+                key={row.tracked_key}
+                trackedKey={row.tracked_key}
+                marker={row.marker}
+                label={labelByKey.get(row.tracked_key) || row.tracked_key}
+                onUpdate={(patch) => row.marker && updateMarkerByRef(row.marker, patch)}
+                allOptions={allMarkerOptions}
+              />
             ))}
+            {split.expected.length === 0 && <div style={{ fontSize: 12, color: 'var(--text3)' }}>Aucun marker suivi configuré.</div>}
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
+          {/* SECTION EXTRAS */}
+          {split.extras.length > 0 && (
+            <>
+              <SectionHeader icon="fa-plus" label={`Extras détectés (${split.extras.length})`} subLabel="hors suivi — clique pour valider individuellement" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {split.extras.map((m, i) => (
+                  <ExtraMarkerRow
+                    key={`${m.marker_key}_${i}`}
+                    marker={m}
+                    label={labelByKey.get(m.marker_key!) || m.marker_key!}
+                    onUpdate={(patch) => updateMarkerByRef(m, patch)}
+                    allOptions={allMarkerOptions}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* SECTION NON IDENTIFIÉS */}
+          {split.unidentified.length > 0 && (
+            <>
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ alignSelf: 'flex-start' }}
+                onClick={() => setShowUnidentified((v) => !v)}
+              >
+                <i className={`fas fa-chevron-${showUnidentified ? 'down' : 'right'}`} />
+                {' '}Non identifiés ({split.unidentified.length})
+              </button>
+              {showUnidentified && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {split.unidentified.map((m, i) => (
+                    <UnidentifiedRow
+                      key={`u_${i}`}
+                      marker={m}
+                      onUpdate={(patch) => updateMarkerByRef(m, patch)}
+                      allOptions={allMarkerOptions}
+                    />
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             <button className="btn btn-outline" onClick={rejectUpload}>Rejeter le bilan</button>
             <button className="btn btn-red" onClick={submit} disabled={saving} style={{ flex: 1 }}>{saving ? 'Validation...' : 'Valider et publier'}</button>
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function SectionHeader({ icon, label, subLabel }: { icon: string; label: string; subLabel?: string }) {
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <i className={`fas ${icon}`} style={{ color: 'var(--primary)' }} />{label}
+      </div>
+      {subLabel && <div style={{ fontSize: 11, color: 'var(--text3)' }}>{subLabel}</div>}
+    </div>
+  )
+}
+
+function AiBadge() {
+  return (
+    <span style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', borderRadius: 4, fontWeight: 600 }}>
+      <i className="fas fa-wand-magic-sparkles" /> auto IA
+    </span>
+  )
+}
+
+function ExpectedMarkerRow({
+  trackedKey, marker, label, onUpdate, allOptions,
+}: {
+  trackedKey: string
+  marker?: ExtractedMarker
+  label: string
+  onUpdate: (patch: Partial<ExtractedMarker>) => void
+  allOptions: { key: string; label: string; unit_canonical: string }[]
+}) {
+  const [editing, setEditing] = useState(false)
+  if (!marker) {
+    return (
+      <div style={{ padding: 10, background: 'var(--bg3)', opacity: 0.6, borderRadius: 8, border: '1px dashed var(--border)' }}>
+        <div style={{ fontSize: 13, fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: 11, color: 'var(--text3)' }}>Non trouvé dans ce PDF</div>
+      </div>
+    )
+  }
+  const value = marker.value_canonical ?? marker.value
+  const unit = marker.unit_canonical || marker.unit
+  return (
+    <div style={{ padding: 10, background: 'var(--bg2)', borderRadius: 8, border: '1px solid var(--border)', opacity: marker.ignored ? 0.5 : 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{label}</div>
+        {marker.matched_by_ai && !editing && <AiBadge />}
+      </div>
+      {!editing ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{value ?? '—'} <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400 }}>{unit}</span></div>
+          <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setEditing(true)}>
+            <i className="fas fa-pen" /> Modifier
+          </button>
+          <button className="btn btn-outline btn-sm" onClick={() => onUpdate({ ignored: !marker.ignored })}>
+            {marker.ignored ? 'Ré-inclure' : 'Ignorer'}
+          </button>
+        </div>
+      ) : (
+        <EditFields marker={marker} onUpdate={onUpdate} allOptions={allOptions} onDone={() => setEditing(false)} />
+      )}
+      {marker.lab_reference_range && <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>Plage labo : {marker.lab_reference_range}</div>}
+    </div>
+  )
+}
+
+function ExtraMarkerRow({
+  marker, label, onUpdate, allOptions,
+}: {
+  marker: ExtractedMarker
+  label: string
+  onUpdate: (patch: Partial<ExtractedMarker>) => void
+  allOptions: { key: string; label: string; unit_canonical: string }[]
+}) {
+  const [editing, setEditing] = useState(false)
+  const value = marker.value_canonical ?? marker.value
+  const unit = marker.unit_canonical || marker.unit
+  const confirmed = !!marker.confirmed_by_coach
+  return (
+    <div style={{ padding: 10, background: 'var(--bg2)', borderRadius: 8, border: confirmed ? '1px solid var(--green)' : '1px solid var(--border)', opacity: marker.ignored ? 0.5 : 1 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, flex: 1 }}>{label}</div>
+        {marker.matched_by_ai && !editing && <AiBadge />}
+      </div>
+      {!editing ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+          <div style={{ fontSize: 16, fontWeight: 700 }}>{value ?? '—'} <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 400 }}>{unit}</span></div>
+          <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setEditing(true)}>
+            <i className="fas fa-pen" /> Modifier
+          </button>
+          <button
+            className={confirmed ? 'btn btn-outline btn-sm' : 'btn btn-red btn-sm'}
+            onClick={() => onUpdate({ confirmed_by_coach: !confirmed })}
+          >
+            {confirmed ? <><i className="fas fa-check" /> Inclus</> : 'Valider'}
+          </button>
+        </div>
+      ) : (
+        <EditFields marker={marker} onUpdate={onUpdate} allOptions={allOptions} onDone={() => setEditing(false)} />
+      )}
+      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 4 }}>
+        {confirmed ? 'Inclus dans ce bilan (one-shot, n\'ajoute pas au suivi permanent)' : 'À valider explicitement pour être inclus'}
+      </div>
+    </div>
+  )
+}
+
+function UnidentifiedRow({
+  marker, onUpdate, allOptions,
+}: {
+  marker: ExtractedMarker
+  onUpdate: (patch: Partial<ExtractedMarker>) => void
+  allOptions: { key: string; label: string; unit_canonical: string }[]
+}) {
+  return (
+    <div style={{ padding: 10, background: 'var(--bg3)', borderRadius: 8, border: '1px solid var(--border)', opacity: marker.ignored ? 0.5 : 1 }}>
+      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Raw : {marker.raw_label}</div>
+      <select className="form-control" style={{ marginBottom: 6 }} value={marker.marker_key || ''} onChange={(e) => onUpdate({ marker_key: e.target.value || null, matched_by_ai: false })}>
+        <option value="">-- Choisir un marker --</option>
+        {allOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+      </select>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input className="form-control" type="number" step="any" placeholder="Valeur" value={marker.value ?? ''} onChange={(e) => onUpdate({ value: e.target.value ? parseFloat(e.target.value) : null })} />
+        <input className="form-control" placeholder="Unité" value={marker.unit || ''} onChange={(e) => onUpdate({ unit: e.target.value })} style={{ maxWidth: 100 }} />
+      </div>
+      {marker.lab_reference_range && <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>Plage labo : {marker.lab_reference_range}</div>}
+      <button className="btn btn-outline btn-sm" style={{ marginTop: 6 }} onClick={() => onUpdate({ ignored: !marker.ignored })}>
+        {marker.ignored ? 'Ré-inclure' : 'Ignorer cette ligne'}
+      </button>
+    </div>
+  )
+}
+
+function EditFields({
+  marker, onUpdate, allOptions, onDone,
+}: {
+  marker: ExtractedMarker
+  onUpdate: (patch: Partial<ExtractedMarker>) => void
+  allOptions: { key: string; label: string; unit_canonical: string }[]
+  onDone: () => void
+}) {
+  return (
+    <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <select
+        className="form-control"
+        value={marker.marker_key || ''}
+        onChange={(e) => onUpdate({ marker_key: e.target.value || null, matched_by_ai: false })}
+      >
+        <option value="">-- Choisir un marker --</option>
+        {allOptions.map((o) => <option key={o.key} value={o.key}>{o.label}</option>)}
+      </select>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input
+          className="form-control" type="number" step="any" placeholder="Valeur (canonique)"
+          value={marker.value_canonical ?? marker.value ?? ''}
+          onChange={(e) => onUpdate({ value_canonical: e.target.value ? parseFloat(e.target.value) : null, value: e.target.value ? parseFloat(e.target.value) : null })}
+        />
+        <input
+          className="form-control" placeholder="Unité"
+          value={marker.unit_canonical || marker.unit || ''}
+          onChange={(e) => onUpdate({ unit_canonical: e.target.value, unit: e.target.value })}
+          style={{ maxWidth: 120 }}
+        />
+      </div>
+      <button className="btn btn-outline btn-sm" style={{ alignSelf: 'flex-end' }} onClick={onDone}>OK</button>
     </div>
   )
 }
