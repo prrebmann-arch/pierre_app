@@ -76,12 +76,14 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Build the rows to insert: one per athlete, sharing the same media
-  const baseRow = {
+  // Build the rows to insert: one per athlete, sharing the same media.
+  // For video: do NOT set `type` column (matches save-retour behavior — the
+  // athlete app reads video_path/thumbnail_path directly, not type).
+  const isVideoBroadcast = body.type === 'video'
+  const baseRow: Record<string, unknown> = {
     coach_id: user.id,
     titre: body.titre.trim(),
     commentaire: body.commentaire?.trim() || null,
-    type: body.type,
     audio_url: body.audio_url || null,
     loom_url: body.loom_url || null,
     video_path: body.video_path || null,
@@ -91,51 +93,67 @@ export async function POST(req: NextRequest) {
     height: body.height ?? null,
     mime_type: body.mime_type || null,
   }
-  const rows = athletes.map((a) => ({ ...baseRow, athlete_id: a.id }))
+  if (!isVideoBroadcast) baseRow.type = body.type
+  const rowsToInsert = athletes.map((a) => ({ ...baseRow, athlete_id: a.id }))
 
-  const { error: insErr } = await admin.from('bilan_retours').insert(rows)
+  // RETURNING id so we can pair each athlete with its retour_id for the push
+  const { data: insertedRows, error: insErr } = await admin
+    .from('bilan_retours')
+    .insert(rowsToInsert)
+    .select('id, athlete_id')
   if (insErr) {
     console.error('[annonces/broadcast] insert error', insErr)
     return NextResponse.json({ error: insErr.message }, { status: 500 })
   }
+  const retourIdByAthleteId = new Map<string, string>()
+  for (const r of insertedRows || []) retourIdByAthleteId.set(r.athlete_id, r.id)
 
-  // In-app notifications (one row per athlete with valid user_id)
-  const userIds = athletes.map((a) => a.user_id).filter((u): u is string => !!u)
-  const meta: Record<string, string> = {}
-  if (body.commentaire) { meta.commentaire = body.commentaire; meta.coach_notes = body.commentaire }
-  if (body.audio_url) meta.audio_url = body.audio_url
-  if (body.loom_url) meta.loom_url = body.loom_url
+  // Build per-athlete notif rows (each carries its own retour_id so the
+  // athlete app can route the tap to the correct bilan_retours row).
+  const athletesWithUserId = athletes.filter((a) => !!a.user_id) as { id: string; user_id: string; prenom: string | null }[]
+  const baseMeta: Record<string, unknown> = {}
+  if (body.commentaire) { baseMeta.commentaire = body.commentaire; baseMeta.coach_notes = body.commentaire }
+  if (body.audio_url) baseMeta.audio_url = body.audio_url
+  if (body.loom_url) baseMeta.loom_url = body.loom_url
+  if (body.video_path) baseMeta.has_video = true
 
   const notifTitle =
-    body.type === 'audio' ? 'Message vocal de ton coach'
-    : body.type === 'loom' || body.type === 'video' ? 'Vidéo de ton coach'
+    isVideoBroadcast || body.type === 'loom' ? 'Vidéo de ton coach'
+    : body.type === 'audio' ? 'Message vocal de ton coach'
     : 'Annonce de ton coach'
   const notifBody = body.commentaire?.trim()
-    || (body.type === 'audio' ? "Ton coach t'a envoyé un message vocal"
-    : body.type === 'loom' || body.type === 'video' ? "Ton coach t'a envoyé une vidéo"
+    || (isVideoBroadcast || body.type === 'loom' ? "Ton coach t'a envoyé une vidéo"
+    : body.type === 'audio' ? "Ton coach t'a envoyé un message vocal"
     : 'Nouvelle annonce')
 
-  if (userIds.length > 0) {
-    const notifRows = userIds.map((uid) => ({
-      user_id: uid,
+  if (athletesWithUserId.length > 0) {
+    const notifRows = athletesWithUserId.map((a) => ({
+      user_id: a.user_id,
       type: 'retour',
       title: notifTitle,
       body: notifBody,
-      metadata: meta,
+      metadata: { ...baseMeta, retour_id: retourIdByAthleteId.get(a.id), titre: baseRow.titre },
     }))
     await admin.from('notifications').insert(notifRows)
 
-    // Push notif via Expo — broadcast in one call
+    // Push : 1 message par token (per-athlete data because retour_id différent)
     const { data: tokens } = await admin
-      .from('push_tokens').select('token').in('user_id', userIds)
+      .from('push_tokens')
+      .select('token, user_id')
+      .in('user_id', athletesWithUserId.map((a) => a.user_id))
     if (tokens && tokens.length > 0) {
-      const messages = tokens.map((t: { token: string }) => ({
-        to: t.token,
-        sound: 'default',
-        title: notifTitle,
-        body: notifBody,
-        data: { type: 'retour', ...meta },
-      }))
+      const userIdToAthlete = new Map(athletesWithUserId.map((a) => [a.user_id, a]))
+      const messages = tokens.map((t: { token: string; user_id: string }) => {
+        const a = userIdToAthlete.get(t.user_id)
+        const retourId = a ? retourIdByAthleteId.get(a.id) : undefined
+        return {
+          to: t.token,
+          sound: 'default',
+          title: notifTitle,
+          body: notifBody,
+          data: { type: 'retour', ...baseMeta, retour_id: retourId, titre: baseRow.titre },
+        }
+      })
       try {
         await fetch('https://exp.host/--/api/v2/push/send', {
           method: 'POST',
@@ -150,8 +168,8 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    inserted: rows.length,
-    pushed: userIds.length,
-    skipped_no_user: athletes.length - userIds.length,
+    inserted: rowsToInsert.length,
+    pushed: athletesWithUserId.length,
+    skipped_no_user: athletes.length - athletesWithUserId.length,
   })
 }
