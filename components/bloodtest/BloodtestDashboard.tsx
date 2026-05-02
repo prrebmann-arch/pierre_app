@@ -1079,6 +1079,19 @@ function MarkerDetailModal({
               {meta.label} · {marker.unit_canonical}
             </div>
           </div>
+          <a
+            href="/profile/marqueurs-sanguins"
+            title="Personnaliser les plages cliniques"
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              cursor: 'pointer', color: 'var(--text)',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              textDecoration: 'none',
+            }}
+          >
+            <i className="fas fa-sliders" style={{ fontSize: 12 }} />
+          </a>
           <button
             onClick={onClose}
             style={{

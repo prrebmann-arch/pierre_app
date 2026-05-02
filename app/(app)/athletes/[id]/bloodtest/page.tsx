@@ -218,6 +218,9 @@ export default function BloodtestPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
         <Toggle checked={enabled} onChange={toggleEnabled} label="Prise de sang activée" />
         <input type="file" accept="image/jpeg,image/png" multiple id="bt-upload" hidden onChange={(e) => { const fs = e.target.files; if (fs && fs.length > 0) { uploadImages(Array.from(fs)); e.target.value = '' } }} />
+        <Link href="/profile/marqueurs-sanguins" className="btn btn-outline btn-sm" title="Personnaliser les plages optimal/limite/hors zone de chaque marqueur">
+          <i className="fas fa-sliders" /> Plages cliniques
+        </Link>
         <button className="btn btn-red btn-sm" disabled={uploading} onClick={() => document.getElementById('bt-upload')?.click()}>
           <i className="fas fa-images" /> {uploading ? 'Upload...' : 'Upload screenshots'}
         </button>
