@@ -100,3 +100,31 @@ export type BloodtestUploadRow = {
   archived_at: string | null
   created_at: string
 }
+
+export type SplitMarkersResult = {
+  expected: { tracked_key: string; marker?: ExtractedMarker }[]
+  extras: ExtractedMarker[]
+  unidentified: ExtractedMarker[]
+}
+
+export function splitMarkers(markers: ExtractedMarker[], tracked: string[]): SplitMarkersResult {
+  const trackedSet = new Set(tracked)
+  const byKey = new Map<string, ExtractedMarker[]>()
+  for (const m of markers) {
+    if (m.marker_key) {
+      const arr = byKey.get(m.marker_key) || []
+      arr.push(m)
+      byKey.set(m.marker_key, arr)
+    }
+  }
+  const expected = tracked.map((key) => {
+    const matches = byKey.get(key) || []
+    return { tracked_key: key, marker: matches[0] }
+  })
+  const extras: ExtractedMarker[] = []
+  for (const [key, ms] of byKey) {
+    if (!trackedSet.has(key)) extras.push(...ms)
+  }
+  const unidentified = markers.filter((m) => !m.marker_key)
+  return { expected, extras, unidentified }
+}
