@@ -29,6 +29,7 @@ export default function PanelSuivi({
   customMarkers,
   onApplyPreset,
   onToggleMarker,
+  onSetTrackedKeys,
   onOpenCustomModal,
   athleteFirstName,
 }: {
@@ -36,6 +37,7 @@ export default function PanelSuivi({
   customMarkers: { marker_key: string; label: string; unit_canonical: string; category: string }[]
   onApplyPreset: (preset: BloodtestPreset) => void
   onToggleMarker: (key: string) => void
+  onSetTrackedKeys?: (next: string[]) => void
   onOpenCustomModal: () => void
   athleteFirstName?: string
 }) {
@@ -290,9 +292,11 @@ export default function PanelSuivi({
                   meta={meta}
                   markers={ms}
                   trackedSet={trackedSet}
+                  tracked={tracked}
                   onCount={onCount}
                   allOn={allOn}
                   onToggle={onToggleMarker}
+                  onSetTrackedKeys={onSetTrackedKeys}
                 />
               )
             })}
@@ -304,22 +308,31 @@ export default function PanelSuivi({
 }
 
 function CategorySection({
-  meta, markers, trackedSet, onCount, allOn, onToggle,
+  meta, markers, trackedSet, tracked, onCount, allOn, onToggle, onSetTrackedKeys,
 }: {
   category: BloodtestCategory
   meta: { label: string; icon: string; color: string }
   markers: BloodtestMarker[]
   trackedSet: Set<string>
+  tracked: string[]
   onCount: number
   allOn: boolean
   onToggle: (key: string) => void
+  onSetTrackedKeys?: (next: string[]) => void
 }) {
   function bulkToggle() {
-    if (allOn) {
-      markers.forEach((m) => trackedSet.has(m.key) && onToggle(m.key))
-    } else {
-      markers.forEach((m) => !trackedSet.has(m.key) && onToggle(m.key))
+    const keys = markers.map((m) => m.key)
+    if (onSetTrackedKeys) {
+      // Bulk = single DB write, évite les race conditions de toggle séquentiel
+      const next = allOn
+        ? tracked.filter((k) => !keys.includes(k))
+        : Array.from(new Set([...tracked, ...keys]))
+      onSetTrackedKeys(next)
+      return
     }
+    // Fallback : toggle séquentiel (ne marche bien que pour 1 marker)
+    if (allOn) keys.forEach((k) => trackedSet.has(k) && onToggle(k))
+    else keys.forEach((k) => !trackedSet.has(k) && onToggle(k))
   }
 
   return (

@@ -84,11 +84,15 @@ export default function BloodtestPage() {
     toast(`Preset ${preset} appliqué`, 'success')
   }
 
-  async function toggleMarker(key: string) {
-    const next = tracked.includes(key) ? tracked.filter((k) => k !== key) : [...tracked, key]
+  async function setTrackedKeys(next: string[]) {
     const { error } = await supabase.from('athletes').update({ bloodtest_tracked_markers: next }).eq('id', params.id)
     if (error) { toast(`Erreur: ${error.message}`, 'error'); return }
     setTracked(next)
+  }
+
+  async function toggleMarker(key: string) {
+    const next = tracked.includes(key) ? tracked.filter((k) => k !== key) : [...tracked, key]
+    await setTrackedKeys(next)
   }
 
   async function uploadImages(files: File[]) {
@@ -232,6 +236,7 @@ export default function BloodtestPage() {
         customMarkers={customMarkers}
         onApplyPreset={applyPreset}
         onToggleMarker={toggleMarker}
+        onSetTrackedKeys={setTrackedKeys}
         onOpenCustomModal={() => setShowCustomModal(true)}
         athleteFirstName={athleteInfo?.prenom}
       />
